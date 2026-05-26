@@ -1,0 +1,3 @@
+display_name: DevOps Package Copilot
+short_description: Package projects from build docs.
+default_prompt: Use DevOps Package Copilot to package a project from its docs/docker-build-*.md rules.
