@@ -27,6 +27,20 @@ Confirm execution?
 
 If the user asked for plan only, stop here and do not ask for execution confirmation.
 
+For ordinary follow-up builds in the same session, use this no-confirmation format:
+
+```markdown
+Reusing the current packaging session:
+
+- Project root: `<path>`
+- Script: `<script>`
+- Version: `<version>`
+- Changed modules: `<modules>`
+- Command: `<command>`
+
+Starting build.
+```
+
 ## Success Report
 
 After a successful build, use:
@@ -77,8 +91,7 @@ Reusing the current packaging session:
 - Script: `<script>`
 - Previous modules: `<old>`
 - New modules: `<new>`
-- Previous version: `<old>`
-- New version: `<new>`
+- Version: `<reused version>` or `<old -> new>`
 ```
 
-Then show the normal execution plan.
+Then show the normal execution plan only when confirmation is required. For ordinary follow-up builds, show the no-confirmation format and execute.

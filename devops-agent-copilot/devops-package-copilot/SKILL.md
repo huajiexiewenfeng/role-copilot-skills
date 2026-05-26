@@ -1,6 +1,6 @@
 ---
 name: devops-package-copilot
-description: Use this skill when acting as the DevOps Agent Copilot to package/build local projects from natural language, especially Chinese requests like "打包某个项目", "再打一次", "换个版本打包", or "打全部模块". The skill discovers project-local docs/docker-build-*.md rules, reuses session-scoped packaging context, asks only for missing critical values, confirms the exact command, runs existing local scripts only after confirmation, and summarizes build artifacts or failures.
+description: Use this skill when acting as the DevOps Agent Copilot to package/build local projects from natural language, especially Chinese requests like "打包某个项目", "再打一次", "换个版本打包", or "打全部模块". The skill discovers project-local docs/docker-build-*.md rules, reuses session-scoped packaging context including the last confirmed version, asks only for missing critical values, avoids repeated confirmation for ordinary follow-up builds in the same session, runs existing local scripts, and summarizes build artifacts or failures.
 ---
 
 # DevOps Package Copilot
@@ -43,7 +43,9 @@ Track:
 
 Only reuse context within the same session. When the user changes `project_root`, reload `docs/docker-build-*.md` and do not mix settings from the previous project.
 
-Do not reuse the previous version unless the user says to build the same version again. Re-read branch and commit before every execution plan.
+After the user provides or confirms a version once, reuse that version for later builds in the same session by default. Change it only when the user explicitly provides a new version or asks to change the version. When the user changes `project_root`, clear the version and ask again.
+
+Re-read branch and commit before every execution plan.
 
 ## Workflow
 
@@ -67,8 +69,9 @@ Do not reuse the previous version unless the user says to build the same version
 7. Ask only for missing critical values.
 8. Read current Git branch and commit when the project is a Git repository.
 9. Show the execution plan and exact command.
-10. Run the command only after explicit confirmation.
-11. Summarize success, artifact locations, manifest/log hints, or failure diagnosis.
+10. Decide whether confirmation is required.
+11. Run the command when allowed by the confirmation policy.
+12. Summarize success, artifact locations, manifest/log hints, or failure diagnosis.
 
 For detailed parsing and reporting rules, read:
 
@@ -82,6 +85,7 @@ Use these defaults unless project docs override them or the user explicitly says
 - `skip_maven`: `false`; do not add `-SkipMaven`.
 - `dry_run`: `false`; do not add `-DryRun`.
 - `package_type`: temporary test package.
+- `version`: reuse the last confirmed session version unless the user provides a new version or switches project root.
 - `modules`: if the user says "打包 <name> 项目" and `<name>` appears in supported modules, use `<name>` as the module.
 - Multi-module or `ALL`: use only when the user explicitly asks for multiple modules or all modules.
 
@@ -98,7 +102,7 @@ Never guess:
 Ask only when needed:
 
 - Missing project path and no session context exists.
-- Missing version.
+- Missing version and no session version exists.
 - Requested module is absent from docs.
 - User asks for all modules but docs do not mention `ALL`.
 - Multiple possible project roots or rule docs are ambiguous.
@@ -107,9 +111,9 @@ Do not ask about `SkipMaven` or `DryRun` during the normal path. Use defaults an
 
 Never invent command parameters. The real packaging command must follow `docs/docker-build-*.md`. Only fill values into documented command shapes and documented flags.
 
-## Confirmation Required
+## Confirmation Policy
 
-Before running any build command, show:
+For the first build of a project root in the current session, show:
 
 ```text
 Project root:
@@ -123,7 +127,29 @@ Defaults:
 Command:
 ```
 
-Then ask for confirmation. Do not execute from a guessed command.
+Then ask for confirmation.
+
+For ordinary follow-up builds in the same session, do not ask for confirmation again. Show the reused context and command, then execute.
+
+Ordinary follow-up builds are requests that:
+
+- use the same `project_root`
+- use the same documented script entry
+- use the existing session version or a user-provided replacement version
+- package a single documented module
+- do not request release, publish, push, deploy, `ALL`, destructive cleanup, or optional behavior changes such as `-SkipMaven` or `-DryRun`
+
+Confirmation is still required when:
+
+- switching `project_root`
+- first reading a new project's packaging rules
+- packaging `ALL` or many modules
+- building a release package
+- pushing, publishing, or deploying
+- using optional parameters that change build semantics
+- running any command whose shape was not already shown in the current session
+
+Do not execute from a guessed command.
 
 ## Safety
 
@@ -136,9 +162,10 @@ Then ask for confirmation. Do not execute from a guessed command.
 ## Common User Requests
 
 ```text
-打包 smart-go-file 项目，路径 D:\workspace\drone\develop\smartghub\drone-cloud-api
-换成 v1.3.1 再打一次
+打包 smart-go-file 项目，路径 D:\workspace\drone\develop\smartghub\drone-cloud-api，版本 v1.3.0
+再打一次
 这次打 dock-api
+换成 v1.3.1 再打一次
 打全部模块
 只生成执行计划，不真正打包
 ```
