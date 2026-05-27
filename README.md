@@ -54,6 +54,10 @@ Current repository contents:
 ```text
 devops-agent-copilot/
   devops-package-copilot/
+hr-agent-copilot/
+  hr-resume-screening/
+  hr-candidate-detail-report/
+  hr-interview-question-generator/
 ```
 
 Planned role groups and skills may be added incrementally.
@@ -61,6 +65,8 @@ Planned role groups and skills may be added incrementally.
 ## Available Skills
 
 ### DevOps Agent Copilot
+
+[Role README](./devops-agent-copilot/README.md) | [简体中文](./devops-agent-copilot/README.zh.md)
 
 | Skill | Use When |
 |---|---|
@@ -73,11 +79,13 @@ Planned DevOps skills:
 
 ### HR Agent Copilot
 
-Planned or external skills:
+[Role README](./hr-agent-copilot/README.md) | [简体中文](./hr-agent-copilot/README.zh.md)
 
-- `hr-resume-screening`
-- `hr-candidate-detail-report`
-- `hr-interview-question-generator`
+| Skill | Use When |
+|---|---|
+| `hr-resume-screening` | First-stage resume screening against a JD with candidate ranking and 100-point scoring. |
+| `hr-candidate-detail-report` | Candidate detail reports with score reasons, strengths, weaknesses, risks, and interview verification points. |
+| `hr-interview-question-generator` | Candidate-specific interview questions, reference answer points, follow-up probes, and weak-answer signals. |
 
 ## Installation
 
@@ -85,6 +93,12 @@ Install one skill:
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-package-copilot
+```
+
+Install an HR skill:
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
 ```
 
 For local development from the repository root:

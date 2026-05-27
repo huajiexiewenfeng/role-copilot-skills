@@ -54,6 +54,10 @@ role-copilot-skills/
 ```text
 devops-agent-copilot/
   devops-package-copilot/
+hr-agent-copilot/
+  hr-resume-screening/
+  hr-candidate-detail-report/
+  hr-interview-question-generator/
 ```
 
 后续会逐步补充更多角色和 skill。
@@ -61,6 +65,8 @@ devops-agent-copilot/
 ## 当前 Skills
 
 ### DevOps Agent Copilot
+
+[角色 README](./devops-agent-copilot/README.zh.md) | [English](./devops-agent-copilot/README.md)
 
 | Skill | 使用场景 |
 |---|---|
@@ -73,11 +79,13 @@ devops-agent-copilot/
 
 ### HR Agent Copilot
 
-计划或外部已有 skills：
+[角色 README](./hr-agent-copilot/README.zh.md) | [English](./hr-agent-copilot/README.md)
 
-- `hr-resume-screening`
-- `hr-candidate-detail-report`
-- `hr-interview-question-generator`
+| Skill | 使用场景 |
+|---|---|
+| `hr-resume-screening` | 根据 JD 对简历做第一轮筛选、排序和 100 分制评分。 |
+| `hr-candidate-detail-report` | 输出候选人明细报告，解释得分原因、优势、短板、风险点和面试验证点。 |
+| `hr-interview-question-generator` | 为候选人生成定制化面试题、参考答案要点、追问和弱回答信号。 |
 
 ## 安装
 
@@ -85,6 +93,12 @@ devops-agent-copilot/
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-package-copilot
+```
+
+安装一个 HR skill：
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
 ```
 
 本地开发时，在仓库根目录执行：
