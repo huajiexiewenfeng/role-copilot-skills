@@ -1,5 +1,5 @@
 ---
-name: hr-resume-screening
+name: hr-resume-screening-copilot
 description: Use this skill whenever the user wants to screen resumes, analyze PDF resumes from one or more folders, compare candidates against a JD, rank candidates, score candidates out of 100, or produce an interview recommendation list. This is the first-stage HR screening skill and should be used before candidate detail reports or interview question generation.
 ---
 
@@ -112,4 +112,5 @@ Penalize:
 - unexplained frequent short tenures.
 
 The final score reflects fit for this JD, not general candidate ability.
+
 

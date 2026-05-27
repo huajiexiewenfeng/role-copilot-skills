@@ -1,5 +1,5 @@
 ---
-name: hr-interview-question-generator
+name: hr-interview-question-generator-copilot
 description: Use this skill when the user has selected interview candidates and asks for interview questions, interview focus areas, reference answers, follow-up probes, risk verification points, weak-answer signals, or candidate-specific technical interview plans. This skill should generate targeted questions based on the JD and each candidate's resume claims.
 ---
 
@@ -21,7 +21,7 @@ Accept:
 - Candidate names selected by the user.
 - Specific interview focus requested by the user.
 
-If candidate resumes are missing, ask for them or ask the user to run `hr-resume-screening` first.
+If candidate resumes are missing, ask for them or ask the user to run `hr-resume-screening-copilot` first.
 
 ## Shared Resources
 
@@ -133,4 +133,5 @@ Always include questions that verify:
 - Whether the candidate can explain design trade-offs.
 - Whether the candidate has handled failures in production.
 - Whether keyword claims are shallow or deep.
+
 

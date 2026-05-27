@@ -1,6 +1,6 @@
 ---
-name: hr-candidate-detail-report
-description: Use this skill when the user asks for candidate details, score reasons, personnel detail reports, strengths and weaknesses, education/company/stability analysis, risk analysis, or why candidates were ranked in a certain order after resume screening. This skill explains candidate fit in detail and should usually follow hr-resume-screening.
+name: hr-candidate-detail-report-copilot
+description: Use this skill when the user asks for candidate details, score reasons, personnel detail reports, strengths and weaknesses, education/company/stability analysis, risk analysis, or why candidates were ranked in a certain order after resume screening. This skill explains candidate fit in detail and should usually follow hr-resume-screening-copilot.
 ---
 
 # HR Candidate Detail Report
@@ -110,4 +110,5 @@ Score: [x]/100
 When comparing multiple candidates, use a compact table first, then details.
 
 When the user asks for a short answer, provide one-sentence summaries only.
+
 

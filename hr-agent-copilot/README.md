@@ -14,9 +14,9 @@ It helps HR teams, hiring managers, and technical interviewers turn recruiting w
 
 | Skill | Use When |
 |---|---|
-| `hr-resume-screening` | First-stage screening: compare resumes against a JD, rank candidates, score them out of 100, and recommend interview candidates. |
-| `hr-candidate-detail-report` | Explain candidate score reasons, strengths, weaknesses, risks, education/company/stability signals, and interview verification points. |
-| `hr-interview-question-generator` | Generate candidate-specific interview focus areas, questions, reference answer points, follow-up probes, and weak-answer signals. |
+| `hr-resume-screening-copilot` | First-stage screening: compare resumes against a JD, rank candidates, score them out of 100, and recommend interview candidates. |
+| `hr-candidate-detail-report-copilot` | Explain candidate score reasons, strengths, weaknesses, risks, education/company/stability signals, and interview verification points. |
+| `hr-interview-question-generator-copilot` | Generate candidate-specific interview focus areas, questions, reference answer points, follow-up probes, and weak-answer signals. |
 
 ## Shared Resources
 
@@ -39,24 +39,24 @@ hr-agent-copilot/
 Install one skill:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
 ```
 
 Install all HR skills one by one:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-candidate-detail-report
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-interview-question-generator
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-candidate-detail-report-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-interview-question-generator-copilot
 ```
 
 ## Typical Workflow
 
 ```text
 JD + resumes
--> hr-resume-screening
--> hr-candidate-detail-report
--> hr-interview-question-generator
+-> hr-resume-screening-copilot
+-> hr-candidate-detail-report-copilot
+-> hr-interview-question-generator-copilot
 -> interview plan and verification focus
 ```
 
@@ -75,3 +75,4 @@ python scripts/extract_resumes.py --input "D:/resumes/backend" --output output/h
 - Treat ambiguous claims as interview verification points.
 - Do not make discriminatory decisions based on protected attributes.
 - Use age only if the user explicitly asks and only as career-stage or role-level context.
+

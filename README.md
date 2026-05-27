@@ -44,9 +44,9 @@ role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
   hr-agent-copilot/
-    hr-resume-screening/
-    hr-candidate-detail-report/
-    hr-interview-question-generator/
+    hr-resume-screening-copilot/
+    hr-candidate-detail-report-copilot/
+    hr-interview-question-generator-copilot/
 ```
 
 Current repository contents:
@@ -55,9 +55,9 @@ Current repository contents:
 devops-agent-copilot/
   devops-package-copilot/
 hr-agent-copilot/
-  hr-resume-screening/
-  hr-candidate-detail-report/
-  hr-interview-question-generator/
+  hr-resume-screening-copilot/
+  hr-candidate-detail-report-copilot/
+  hr-interview-question-generator-copilot/
 ```
 
 Planned role groups and skills may be added incrementally.
@@ -83,9 +83,9 @@ Planned DevOps skills:
 
 | Skill | Use When |
 |---|---|
-| `hr-resume-screening` | First-stage resume screening against a JD with candidate ranking and 100-point scoring. |
-| `hr-candidate-detail-report` | Candidate detail reports with score reasons, strengths, weaknesses, risks, and interview verification points. |
-| `hr-interview-question-generator` | Candidate-specific interview questions, reference answer points, follow-up probes, and weak-answer signals. |
+| `hr-resume-screening-copilot` | First-stage resume screening against a JD with candidate ranking and 100-point scoring. |
+| `hr-candidate-detail-report-copilot` | Candidate detail reports with score reasons, strengths, weaknesses, risks, and interview verification points. |
+| `hr-interview-question-generator-copilot` | Candidate-specific interview questions, reference answer points, follow-up probes, and weak-answer signals. |
 
 ## Installation
 
@@ -98,7 +98,7 @@ npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-
 Install an HR skill:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
 ```
 
 For local development from the repository root:
@@ -154,3 +154,4 @@ This repository is in an early stage.
 The first implemented skill is `devops-package-copilot`. It is designed to support local enterprise packaging workflows where projects already provide build scripts and `docs/docker-build-*.md` documentation.
 
 Future work may add CI diagnosis, release support, and more role groups.
+

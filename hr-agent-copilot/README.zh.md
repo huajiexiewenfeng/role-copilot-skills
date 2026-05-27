@@ -14,9 +14,9 @@ HR Agent Copilot 是 Role Copilot Skills 里的 HR 招聘角色组。
 
 | Skill | 使用场景 |
 |---|---|
-| `hr-resume-screening` | 第一轮筛选：根据 JD 对简历进行匹配、排序、100 分制评分，并推荐面试候选人。 |
-| `hr-candidate-detail-report` | 解释候选人的得分原因、优势、短板、风险点、学历/公司/稳定度信号和面试验证点。 |
-| `hr-interview-question-generator` | 为候选人生成定制化面试重点、面试题、参考答案要点、追问和弱回答信号。 |
+| `hr-resume-screening-copilot` | 第一轮筛选：根据 JD 对简历进行匹配、排序、100 分制评分，并推荐面试候选人。 |
+| `hr-candidate-detail-report-copilot` | 解释候选人的得分原因、优势、短板、风险点、学历/公司/稳定度信号和面试验证点。 |
+| `hr-interview-question-generator-copilot` | 为候选人生成定制化面试重点、面试题、参考答案要点、追问和弱回答信号。 |
 
 ## 共享资源
 
@@ -39,24 +39,24 @@ hr-agent-copilot/
 安装单个 skill：
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
 ```
 
 逐个安装全部 HR skills：
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-candidate-detail-report
-npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-interview-question-generator
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-candidate-detail-report-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-interview-question-generator-copilot
 ```
 
 ## 典型流程
 
 ```text
 JD + 简历
--> hr-resume-screening
--> hr-candidate-detail-report
--> hr-interview-question-generator
+-> hr-resume-screening-copilot
+-> hr-candidate-detail-report-copilot
+-> hr-interview-question-generator-copilot
 -> 面试计划和验证重点
 ```
 
@@ -75,3 +75,4 @@ python scripts/extract_resumes.py --input "D:/resumes/backend" --output output/h
 - 模糊经历应作为面试验证点，而不是直接否决。
 - 不根据受保护身份特征做歧视性判断。
 - 年龄只在用户明确要求时，作为职业阶段或岗位层级匹配的辅助信息讨论。
+
