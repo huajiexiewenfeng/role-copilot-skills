@@ -44,7 +44,12 @@ role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
   project-agent-copilot/
+    project-init-copilot/
+    project-ingest-copilot/
     project-develop-copilot/
+    project-fix-copilot/
+    project-finish-copilot/
+    project-review-copilot/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -57,7 +62,12 @@ role-copilot-skills/
 devops-agent-copilot/
   devops-package-copilot/
 project-agent-copilot/
+  project-init-copilot/
+  project-ingest-copilot/
   project-develop-copilot/
+  project-fix-copilot/
+  project-finish-copilot/
+  project-review-copilot/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -87,13 +97,17 @@ hr-agent-copilot/
 
 | Skill | 使用场景 |
 |---|---|
-| `project-develop-copilot` | 用于项目开发生命周期：init、ingest、develop、fix、finish、review，并维护项目本地上下文和 LLM Wiki。 |
+| `project-init-copilot` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
+| `project-ingest-copilot` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
+| `project-develop-copilot` | 基于受控项目上下文和需求摘要开发需求或功能。 |
+| `project-fix-copilot` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
+| `project-finish-copilot` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
+| `project-review-copilot` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
 
 计划中的 Project skills：
 
 - `project-prd-copilot`
 - `project-ui-copilot`
-- `project-review-copilot`
 - `project-test-copilot`
 - `project-release-copilot`
 

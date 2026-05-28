@@ -44,7 +44,12 @@ role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
   project-agent-copilot/
+    project-init-copilot/
+    project-ingest-copilot/
     project-develop-copilot/
+    project-fix-copilot/
+    project-finish-copilot/
+    project-review-copilot/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -57,7 +62,12 @@ Current repository contents:
 devops-agent-copilot/
   devops-package-copilot/
 project-agent-copilot/
+  project-init-copilot/
+  project-ingest-copilot/
   project-develop-copilot/
+  project-fix-copilot/
+  project-finish-copilot/
+  project-review-copilot/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -87,13 +97,17 @@ Planned DevOps skills:
 
 | Skill | Use When |
 |---|---|
-| `project-develop-copilot` | Coordinate project development lifecycle work: init, ingest, develop, fix, finish, and review with project-local context and LLM Wiki. |
+| `project-init-copilot` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
+| `project-ingest-copilot` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
+| `project-develop-copilot` | Develop a requirement or feature with scoped project context and requirement summaries. |
+| `project-fix-copilot` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
+| `project-finish-copilot` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
+| `project-review-copilot` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
 Planned Project skills:
 
 - `project-prd-copilot`
 - `project-ui-copilot`
-- `project-review-copilot`
 - `project-test-copilot`
 - `project-release-copilot`
 

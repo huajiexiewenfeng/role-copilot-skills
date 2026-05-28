@@ -10,25 +10,29 @@ Project Agent Copilot is the project engineering role group in Role Copilot Skil
 
 It is designed for teams that already have source code, project documents, development conventions, and recurring engineering workflows. The Copilot does not replace those systems. It helps the agent recover project context, keep source material discoverable, work within scoped modules, and sync useful knowledge back into a lightweight project LLM Wiki.
 
-This role group is intentionally split into domain skills. `project-develop-copilot` is the first domain skill; future skills may focus on PRD, UI, review, testing, release, or refactoring workflows.
+This role group is intentionally split into domain skills. Each skill is a real workflow entry point that can be installed and used independently in project work.
 
 ## Current Skills
 
 | Skill | Use When |
 |---|---|
-| `project-develop-copilot` | Coordinate project development lifecycle work: init, ingest, develop, fix, finish, and review with project-local context and LLM Wiki. |
+| `project-init-copilot` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
+| `project-ingest-copilot` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
+| `project-develop-copilot` | Develop a requirement or feature with scoped project context and requirement summaries. |
+| `project-fix-copilot` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
+| `project-finish-copilot` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
+| `project-review-copilot` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
 Planned domain skills:
 
 - `project-prd-copilot`
 - `project-ui-copilot`
-- `project-review-copilot`
 - `project-test-copilot`
 - `project-release-copilot`
 
 ## Install
 
-Install the development skill:
+Install one project skill:
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
@@ -44,13 +48,12 @@ npx skills add .
 
 ```text
 User request or source material
--> project-develop-copilot
--> resolve project root
--> discover project sources and legacy context
--> build scoped working context
--> discuss, plan, fix, or implement
--> verify the change
--> sync useful knowledge to .llm-wiki
+-> project-init-copilot when adopting a repository
+-> project-ingest-copilot when adding source materials
+-> project-develop-copilot for feature development
+-> project-fix-copilot for bugs
+-> project-finish-copilot after verification
+-> project-review-copilot before handoff or merge
 ```
 
 ## Context Model
