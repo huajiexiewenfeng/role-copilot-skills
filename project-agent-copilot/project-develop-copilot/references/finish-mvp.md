@@ -12,9 +12,23 @@ Before wiki sync, confirm at least one verification result:
 - manual verification completed
 - user accepted that verification could not be run and why
 
+If no verification exists, do not claim the work is complete. Ask whether to run verification or record the limitation.
+
+## Change Summary
+
+Collect:
+
+- files changed
+- behavior changed
+- active requirement or bug
+- active scopes
+- tests or checks run
+- skipped verification
+- user decisions
+
 ## Knowledge Sync
 
-Update only the pages affected by the actual change.
+Update only pages affected by the actual change.
 
 Always consider:
 
@@ -26,12 +40,36 @@ Always consider:
 
 Do not write large implementation narratives. Preserve indexes, summaries, status, relationships, and gaps.
 
+## Requirement Status Values
+
+Use:
+
+- `captured`
+- `planned`
+- `implementing`
+- `verified`
+- `done`
+- `blocked`
+
+## Bug Status Values
+
+Use:
+
+- `captured`
+- `diagnosing`
+- `fixing`
+- `verified`
+- `closed`
+- `blocked`
+
 ## Final Report
 
 Report:
 
-- implementation summary
-- verification evidence
-- wiki pages updated
-- remaining gaps
-- suggested next action
+```text
+Implementation summary:
+Verification:
+Wiki updates:
+Remaining gaps:
+Next action:
+```
