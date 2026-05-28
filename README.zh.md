@@ -43,6 +43,8 @@ Role Copilot Skills 就是把这些角色工作流沉淀成可安装、可复用
 role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
+  project-agent-copilot/
+    project-develop-copilot/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -54,6 +56,8 @@ role-copilot-skills/
 ```text
 devops-agent-copilot/
   devops-package-copilot/
+project-agent-copilot/
+  project-develop-copilot/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -77,6 +81,22 @@ hr-agent-copilot/
 - `devops-ci-diagnose-copilot`
 - `devops-release-copilot`
 
+### Project Agent Copilot
+
+[角色 README](./project-agent-copilot/README.zh.md) | [English](./project-agent-copilot/README.md)
+
+| Skill | 使用场景 |
+|---|---|
+| `project-develop-copilot` | 用于项目开发生命周期：init、ingest、develop、fix、finish、review，并维护项目本地上下文和 LLM Wiki。 |
+
+计划中的 Project skills：
+
+- `project-prd-copilot`
+- `project-ui-copilot`
+- `project-review-copilot`
+- `project-test-copilot`
+- `project-release-copilot`
+
 ### HR Agent Copilot
 
 [角色 README](./hr-agent-copilot/README.zh.md) | [English](./hr-agent-copilot/README.md)
@@ -99,6 +119,12 @@ npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
+```
+
+安装一个 Project skill：
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
 本地开发时，在仓库根目录执行：

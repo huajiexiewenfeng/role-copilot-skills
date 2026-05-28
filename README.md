@@ -43,6 +43,8 @@ Role Copilot Skills captures those workflows as installable skills.
 role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
+  project-agent-copilot/
+    project-develop-copilot/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -54,6 +56,8 @@ Current repository contents:
 ```text
 devops-agent-copilot/
   devops-package-copilot/
+project-agent-copilot/
+  project-develop-copilot/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -77,6 +81,22 @@ Planned DevOps skills:
 - `devops-ci-diagnose-copilot`
 - `devops-release-copilot`
 
+### Project Agent Copilot
+
+[Role README](./project-agent-copilot/README.md) | [简体中文](./project-agent-copilot/README.zh.md)
+
+| Skill | Use When |
+|---|---|
+| `project-develop-copilot` | Coordinate project development lifecycle work: init, ingest, develop, fix, finish, and review with project-local context and LLM Wiki. |
+
+Planned Project skills:
+
+- `project-prd-copilot`
+- `project-ui-copilot`
+- `project-review-copilot`
+- `project-test-copilot`
+- `project-release-copilot`
+
 ### HR Agent Copilot
 
 [Role README](./hr-agent-copilot/README.md) | [简体中文](./hr-agent-copilot/README.zh.md)
@@ -99,6 +119,12 @@ Install an HR skill:
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-screening-copilot
+```
+
+Install a Project skill:
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
 For local development from the repository root:
