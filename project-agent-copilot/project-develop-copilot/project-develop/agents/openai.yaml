@@ -1,0 +1,3 @@
+display_name: Project Develop
+short_description: Develop requirements with scoped context and LLM Wiki.
+default_prompt: Use Project Develop to develop a project requirement or feature with scoped context.

@@ -1,0 +1,3 @@
+display_name: Project Fix
+short_description: Diagnose and fix bugs with scoped project context.
+default_prompt: Use Project Fix to diagnose, fix, verify, and record a project bug.

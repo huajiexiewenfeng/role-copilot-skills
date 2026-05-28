@@ -1,9 +1,9 @@
 ---
-name: project-ingest-copilot
+name: project-ingest
 description: Use when adding PRDs, links, Markdown, PDF, Word, logs, meeting notes, customer feedback, or temporary project materials into a project LLM Wiki as source proxies and ingest index entries.
 ---
 
-# Project Ingest Copilot
+# Project Ingest
 
 ## Purpose
 

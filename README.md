@@ -8,7 +8,7 @@ English | [简体中文](./README.zh.md)
 
 Role Copilot Skills is a collection of domain-specific Agent Copilot skills.
 
-The repository is organized around practical enterprise roles instead of isolated prompts. Each top-level directory is an Agent Copilot role, and each child directory is an installable Codex skill.
+The repository is organized around practical enterprise roles instead of isolated prompts. Each top-level directory is an Agent Copilot role container. A role container may hold one or more skill collections, and installable Codex skills live inside those collections.
 
 ```text
 role copilot
@@ -44,12 +44,13 @@ role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
   project-agent-copilot/
-    project-init-copilot/
-    project-ingest-copilot/
     project-develop-copilot/
-    project-fix-copilot/
-    project-finish-copilot/
-    project-review-copilot/
+      project-init/
+      project-ingest/
+      project-develop/
+      project-fix/
+      project-finish/
+      project-review/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -62,12 +63,13 @@ Current repository contents:
 devops-agent-copilot/
   devops-package-copilot/
 project-agent-copilot/
-  project-init-copilot/
-  project-ingest-copilot/
   project-develop-copilot/
-  project-fix-copilot/
-  project-finish-copilot/
-  project-review-copilot/
+    project-init/
+    project-ingest/
+    project-develop/
+    project-fix/
+    project-finish/
+    project-review/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -97,12 +99,12 @@ Planned DevOps skills:
 
 | Skill | Use When |
 |---|---|
-| `project-init-copilot` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
-| `project-ingest-copilot` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
-| `project-develop-copilot` | Develop a requirement or feature with scoped project context and requirement summaries. |
-| `project-fix-copilot` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
-| `project-finish-copilot` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
-| `project-review-copilot` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
+| `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
+| `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
+| `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
+| `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
+| `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
+| `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
 Planned Project skills:
 
@@ -138,7 +140,7 @@ npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-s
 Install a Project skill:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
 ```
 
 For local development from the repository root:

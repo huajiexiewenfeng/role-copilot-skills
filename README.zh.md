@@ -8,7 +8,7 @@
 
 Role Copilot Skills 是一组按企业角色组织的 Agent Copilot skills。
 
-这个仓库不是把所有 prompt 平铺在一起，而是按实际岗位和团队流程来组织。每个一级目录是一个 Agent Copilot 角色，每个二级目录是一个可以独立安装的 Codex skill。
+这个仓库不是把所有 prompt 平铺在一起，而是按实际岗位和团队流程来组织。每个一级目录是一个 Agent Copilot 角色容器。角色容器下面可以放一个或多个 skill 集合，真正可安装的 Codex skill 位于集合内部。
 
 ```text
 角色 Copilot
@@ -44,12 +44,13 @@ role-copilot-skills/
   devops-agent-copilot/
     devops-package-copilot/
   project-agent-copilot/
-    project-init-copilot/
-    project-ingest-copilot/
     project-develop-copilot/
-    project-fix-copilot/
-    project-finish-copilot/
-    project-review-copilot/
+      project-init/
+      project-ingest/
+      project-develop/
+      project-fix/
+      project-finish/
+      project-review/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -62,12 +63,13 @@ role-copilot-skills/
 devops-agent-copilot/
   devops-package-copilot/
 project-agent-copilot/
-  project-init-copilot/
-  project-ingest-copilot/
   project-develop-copilot/
-  project-fix-copilot/
-  project-finish-copilot/
-  project-review-copilot/
+    project-init/
+    project-ingest/
+    project-develop/
+    project-fix/
+    project-finish/
+    project-review/
 hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
@@ -97,12 +99,12 @@ hr-agent-copilot/
 
 | Skill | 使用场景 |
 |---|---|
-| `project-init-copilot` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
-| `project-ingest-copilot` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
-| `project-develop-copilot` | 基于受控项目上下文和需求摘要开发需求或功能。 |
-| `project-fix-copilot` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
-| `project-finish-copilot` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
-| `project-review-copilot` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
+| `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
+| `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
+| `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
+| `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
+| `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
+| `project-review` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
 
 计划中的 Project skills：
 
@@ -138,7 +140,7 @@ npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-s
 安装一个 Project skill：
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
 ```
 
 本地开发时，在仓库根目录执行：

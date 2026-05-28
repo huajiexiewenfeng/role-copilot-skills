@@ -1,9 +1,9 @@
 ---
-name: project-review-copilot
+name: project-review
 description: Use when reviewing project changes for code risk, test gaps, requirement consistency, scope drift, stale context, LLM Wiki sync, or readiness before commit, PR, or merge.
 ---
 
-# Project Review Copilot
+# Project Review
 
 ## Purpose
 

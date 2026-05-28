@@ -1,9 +1,9 @@
 ---
-name: project-finish-copilot
+name: project-finish
 description: Use when finishing verified project work, syncing actual changes back to LLM Wiki, updating requirement or bug status, recording verification, and preparing handoff.
 ---
 
-# Project Finish Copilot
+# Project Finish
 
 ## Purpose
 

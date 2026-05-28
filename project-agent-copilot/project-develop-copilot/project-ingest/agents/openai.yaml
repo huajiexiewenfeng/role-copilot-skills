@@ -1,0 +1,3 @@
+display_name: Project Ingest
+short_description: Ingest project source materials into LLM Wiki.
+default_prompt: Use Project Ingest to capture a PRD, link, document, log, or source material into the project LLM Wiki.

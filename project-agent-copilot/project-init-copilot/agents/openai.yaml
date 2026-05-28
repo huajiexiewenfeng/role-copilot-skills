@@ -1,3 +1,0 @@
-display_name: Project Init Copilot
-short_description: Initialize project LLM Wiki and migrate legacy context.
-default_prompt: Use Project Init Copilot to initialize or refresh project-local LLM Wiki context.

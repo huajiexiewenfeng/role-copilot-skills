@@ -1,3 +1,0 @@
-display_name: Project Finish Copilot
-short_description: Finish verified work and sync LLM Wiki.
-default_prompt: Use Project Finish Copilot to sync verified project changes back into the LLM Wiki and prepare handoff.

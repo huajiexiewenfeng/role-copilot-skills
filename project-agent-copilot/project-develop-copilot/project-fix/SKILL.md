@@ -1,9 +1,9 @@
 ---
-name: project-fix-copilot
+name: project-fix
 description: Use when diagnosing or fixing a project bug, error, failed test, regression, incident, log symptom, or unexpected behavior with scoped project context and LLM Wiki bug summaries.
 ---
 
-# Project Fix Copilot
+# Project Fix
 
 ## Purpose
 

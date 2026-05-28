@@ -1,13 +1,13 @@
 ---
-name: project-init-copilot
-description: Use when initializing or refreshing a project-local LLM Wiki, adopting a repository, discovering modules, or migrating legacy docs/ai-coding context into the new project-agent-copilot structure.
+name: project-init
+description: Use when initializing or refreshing a project-local LLM Wiki, adopting a repository, discovering modules, or migrating legacy docs/ai-coding context into the project development context structure.
 ---
 
-# Project Init Copilot
+# Project Init
 
 ## Purpose
 
-Initialize or refresh project-local development context for Project Agent Copilot.
+Initialize or refresh project-local development context for the project development skill collection.
 
 This skill creates a usable `.llm-wiki` skeleton, discovers modules conservatively, and migrates legacy `docs/ai-coding` as read-only source context. It does not modify production code.
 

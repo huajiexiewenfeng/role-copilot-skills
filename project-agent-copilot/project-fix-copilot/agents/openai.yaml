@@ -1,3 +1,0 @@
-display_name: Project Fix Copilot
-short_description: Diagnose and fix bugs with scoped project context.
-default_prompt: Use Project Fix Copilot to diagnose, fix, verify, and record a project bug.

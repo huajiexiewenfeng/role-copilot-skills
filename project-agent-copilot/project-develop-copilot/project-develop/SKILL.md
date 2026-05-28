@@ -1,15 +1,15 @@
 ---
-name: project-develop-copilot
+name: project-develop
 description: Use when developing a project requirement or feature with project-local context, scoped modules, active sources, LLM Wiki requirement summaries, and implementation planning.
 ---
 
-# Project Develop Copilot
+# Project Develop
 
 ## Purpose
 
 Develop a feature or requirement from scoped project context into an implementation plan and, when the user confirms, into code changes.
 
-This skill belongs to the Project Agent Copilot role group. It is one domain skill, not the whole project workflow suite. Use sibling skills for init, ingest, bug fixing, finish sync, and review.
+This skill belongs to the Project Develop Copilot skill collection. It is one domain skill, not the whole project workflow suite. Use sibling skills for init, ingest, bug fixing, finish sync, and review.
 
 ## Source Of Truth
 
