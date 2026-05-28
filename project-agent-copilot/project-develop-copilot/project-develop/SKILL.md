@@ -41,6 +41,8 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - read `.llm-wiki/index.md` if present
    - read `.llm-wiki/modules/index.md` if present
    - read `.llm-wiki/ingest/index.md` if relevant
+   - read the matching requirement page if one exists
+   - read the matching `.llm-wiki/working-context/<change-id>.md` if one exists
    - discover unindexed source docs in configured source directories
    - select active, candidate, and excluded sources
    - select active, read-only, and excluded code scopes
@@ -51,13 +53,15 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - active scopes
    - read-only scopes
    - excluded scopes
+   - working context page, if used
    - known facts
    - assumptions
    - gaps or questions
 4. If context is insufficient, ask only the smallest necessary question.
 5. Use Superpowers brainstorming or planning skills after context recovery when available.
 6. Create or update `.llm-wiki/requirements/<change-id>.md`.
-7. Do not modify production code until the user confirms implementation or asks to proceed.
+7. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
+8. Do not modify production code until the user confirms implementation or asks to proceed.
 
 ## Requirement Page Minimum
 
@@ -79,6 +83,8 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 ## Active Scopes
 
 ## Candidate Context
+
+## Working Context
 
 ## Gaps
 

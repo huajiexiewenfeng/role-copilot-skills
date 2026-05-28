@@ -32,13 +32,14 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - legacy `docs/ai-coding/`
    - `.codegraph/`
 3. Create missing `.llm-wiki` directories and starter files.
-4. Create or update `.llm-wiki/modules/index.md`.
-5. Mark only explicitly selected or clearly relevant modules as `active`.
-6. Mark reference modules as `reference-only`.
-7. Mark other modules as `discovered`.
-8. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
-9. Write a `.llm-wiki/log.md` entry.
-10. Report created files, discovered modules, migrated context, and open questions.
+4. Ensure `.llm-wiki/working-context/` exists for future complex or cross-module work.
+5. Create or update `.llm-wiki/modules/index.md`.
+6. Mark only explicitly selected or clearly relevant modules as `active`.
+7. Mark reference modules as `reference-only`.
+8. Mark other modules as `discovered`.
+9. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
+10. Write a `.llm-wiki/log.md` entry.
+11. Report created files, discovered modules, migrated context, and open questions.
 
 ## Safety
 

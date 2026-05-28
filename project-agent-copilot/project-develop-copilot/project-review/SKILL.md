@@ -19,6 +19,7 @@ Use available evidence:
 - changed files
 - tests and verification output
 - active requirement or bug summary
+- active working context page
 - `.llm-wiki` updates
 - source material and acceptance criteria
 
@@ -32,6 +33,7 @@ Use available evidence:
    - scope drift
    - missing tests or verification
    - stale or missing `.llm-wiki` updates
+   - stale or missing working-context status
    - cross-scope contract risks
    - accidental unrelated file changes
 5. Report findings first.

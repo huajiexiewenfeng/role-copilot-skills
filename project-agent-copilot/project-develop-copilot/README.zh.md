@@ -54,10 +54,13 @@ project-init
   sources/
   requirements/
   bugs/
+  working-context/
   modules/
 ```
 
 这个 wiki 是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
+
+`working-context/` 只用于复杂或跨模块工作，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个任务上下文里。
 
 旧版 `docs/ai-coding/` 目录视为迁移来源。新的项目上下文应写入 `.llm-wiki`。
 

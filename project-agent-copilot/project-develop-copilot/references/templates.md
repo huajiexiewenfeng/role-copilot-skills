@@ -49,6 +49,30 @@
 ## Related
 ```
 
+## Working Context
+
+```markdown
+# Working Context: <change-id>
+
+## Purpose
+
+## Active Scopes
+
+## Read-Only Scopes
+
+## Excluded Scopes
+
+## Source Context
+
+## Cross-Scope Contracts
+
+## Scope Escalation Log
+
+## Verification Plan
+
+## Status
+```
+
 ## Bug Summary
 
 ```markdown

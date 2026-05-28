@@ -22,6 +22,7 @@ Collect:
 - behavior changed
 - active requirement or bug
 - active scopes
+- working context page, if used
 - tests or checks run
 - skipped verification
 - user decisions
@@ -37,6 +38,7 @@ Always consider:
 - related bug summary
 - related module summary
 - source proxy status
+- related working context status
 
 Do not write large implementation narratives. Preserve indexes, summaries, status, relationships, and gaps.
 

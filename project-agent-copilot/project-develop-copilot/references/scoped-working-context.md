@@ -52,7 +52,7 @@ Verification needed:
 
 ## Multi-Scope Changes
 
-For cross-service changes, create `.llm-wiki/working-context/<change-id>.md` when the project already has a working-context directory or when the change is complex enough to need one.
+For cross-service changes, create `.llm-wiki/working-context/<change-id>.md` when the change is complex enough to need one. `project-init` should create the directory, but do not create a working-context page for every task.
 
 Record:
 
@@ -63,5 +63,6 @@ Record:
 - cross-service contracts
 - write permissions
 - escalation log
+- verification plan
 
 Scoped context owns local implementation rules. Change working context owns cross-scope coordination.

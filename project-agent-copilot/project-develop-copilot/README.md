@@ -54,10 +54,13 @@ The shared project context layer is `.llm-wiki`:
   sources/
   requirements/
   bugs/
+  working-context/
   modules/
 ```
 
 The wiki is an index and summary layer, not a replacement for source files, PRDs, issues, design docs, tests, or code. It records where important material is, what it means, which module or requirement it relates to, and what gaps remain.
+
+Use `working-context/` only for complex or cross-module work that needs active scopes, read-only scopes, excluded scopes, contracts, escalation, and verification to stay together.
 
 Legacy `docs/ai-coding/` directories are migration sources. New project context should be written to `.llm-wiki`.
 

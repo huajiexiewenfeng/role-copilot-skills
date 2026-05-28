@@ -35,8 +35,10 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - related bug summary
    - related module summary
    - related source proxy status
-5. Record remaining gaps or skipped updates.
-6. Report implementation summary, verification, wiki updates, and next action.
+   - related working context status
+5. Mark related `.llm-wiki/working-context/<change-id>.md` as verified, done, blocked, or skipped when one exists.
+6. Record remaining gaps or skipped updates.
+7. Report implementation summary, verification, wiki updates, and next action.
 
 ## Safety
 

@@ -45,6 +45,7 @@ During `project init`:
    - `.llm-wiki/sources`
    - `.llm-wiki/requirements`
    - `.llm-wiki/bugs`
+   - `.llm-wiki/working-context`
    - `.llm-wiki/modules`
 3. Create starter files if missing:
    - `.llm-wiki/index.md`

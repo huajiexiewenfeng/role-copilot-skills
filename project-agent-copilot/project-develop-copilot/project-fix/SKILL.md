@@ -31,11 +31,13 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - affected scope
    - evidence
    - recent changes
+   - working context page, if used
 5. Reproduce the issue or state why reproduction is not currently possible.
 6. Diagnose likely cause before changing code.
 7. Fix only active scopes unless escalation is justified.
 8. Verify the fix.
-9. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+9. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
+10. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
 
 ## Bug Page Minimum
 
@@ -59,6 +61,8 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 ## Verification
 
 ## Related
+
+## Working Context
 ```
 
 ## Safety

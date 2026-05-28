@@ -8,11 +8,13 @@ For new features and bug fixes, project context is read at the start of the flow
 2. Read `.llm-wiki/index.md` if present.
 3. Read `.llm-wiki/modules/index.md` if present.
 4. Read `.llm-wiki/ingest/index.md` if present and relevant.
-5. Detect unindexed source documents in configured source directories.
-6. Select active, candidate, and excluded sources.
-7. Select active, read-only, and excluded code scopes.
-8. Read active module summaries and source proxies.
-9. Produce a context summary and gaps.
+5. Read the current requirement or bug page if the user names one or if one clearly matches the request.
+6. Read `.llm-wiki/working-context/<change-id>.md` when it exists for the current work.
+7. Detect unindexed source documents in configured source directories.
+8. Select active, candidate, and excluded sources.
+9. Select active, read-only, and excluded code scopes.
+10. Read active module summaries and source proxies.
+11. Produce a context summary and gaps.
 
 ## Source Directory Discovery
 
@@ -38,8 +40,9 @@ Do not deep-read everything. Compare discovered files against `.llm-wiki/ingest/
 3. If Superpowers brainstorming is available, use it after context summary.
 4. Define requirement scope and acceptance criteria.
 5. Create or update `.llm-wiki/requirements/<change-id>.md`.
-6. Hand off to implementation planning.
-7. Do not modify code until user confirms implementation.
+6. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
+7. Hand off to implementation planning.
+8. Do not modify code until user confirms implementation.
 
 ## Requirement Page Minimum
 
@@ -67,6 +70,32 @@ Do not deep-read everything. Compare discovered files against `.llm-wiki/ingest/
 ## Status
 ```
 
+## Working Context Page Minimum
+
+Use this for complex or cross-module work:
+
+```markdown
+# Working Context: <change-id>
+
+## Purpose
+
+## Active Scopes
+
+## Read-Only Scopes
+
+## Excluded Scopes
+
+## Source Context
+
+## Cross-Scope Contracts
+
+## Scope Escalation Log
+
+## Verification Plan
+
+## Status
+```
+
 ## project fix Flow
 
 1. Capture bug source or ingest it when external.
@@ -76,7 +105,8 @@ Do not deep-read everything. Compare discovered files against `.llm-wiki/ingest/
 5. Diagnose likely cause before code changes.
 6. Fix only active scopes unless escalation is justified.
 7. Verify the fix.
-8. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+8. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
+9. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
 
 ## Bug Page Minimum
 
@@ -113,6 +143,7 @@ Candidate sources:
 Active scopes:
 Read-only scopes:
 Excluded scopes:
+Working context:
 Known facts:
 Assumptions:
 Gaps / questions:
