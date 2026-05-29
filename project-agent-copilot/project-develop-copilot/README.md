@@ -9,7 +9,7 @@ It combines project LLM Wiki maintenance, scoped context recovery, requirement d
 
 It does not replace Superpowers-style skills. It prepares project context, active scopes, and `.llm-wiki` state first, then bridges to brainstorming, planning, TDD, debugging, execution, verification, and review skills inside that controlled context.
 
-It also supports OpenSpec-style requirements, existing codegraph context, legacy project-coding-skills material, and Obsidian LLM Wiki ideas as bridges, not hard dependencies. See `references/tool-bridge.md`.
+It also supports OpenSpec-style requirements, existing codegraph context, and Obsidian LLM Wiki ideas as bridges, not hard dependencies. The older project-coding-skills work is treated as the predecessor whose proven project-development ideas are internalized here. See `references/tool-bridge.md`.
 
 English | [Simplified Chinese](./README.zh.md)
 

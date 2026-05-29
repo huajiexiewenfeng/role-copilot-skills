@@ -9,7 +9,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 它不替代 Superpowers 类 skills，而是先准备项目上下文、active scopes 和 `.llm-wiki` 状态，再在这个受控上下文里桥接 brainstorming、planning、TDD、debugging、execution、verification 和 review。
 
-它也可以桥接 OpenSpec 风格需求机制、已有 codegraph 上下文、旧版 project-coding-skills 资料，以及 Obsidian LLM Wiki 思想，但这些都是桥接对象，不是硬依赖。见 `references/tool-bridge.md`。
+它也可以桥接 OpenSpec 风格需求机制、已有 codegraph 上下文，以及 Obsidian LLM Wiki 思想，但这些都是桥接对象，不是硬依赖。旧版 project-coding-skills 是前身，它已经验证过的项目开发思想应内化到这里；当前集合是升级版。见 `references/tool-bridge.md`。
 
 [English](./README.md) | 简体中文
 
