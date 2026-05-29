@@ -13,6 +13,8 @@ It also supports OpenSpec-style requirements, existing codegraph context, and Ob
 
 When goals, scope, or implementation choices are unclear, use `references/north-star.md` as the source of alignment.
 
+For current MVP gaps and implementation priority, use `references/capability-gap-audit.md`.
+
 English | [Simplified Chinese](./README.zh.md)
 
 ## Skills

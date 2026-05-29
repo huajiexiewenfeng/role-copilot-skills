@@ -13,6 +13,8 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 当目标、边界或实现取舍不清楚时，以 `references/north-star.md` 作为对齐来源。
 
+当前 MVP 缺口和实现优先级见 `references/capability-gap-audit.md`。
+
 [English](./README.md) | 简体中文
 
 ## Skills
