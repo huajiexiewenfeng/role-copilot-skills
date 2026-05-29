@@ -15,6 +15,7 @@ Read these role-level references:
 
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
+- `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
 - `../references/llm-wiki-mvp.md`

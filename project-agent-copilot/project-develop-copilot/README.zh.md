@@ -1,8 +1,15 @@
 # Project Develop Copilot
 
-Project Develop Copilot 是面向真实项目开发的 skill 集合。它把项目 LLM Wiki 维护、受控上下文恢复、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
+Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两个核心目标：
+
+1. 桥接各个顶级 skills 和 tools，纳入统一项目生命周期。
+2. 内化项目级 LLM Wiki，作为共享上下文记忆层。
+
+它把项目 LLM Wiki 维护、受控上下文恢复、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
 
 它不替代 Superpowers 类 skills，而是先准备项目上下文、active scopes 和 `.llm-wiki` 状态，再在这个受控上下文里桥接 brainstorming、planning、TDD、debugging、execution、verification 和 review。
+
+它也可以桥接 OpenSpec 风格需求机制、已有 codegraph 上下文、旧版 project-coding-skills 资料，以及 Obsidian LLM Wiki 思想，但这些都是桥接对象，不是硬依赖。见 `references/tool-bridge.md`。
 
 [English](./README.md) | 简体中文
 
@@ -45,6 +52,8 @@ project-init
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
+其他顶级工具也遵循同样的 context-first 桥接规则。见 `references/tool-bridge.md`。
+
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
@@ -62,7 +71,7 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
   modules/
 ```
 
-这个 wiki 是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
+这个 wiki 是 LLM Wiki 思想在项目开发中的内化子集：它是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
 
 `working-context/` 只用于复杂或跨模块工作，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个任务上下文里。
 

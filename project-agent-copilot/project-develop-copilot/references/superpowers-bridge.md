@@ -2,6 +2,8 @@
 
 Use this reference to combine Project Develop Copilot with Superpowers-style skills without mixing responsibilities.
 
+For the broader bridge contract across tools such as OpenSpec-style mechanisms, codegraph, and legacy project coding context, see `tool-bridge.md`.
+
 ## Boundary
 
 Project skills own:

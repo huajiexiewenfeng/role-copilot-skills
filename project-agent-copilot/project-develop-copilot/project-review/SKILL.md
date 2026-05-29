@@ -1,6 +1,6 @@
 ---
 name: project-review
-description: Use when reviewing project changes for code risk, test gaps, requirement consistency, scope drift, stale context, LLM Wiki sync, or readiness before commit, PR, or merge.
+description: Use when reviewing project changes for code risk, test gaps, requirement consistency, scope drift, stale context, LLM Wiki sync, tool-bridge consistency, or readiness before commit, PR, or merge.
 ---
 
 # Project Review
@@ -25,7 +25,10 @@ Use available evidence:
 
 ## Required Shared References
 
-Read `../references/superpowers-bridge.md` when Superpowers-style review skills are available.
+Read these references when relevant:
+
+- `../references/tool-bridge.md`
+- `../references/superpowers-bridge.md` when Superpowers-style review skills are available.
 
 ## Workflow
 

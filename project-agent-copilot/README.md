@@ -12,6 +12,8 @@ It is designed for teams that already have source code, project documents, devel
 
 The first implemented collection is `project-develop-copilot`.
 
+Project collections should follow two principles: bridge mature top-level skills and tools instead of rebuilding them, and internalize project LLM Wiki as a small project context layer rather than depending on a separate knowledge-base workflow.
+
 ## Current Collections
 
 | Collection | Contains |

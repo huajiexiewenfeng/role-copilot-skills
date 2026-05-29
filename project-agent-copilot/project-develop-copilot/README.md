@@ -1,8 +1,15 @@
 # Project Develop Copilot
 
-Project Develop Copilot is a skill collection for real project development work. It combines project LLM Wiki maintenance, scoped context recovery, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
+Project Develop Copilot is a skill collection for real project development work. It has two core goals:
+
+1. Bridge top-level skills and tools into one project lifecycle.
+2. Internalize a project-level LLM Wiki as the shared context memory.
+
+It combines project LLM Wiki maintenance, scoped context recovery, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
 
 It does not replace Superpowers-style skills. It prepares project context, active scopes, and `.llm-wiki` state first, then bridges to brainstorming, planning, TDD, debugging, execution, verification, and review skills inside that controlled context.
+
+It also supports OpenSpec-style requirements, existing codegraph context, legacy project-coding-skills material, and Obsidian LLM Wiki ideas as bridges, not hard dependencies. See `references/tool-bridge.md`.
 
 English | [Simplified Chinese](./README.zh.md)
 
@@ -45,6 +52,8 @@ project-init
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
+Other top-level tools follow the same context-first bridge rule. See `references/tool-bridge.md`.
+
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:
@@ -62,7 +71,7 @@ The shared project context layer is `.llm-wiki`:
   modules/
 ```
 
-The wiki is an index and summary layer, not a replacement for source files, PRDs, issues, design docs, tests, or code. It records where important material is, what it means, which module or requirement it relates to, and what gaps remain.
+The wiki is the internalized project subset of the LLM Wiki idea: an index and summary layer, not a replacement for source files, PRDs, issues, design docs, tests, or code. It records where important material is, what it means, which module or requirement it relates to, and what gaps remain.
 
 Use `working-context/` only for complex or cross-module work that needs active scopes, read-only scopes, excluded scopes, contracts, escalation, and verification to stay together.
 

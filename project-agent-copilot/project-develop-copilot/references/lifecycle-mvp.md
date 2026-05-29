@@ -15,6 +15,8 @@ Use this reference to run the first usable Project Develop Copilot lifecycle.
 
 Project entries own project context. Superpowers-style skills are bridged only after project context recovery. See `superpowers-bridge.md`.
 
+Project Develop Copilot also bridges other top-level skills and tools through the same context-first rule. See `tool-bridge.md`.
+
 ## Project Root Resolution
 
 Resolve project root in this order:

@@ -37,6 +37,8 @@ General-purpose AI can help, but the agent needs role context:
 
 Role Copilot Skills captures those workflows as installable skills.
 
+The project development collection has a special role: it bridges existing top-level skills and tools into a project lifecycle while internalizing a lightweight project LLM Wiki for context memory.
+
 ## Repository Structure
 
 ```text

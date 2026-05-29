@@ -37,6 +37,8 @@ Role Copilot Skills 是一组按企业角色组织的 Agent Copilot skills。
 
 Role Copilot Skills 就是把这些角色工作流沉淀成可安装、可复用的 skills。
 
+其中项目开发集合承担一个特殊角色：把已有顶级 skills 和 tools 桥接进项目生命周期，同时内化轻量 project LLM Wiki 作为上下文记忆层。
+
 ## 仓库结构
 
 ```text

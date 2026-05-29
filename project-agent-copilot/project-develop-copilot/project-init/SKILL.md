@@ -1,6 +1,6 @@
 ---
 name: project-init
-description: Use when initializing or refreshing a project-local LLM Wiki, adopting a repository, discovering modules, or migrating legacy docs/ai-coding context into the project development context structure.
+description: Use when initializing or refreshing a project-local LLM Wiki, adopting a repository, discovering modules, preparing tool bridges, or migrating legacy docs/ai-coding context into the project development context structure.
 ---
 
 # Project Init
@@ -16,6 +16,7 @@ This skill creates a usable `.llm-wiki` skeleton, discovers modules conservative
 Read these role-level references:
 
 - `../references/lifecycle-mvp.md`
+- `../references/tool-bridge.md`
 - `../references/llm-wiki-mvp.md`
 - `../references/legacy-ai-coding-migration.md`
 

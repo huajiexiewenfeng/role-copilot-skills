@@ -12,6 +12,8 @@ Project Agent Copilot 是 Role Copilot Skills 中的项目研发角色容器。
 
 当前第一个落地集合是 `project-develop-copilot`。
 
+项目方向的集合应遵循两个原则：桥接成熟的顶级 skills 和 tools，而不是重写它们；同时把 project LLM Wiki 内化为轻量项目上下文层，而不是依赖另一套独立知识库流程。
+
 ## 当前集合
 
 | 集合 | 包含 |

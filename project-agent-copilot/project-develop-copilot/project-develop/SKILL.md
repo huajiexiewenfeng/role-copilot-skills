@@ -1,6 +1,6 @@
 ---
 name: project-develop
-description: Use when developing a project requirement or feature with project-local context, scoped modules, active sources, LLM Wiki requirement summaries, and implementation planning.
+description: Use when developing a project requirement or feature with project-local context, scoped modules, active sources, LLM Wiki requirement summaries, implementation planning, or bridging Superpowers/OpenSpec-style planning inside scoped project context.
 ---
 
 # Project Develop
@@ -29,6 +29,7 @@ Read these role-level references as needed:
 
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
+- `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
 - `../references/llm-wiki-mvp.md`
