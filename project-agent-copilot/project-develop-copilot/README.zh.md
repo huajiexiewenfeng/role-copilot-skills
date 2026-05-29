@@ -15,6 +15,8 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 当前 MVP 缺口和实现优先级见 `references/capability-gap-audit.md`。
 
+MVP 验收场景见 `references/acceptance-cases.md`。
+
 [English](./README.md) | 简体中文
 
 ## Skills

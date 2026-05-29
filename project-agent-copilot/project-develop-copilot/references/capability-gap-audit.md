@@ -11,12 +11,12 @@ The current collection is installable and directionally aligned. The main remain
 | Done Means item | Status | Notes |
 |---|---|---|
 | all six project skills are installable and discoverable | Met | `npx skills add . --list` discovers all six project skills. |
-| project init creates a usable `.llm-wiki` | Partial | Skeleton and migration rules exist, but module discovery, codegraph handling, and refresh behavior need sharper output requirements. |
-| project ingest captures source material safely | Partial | Source types, safety, and proxy requirements exist, but confirmation prompts and stale-source handling need more concrete steps. |
-| project develop and project fix load only relevant scoped context | Partial | Context Enrichment Gate exists, but active/candidate/excluded selection should be made more operational. |
+| project init creates a usable `.llm-wiki` | Strengthened | Starter output, refresh behavior, module statuses, and codegraph read-only handling are now in `project-init`. Needs real-project dry run. |
+| project ingest captures source material safely | Strengthened | Confirmation prompts, stale-source handling, processing modes, and final report are now in `project-ingest`. Needs file-type dry run. |
+| project develop and project fix load only relevant scoped context | Partial | `project-develop` now has handoff, OpenSpec-style summary, escalation, and return handoff. `project-fix` still needs P1 detail. |
 | working-context handles complex or cross-module work | Partial | Template and lifecycle hooks exist, but escalation and contract update behavior need examples and review checks. |
 | project finish updates wiki only after verification or explicit limitation | Mostly met | Verification gate exists; needs clearer mapping from changed files to affected wiki pages. |
-| project review checks code risk, test gaps, scope drift, tool-bridge consistency, and wiki drift | Partial | Review stance exists, but tool-bridge consistency and wiki drift checks need a checklist. |
+| project review checks code risk, test gaps, scope drift, tool-bridge consistency, and wiki drift | Strengthened | Review checklist, severity, no-finding output, wiki drift, and tool-bridge consistency are now in `project-review`. Needs dry run. |
 | real project can run end-to-end without old project-coding-skills | Not yet proven | Needs an acceptance run or dry-run on a real multi-module project. |
 
 ## Skill Gaps
@@ -31,14 +31,15 @@ Already present:
 - conservative module discovery
 - `.codegraph/` inspection as a marker
 
-MVP gaps:
+MVP gaps addressed:
 
-- Define exact starter files and update behavior directly enough for a real run.
-- Add refresh behavior for existing `.llm-wiki` instead of only init behavior.
-- Clarify module table fields, allowed status values, and when a module becomes `active`, `reference-only`, or `discovered`.
-- Clarify how existing `.codegraph/` is recorded as read-only supporting context.
+- Exact starter/update behavior, refresh mode, module table fields, statuses, and codegraph read-only handling were added.
 
-Priority: P0.
+Remaining:
+
+- Run against a real multi-module project and tune module discovery language.
+
+Priority: dry-run.
 
 ### project-ingest
 
@@ -49,14 +50,15 @@ Already present:
 - ingest index and source proxy model
 - source safety boundaries
 
-MVP gaps:
+MVP gaps addressed:
 
-- Define confirmation prompts for PDF, Word, URL, logs, and sensitive files.
-- Add stale-source detection rules for files already in `.llm-wiki/ingest/index.md`.
-- Add required final report fields.
-- Clarify when ingest should only index path and when it may summarize.
+- Confirmation prompts, stale-source detection, processing modes, and final report fields were added.
 
-Priority: P0.
+Remaining:
+
+- Validate with Markdown, PDF, Word, URL, and log examples.
+
+Priority: dry-run.
 
 ### project-develop
 
@@ -68,14 +70,15 @@ Already present:
 - Superpowers bridge after context recovery
 - requirement and working-context page creation
 
-MVP gaps:
+MVP gaps addressed:
 
-- Add explicit Context Handoff and Return Handoff using `superpowers-bridge.md`.
-- Add OpenSpec-style change summary fields when no OpenSpec tool is present.
-- Add scope escalation behavior inside the main skill, not only in references.
-- Clarify when user confirmation is required before implementation.
+- Context Handoff, Return Handoff, OpenSpec-style summary, scope escalation, and implementation confirmation were added.
 
-Priority: P0.
+Remaining:
+
+- Validate with a cross-service feature.
+
+Priority: dry-run.
 
 ### project-fix
 
@@ -122,21 +125,22 @@ Already present:
 - scope drift and wiki drift checks
 - requesting-code-review bridge
 
-MVP gaps:
+MVP gaps addressed:
 
-- Add concrete checklist for tool-bridge consistency.
-- Add concrete checklist for `.llm-wiki` drift.
-- Add severity definitions.
-- Add "no findings" output expectations.
+- Tool-bridge consistency checklist, wiki drift checklist, severity definitions, and no-finding output were added.
 
-Priority: P0.
+Remaining:
+
+- Validate against a real diff with wiki drift.
+
+Priority: dry-run.
 
 ## Next Implementation Order
 
-1. Strengthen `project-init`, `project-ingest`, `project-develop`, and `project-review` because they block first real team use.
-2. Then strengthen `project-fix` and `project-finish` because they are already closer to usable.
-3. Add `acceptance-cases.md` with real pressure scenarios before claiming MVP complete.
-4. Run one end-to-end dry run on a real multi-module project.
+1. Strengthen `project-fix` and `project-finish` P1 details.
+2. Use `acceptance-cases.md` to run pressure scenarios.
+3. Run one end-to-end dry run on a real multi-module project.
+4. Update this audit from dry-run findings.
 
 ## Do Not Do Yet
 

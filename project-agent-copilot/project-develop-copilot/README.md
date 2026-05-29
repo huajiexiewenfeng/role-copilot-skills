@@ -15,6 +15,8 @@ When goals, scope, or implementation choices are unclear, use `references/north-
 
 For current MVP gaps and implementation priority, use `references/capability-gap-audit.md`.
 
+For MVP validation scenarios, use `references/acceptance-cases.md`.
+
 English | [Simplified Chinese](./README.zh.md)
 
 ## Skills

@@ -66,9 +66,12 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - writing-plans for implementation planning
    - test-driven-development before code-facing implementation
    - executing-plans when a written plan exists
-6. Create or update `.llm-wiki/requirements/<change-id>.md`.
-7. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
-8. Do not modify production code until the user confirms implementation or asks to proceed.
+6. Provide a Context Handoff before using external skills or tools.
+7. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
+8. Create or update `.llm-wiki/requirements/<change-id>.md`.
+9. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
+10. Before implementation, ask for confirmation unless the user has already explicitly asked to implement now.
+11. After planning or implementation, provide a Return Handoff and update `.llm-wiki` summaries with decisions, status, and gaps.
 
 ## Requirement Page Minimum
 
@@ -98,6 +101,62 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 ## Status
 ```
 
+## Context Handoff
+
+Before brainstorming, planning, TDD, execution, or any external tool bridge, output:
+
+```text
+Project root:
+Change:
+Active sources:
+Active scopes:
+Read-only scopes:
+Excluded scopes:
+Working context:
+Acceptance criteria:
+Known facts:
+Gaps:
+```
+
+## OpenSpec-Style Change Summary
+
+Use this even when OpenSpec tooling is not installed:
+
+```text
+Change:
+Why:
+Acceptance criteria:
+Active sources:
+Active scopes:
+Out of scope:
+Plan:
+Risks:
+Verification:
+```
+
+## Scope Escalation
+
+If implementation needs a candidate or excluded scope:
+
+1. Stop before editing that scope.
+2. Report `from`, `to`, `reason`, `risk`, and `verification needed`.
+3. Ask for user approval unless runtime evidence makes the change unavoidable and low risk.
+4. Update `.llm-wiki/working-context/<change-id>.md` with the escalation.
+
+## Return Handoff
+
+After planning or implementation, report:
+
+```text
+Decisions:
+Plan or changes:
+Wiki updates:
+Scope changes:
+Verification plan or results:
+Remaining gaps:
+Next action:
+```
+
 ## Safety
 
 - Do not pull all services in a monorepo into context by default.
@@ -105,3 +164,4 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 - Do not expand scope without evidence or user confirmation.
 - Do not update legacy `docs/ai-coding` unless explicitly asked.
 - Do not copy secrets or long original content into `.llm-wiki`.
+- Do not modify production code during requirement discussion, context recovery, or planning unless the user explicitly asks to proceed.
