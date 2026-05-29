@@ -35,14 +35,53 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - evidence
    - recent changes
    - working context page, if used
-5. Reproduce the issue or state why reproduction is not currently possible.
+5. Reproduce the issue or state why reproduction is not currently possible using the Reproduction Evidence format.
 6. Bridge to systematic-debugging after evidence and scoped context are captured when available.
 7. Diagnose likely cause before changing code.
 8. Use test-driven-development for regression coverage when feasible.
-9. Fix only active scopes unless escalation is justified.
-10. Verify the fix.
-11. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
-12. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+9. If the fix needs a candidate or excluded scope, run Bug Scope Escalation before editing.
+10. Fix only active scopes unless escalation is justified.
+11. Verify the fix.
+12. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
+13. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+14. Report final diagnosis and verification.
+
+## Reproduction Evidence
+
+Use this format:
+
+```text
+Reproduction:
+Command or steps:
+Input:
+Observed:
+Expected:
+Evidence:
+Status: reproduced | not-reproduced | blocked
+```
+
+If not reproduced:
+
+1. State what was tried.
+2. State what evidence still supports the diagnosis.
+3. Avoid risky fixes unless evidence is strong or the user approves.
+4. Record residual risk in the bug page.
+
+## Bug Scope Escalation
+
+Before editing a module outside active scope, report:
+
+```text
+Bug scope escalation:
+From:
+To:
+Evidence:
+Why active scope is insufficient:
+Risk:
+Verification needed:
+```
+
+Ask for approval unless the evidence is direct, the change is low risk, and the user already asked to proceed.
 
 ## Bug Page Minimum
 
@@ -68,6 +107,22 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 ## Related
 
 ## Working Context
+```
+
+## Final Report
+
+Report:
+
+```text
+Diagnosis:
+Fix:
+Files changed:
+Scope escalation:
+Regression coverage:
+Verification:
+Wiki updates:
+Residual risk:
+Next action:
 ```
 
 ## Safety

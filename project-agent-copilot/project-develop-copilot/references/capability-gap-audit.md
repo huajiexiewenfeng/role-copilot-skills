@@ -15,7 +15,7 @@ The current collection is installable and directionally aligned. The main remain
 | project ingest captures source material safely | Strengthened | Confirmation prompts, stale-source handling, processing modes, and final report are now in `project-ingest`. Needs file-type dry run. |
 | project develop and project fix load only relevant scoped context | Partial | `project-develop` now has handoff, OpenSpec-style summary, escalation, and return handoff. `project-fix` still needs P1 detail. |
 | working-context handles complex or cross-module work | Partial | Template and lifecycle hooks exist, but escalation and contract update behavior need examples and review checks. |
-| project finish updates wiki only after verification or explicit limitation | Mostly met | Verification gate exists; needs clearer mapping from changed files to affected wiki pages. |
+| project finish updates wiki only after verification or explicit limitation | Strengthened | Verification gate, changed-file mapping, skipped verification handling, source proxy status, and working-context status are now present. Needs dry run. |
 | project review checks code risk, test gaps, scope drift, tool-bridge consistency, and wiki drift | Strengthened | Review checklist, severity, no-finding output, wiki drift, and tool-bridge consistency are now in `project-review`. Needs dry run. |
 | real project can run end-to-end without old project-coding-skills | Not yet proven | Needs an acceptance run or dry-run on a real multi-module project. |
 
@@ -89,14 +89,15 @@ Already present:
 - regression coverage guidance
 - verification and bug summary update
 
-MVP gaps:
+MVP gaps addressed:
 
-- Add reproduction evidence format.
-- Add failure-to-reproduce path.
-- Add scope escalation rule for bugs that cross module boundaries.
-- Add final diagnosis and verification report format.
+- Reproduction evidence format, failure-to-reproduce path, bug scope escalation, and final report were added.
 
-Priority: P1.
+Remaining:
+
+- Validate with a real failed test, log, or runtime symptom.
+
+Priority: dry-run.
 
 ### project-finish
 
@@ -107,14 +108,15 @@ Already present:
 - affected wiki page sync
 - handoff report
 
-MVP gaps:
+MVP gaps addressed:
 
-- Add changed-file to wiki-page mapping steps.
-- Clarify source proxy status updates when a requirement source has been implemented or invalidated.
-- Add exact handling for skipped verification.
-- Add status transitions for working-context pages.
+- Changed-file mapping, source proxy status, skipped verification handling, and working-context status transitions were added.
 
-Priority: P1.
+Remaining:
+
+- Validate with a real finished change.
+
+Priority: dry-run.
 
 ### project-review
 
@@ -137,10 +139,9 @@ Priority: dry-run.
 
 ## Next Implementation Order
 
-1. Strengthen `project-fix` and `project-finish` P1 details.
-2. Use `acceptance-cases.md` to run pressure scenarios.
-3. Run one end-to-end dry run on a real multi-module project.
-4. Update this audit from dry-run findings.
+1. Use `acceptance-cases.md` to run pressure scenarios.
+2. Run one end-to-end dry run on a real multi-module project.
+3. Update this audit from dry-run findings.
 
 ## Do Not Do Yet
 
