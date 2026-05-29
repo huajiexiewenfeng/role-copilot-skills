@@ -14,6 +14,8 @@ Before wiki sync, confirm at least one verification result:
 
 If no verification exists, do not claim the work is complete. Ask whether to run verification or record the limitation.
 
+Use verification-before-completion when available before final wiki sync or completion claims.
+
 ## Change Summary
 
 Collect:

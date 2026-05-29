@@ -29,6 +29,7 @@ Read these role-level references as needed:
 
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
+- `../references/superpowers-bridge.md`
 - `../references/templates.md`
 - `../references/llm-wiki-mvp.md`
 
@@ -58,7 +59,11 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - assumptions
    - gaps or questions
 4. If context is insufficient, ask only the smallest necessary question.
-5. Use Superpowers brainstorming or planning skills after context recovery when available.
+5. Bridge to Superpowers-style skills after context recovery when available:
+   - brainstorming for requirement discussion
+   - writing-plans for implementation planning
+   - test-driven-development before code-facing implementation
+   - executing-plans when a written plan exists
 6. Create or update `.llm-wiki/requirements/<change-id>.md`.
 7. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
 8. Do not modify production code until the user confirms implementation or asks to proceed.

@@ -2,6 +2,8 @@
 
 Project Develop Copilot is a skill collection for real project development work. It combines project LLM Wiki maintenance, scoped context recovery, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
 
+It does not replace Superpowers-style skills. It prepares project context, active scopes, and `.llm-wiki` state first, then bridges to brainstorming, planning, TDD, debugging, execution, verification, and review skills inside that controlled context.
+
 English | [Simplified Chinese](./README.zh.md)
 
 ## Skills
@@ -40,6 +42,8 @@ project-init
 ```
 
 `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+
+Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
 ## Context Model
 

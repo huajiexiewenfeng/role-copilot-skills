@@ -14,6 +14,7 @@ Finish project work by syncing verified implementation knowledge back into `.llm
 Read these role-level references:
 
 - `../references/finish-mvp.md`
+- `../references/superpowers-bridge.md`
 - `../references/llm-wiki-mvp.md`
 - `../references/templates.md`
 
@@ -28,17 +29,18 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - lint passed
    - manual verification completed
    - or user accepted that verification could not be run
-3. Summarize actual code and behavior changes.
-4. Update only affected `.llm-wiki` pages:
+3. Use verification-before-completion when available before claiming completion.
+4. Summarize actual code and behavior changes.
+5. Update only affected `.llm-wiki` pages:
    - `.llm-wiki/log.md`
    - related requirement summary
    - related bug summary
    - related module summary
    - related source proxy status
    - related working context status
-5. Mark related `.llm-wiki/working-context/<change-id>.md` as verified, done, blocked, or skipped when one exists.
-6. Record remaining gaps or skipped updates.
-7. Report implementation summary, verification, wiki updates, and next action.
+6. Mark related `.llm-wiki/working-context/<change-id>.md` as verified, done, blocked, or skipped when one exists.
+7. Record remaining gaps or skipped updates.
+8. Report implementation summary, verification, wiki updates, and next action.
 
 ## Safety
 

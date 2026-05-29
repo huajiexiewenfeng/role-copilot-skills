@@ -15,6 +15,7 @@ Read these role-level references:
 
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
+- `../references/superpowers-bridge.md`
 - `../references/templates.md`
 - `../references/llm-wiki-mvp.md`
 
@@ -33,11 +34,13 @@ If installed in a flattened environment, locate equivalent `references/` paths n
    - recent changes
    - working context page, if used
 5. Reproduce the issue or state why reproduction is not currently possible.
-6. Diagnose likely cause before changing code.
-7. Fix only active scopes unless escalation is justified.
-8. Verify the fix.
-9. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
-10. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+6. Bridge to systematic-debugging after evidence and scoped context are captured when available.
+7. Diagnose likely cause before changing code.
+8. Use test-driven-development for regression coverage when feasible.
+9. Fix only active scopes unless escalation is justified.
+10. Verify the fix.
+11. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
+12. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
 
 ## Bug Page Minimum
 

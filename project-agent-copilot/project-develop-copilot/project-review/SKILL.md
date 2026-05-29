@@ -23,6 +23,10 @@ Use available evidence:
 - `.llm-wiki` updates
 - source material and acceptance criteria
 
+## Required Shared References
+
+Read `../references/superpowers-bridge.md` when Superpowers-style review skills are available.
+
 ## Workflow
 
 1. Resolve `project_root`.
@@ -36,8 +40,9 @@ Use available evidence:
    - stale or missing working-context status
    - cross-scope contract risks
    - accidental unrelated file changes
-5. Report findings first.
-6. Include open questions, residual risks, and suggested fixes.
+5. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output format.
+6. Report findings first.
+7. Include open questions, residual risks, and suggested fixes.
 
 ## Output
 

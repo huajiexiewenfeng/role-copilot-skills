@@ -37,12 +37,13 @@ Do not deep-read everything. Compare discovered files against `.llm-wiki/ingest/
 
 1. Run Context Enrichment Gate.
 2. Summarize current project facts, active sources, active scopes, assumptions, and gaps.
-3. If Superpowers brainstorming is available, use it after context summary.
+3. Bridge to Superpowers-style brainstorming and writing-plans after context summary when available.
 4. Define requirement scope and acceptance criteria.
-5. Create or update `.llm-wiki/requirements/<change-id>.md`.
-6. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
-7. Hand off to implementation planning.
-8. Do not modify code until user confirms implementation.
+5. Use test-driven-development before code-facing implementation when available.
+6. Create or update `.llm-wiki/requirements/<change-id>.md`.
+7. Create or update `.llm-wiki/working-context/<change-id>.md` when the change spans multiple modules, uses multiple services, or needs scope escalation tracking.
+8. Hand off to implementation planning.
+9. Do not modify code until user confirms implementation.
 
 ## Requirement Page Minimum
 
@@ -102,11 +103,13 @@ Use this for complex or cross-module work:
 2. Run Context Enrichment Gate.
 3. Summarize symptom, expected behavior, affected scope, evidence, and recent changes.
 4. Reproduce the issue or state why reproduction is not possible.
-5. Diagnose likely cause before code changes.
-6. Fix only active scopes unless escalation is justified.
-7. Verify the fix.
-8. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
-9. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
+5. Bridge to systematic-debugging after scoped evidence is captured when available.
+6. Diagnose likely cause before code changes.
+7. Use test-driven-development for regression coverage when feasible.
+8. Fix only active scopes unless escalation is justified.
+9. Verify the fix.
+10. Create or update `.llm-wiki/working-context/<bug-id>.md` when diagnosis or fix crosses modules.
+11. Update `.llm-wiki/bugs/<bug-id>.md` after verification.
 
 ## Bug Page Minimum
 

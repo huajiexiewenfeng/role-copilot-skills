@@ -13,6 +13,8 @@ Use this reference to run the first usable Project Develop Copilot lifecycle.
 | project finish | Sync verified work | updated wiki summaries and final report |
 | project review | Check consistency | findings and risks |
 
+Project entries own project context. Superpowers-style skills are bridged only after project context recovery. See `superpowers-bridge.md`.
+
 ## Project Root Resolution
 
 Resolve project root in this order:

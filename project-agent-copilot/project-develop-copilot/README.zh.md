@@ -2,6 +2,8 @@
 
 Project Develop Copilot 是面向真实项目开发的 skill 集合。它把项目 LLM Wiki 维护、受控上下文恢复、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
 
+它不替代 Superpowers 类 skills，而是先准备项目上下文、active scopes 和 `.llm-wiki` 状态，再在这个受控上下文里桥接 brainstorming、planning、TDD、debugging、execution、verification 和 review。
+
 [English](./README.md) | 简体中文
 
 ## Skills
@@ -40,6 +42,8 @@ project-init
 ```
 
 `project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+
+Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
 ## 上下文模型
 
