@@ -1,5 +1,7 @@
 # LLM Wiki MVP
 
+Read `north-star.md` first when changing the project wiki contract.
+
 Project `.llm-wiki` is maintained by the agent. Users provide or edit original source materials; the agent maintains the index layer.
 
 This is the internalized project subset of the LLM Wiki idea: small, local, code-aware, and tied to the development lifecycle. It is not a full Obsidian vault workflow.

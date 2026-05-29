@@ -11,6 +11,8 @@ It does not replace Superpowers-style skills. It prepares project context, activ
 
 It also supports OpenSpec-style requirements, existing codegraph context, and Obsidian LLM Wiki ideas as bridges, not hard dependencies. The older project-coding-skills work is treated as the predecessor whose proven project-development ideas are internalized here. See `references/tool-bridge.md`.
 
+When goals, scope, or implementation choices are unclear, use `references/north-star.md` as the source of alignment.
+
 English | [Simplified Chinese](./README.zh.md)
 
 ## Skills

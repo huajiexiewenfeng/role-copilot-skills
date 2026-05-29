@@ -1,5 +1,7 @@
 # Lifecycle MVP
 
+Read `north-star.md` first when changing lifecycle behavior.
+
 Use this reference to run the first usable Project Develop Copilot lifecycle.
 
 ## Entries

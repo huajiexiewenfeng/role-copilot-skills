@@ -27,6 +27,7 @@ Use available evidence:
 
 Read these references when relevant:
 
+- `../references/north-star.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md` when Superpowers-style review skills are available.
 

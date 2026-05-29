@@ -14,6 +14,8 @@ The first implemented collection is `project-develop-copilot`.
 
 Project collections should follow two principles: bridge mature top-level skills and tools instead of rebuilding them, and internalize project LLM Wiki as a small project context layer rather than depending on a separate knowledge-base workflow.
 
+For `project-develop-copilot`, use `project-develop-copilot/references/north-star.md` as the alignment document before completing or changing the skill collection.
+
 ## Current Collections
 
 | Collection | Contains |

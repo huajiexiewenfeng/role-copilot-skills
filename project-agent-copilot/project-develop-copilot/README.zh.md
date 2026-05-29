@@ -11,6 +11,8 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 它也可以桥接 OpenSpec 风格需求机制、已有 codegraph 上下文，以及 Obsidian LLM Wiki 思想，但这些都是桥接对象，不是硬依赖。旧版 project-coding-skills 是前身，它已经验证过的项目开发思想应内化到这里；当前集合是升级版。见 `references/tool-bridge.md`。
 
+当目标、边界或实现取舍不清楚时，以 `references/north-star.md` 作为对齐来源。
+
 [English](./README.md) | 简体中文
 
 ## Skills

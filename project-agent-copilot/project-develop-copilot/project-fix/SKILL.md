@@ -13,6 +13,7 @@ Diagnose and fix bugs through scoped context, evidence, reproduction, implementa
 
 Read these role-level references:
 
+- `../references/north-star.md`
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
 - `../references/tool-bridge.md`

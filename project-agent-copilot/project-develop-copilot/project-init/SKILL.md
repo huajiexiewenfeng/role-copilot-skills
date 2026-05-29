@@ -15,6 +15,7 @@ This skill creates a usable `.llm-wiki` skeleton, discovers modules conservative
 
 Read these role-level references:
 
+- `../references/north-star.md`
 - `../references/lifecycle-mvp.md`
 - `../references/tool-bridge.md`
 - `../references/llm-wiki-mvp.md`

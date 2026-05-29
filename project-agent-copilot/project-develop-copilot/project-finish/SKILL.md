@@ -13,6 +13,7 @@ Finish project work by syncing verified implementation knowledge back into `.llm
 
 Read these role-level references:
 
+- `../references/north-star.md`
 - `../references/finish-mvp.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`

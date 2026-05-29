@@ -15,6 +15,7 @@ This skill creates `.llm-wiki/ingest/index.md` entries and `.llm-wiki/sources/` 
 
 Read these role-level references:
 
+- `../references/north-star.md`
 - `../references/ingest-mvp.md`
 - `../references/tool-bridge.md`
 - `../references/llm-wiki-mvp.md`

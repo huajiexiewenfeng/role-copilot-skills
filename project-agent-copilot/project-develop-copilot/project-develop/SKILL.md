@@ -27,6 +27,7 @@ When sources conflict, name the conflict and prefer the highest authority source
 
 Read these role-level references as needed:
 
+- `../references/north-star.md`
 - `../references/develop-fix-mvp.md`
 - `../references/scoped-working-context.md`
 - `../references/tool-bridge.md`

@@ -1,5 +1,7 @@
 # Tool Bridge
 
+Read `north-star.md` first when changing this bridge.
+
 Project Develop Copilot is an orchestration layer for project development. It should bridge top-level skills and tools instead of reimplementing them.
 
 It is also the upgraded successor of the older project-coding-skills approach. Proven project-coding-skills ideas should be internalized into these project skills, not bridged as an external runtime dependency.
