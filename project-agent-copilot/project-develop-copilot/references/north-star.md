@@ -4,7 +4,7 @@ Read this first when designing, changing, reviewing, or extending Project Develo
 
 ## Mission
 
-Project Develop Copilot is the upgraded successor of project-coding-skills. It internalizes project LLM Wiki and project-coding-skills ideas, then bridges mature top-level skills and tools into one practical project development lifecycle.
+Project Develop Copilot is the upgraded successor of project-coding-skills. It internalizes project LLM Wiki and project-coding-skills ideas, then bridges mature top-level skills and tools into one practical project development lifecycle. It exposes a lifecycle router so users can enter naturally from a PRD, bug, log, review request, or resume request without choosing the correct child skill first.
 
 ## Core Goals
 
@@ -24,7 +24,13 @@ Project Develop Copilot is the upgraded successor of project-coding-skills. It i
    - Superpowers-style brainstorming, planning, TDD, debugging, execution, verification, and review
    - OpenSpec-style requirement discussion, change spec, acceptance criteria, and implementation plan
    - existing codegraph or codeGraphify outputs when present
-4. Provide real, installable project workflow skills:
+4. Provide a natural lifecycle router:
+   - users face Project Develop Copilot, not isolated child skills
+   - every entry is resumable
+   - every entry is scoped
+   - every entry returns to lifecycle
+   - Change Brief, Bug Brief, and working-context pages carry lifecycle state
+5. Provide real, installable project workflow skills:
    - `project-init`
    - `project-ingest`
    - `project-develop`
@@ -36,13 +42,17 @@ Project Develop Copilot is the upgraded successor of project-coding-skills. It i
 
 Project Develop Copilot owns project context:
 
+- lifecycle routing
 - project root resolution
 - `.llm-wiki` protocol
 - ingest/source proxies
 - scoped working context
 - working-context pages for complex or cross-module work
+- Change Brief and Bug Brief state
+- artifact registry
+- progress dashboard state when enabled
 - finish sync
-- review of wiki drift and scope drift
+- review of wiki drift, scope drift, artifact drift, and dashboard drift
 
 External skills and tools own their own expertise:
 
@@ -52,17 +62,20 @@ External skills and tools own their own expertise:
 
 External tools receive scoped project context. They do not choose project scope from scratch.
 
-## Context-First Rule
+## Lifecycle-First Rule
 
-Every development or fix flow follows this order:
+Every entry follows lifecycle-first rules:
 
-1. Resolve project root.
-2. Recover `.llm-wiki` indexes and summaries.
-3. Identify active sources.
-4. Select active, read-only, candidate, and excluded scopes.
-5. Create or reuse working-context when the task is cross-module.
-6. Bridge to external skills or tools only after context is scoped.
-7. Sync decisions, status, gaps, and verified outcomes back to `.llm-wiki`.
+1. Route natural user intent.
+2. Resolve project root.
+3. Discover new or stale context.
+4. Create or resume lifecycle session.
+5. Recover `.llm-wiki` indexes and summaries.
+6. Identify active sources.
+7. Select active, read-only, candidate, and excluded scopes.
+8. Create or reuse working-context when the task is cross-module.
+9. Bridge to external skills or tools only after context is scoped.
+10. Verify, sync knowledge, register artifacts, update dashboard state when enabled, and review drift.
 
 ## Non-Goals
 
@@ -84,5 +97,8 @@ For the MVP to be considered complete:
 - project develop and project fix load only relevant scoped context
 - working-context handles complex or cross-module work
 - project finish updates wiki only after verification or an explicit limitation
-- project review checks code risk, test gaps, scope drift, tool-bridge consistency, and wiki drift
+- project review checks code risk, test gaps, scope drift, tool-bridge consistency, wiki drift, artifact drift, and progress dashboard drift when enabled
+- users can start from natural intent without manually choosing the correct child skill
+- lifecycle sessions keep requirement, bug, scope, plan, verification, and handoff state recoverable
+- finish and review check artifact drift, and progress dashboard drift when enabled
 - a real project can run through init, ingest, develop or fix, finish, and review without needing the old project-coding-skills
