@@ -15,11 +15,11 @@ DevOps Agent Copilot 是 Role Copilot Skills 里的 DevOps 角色组。
 | Skill | 使用场景 |
 |---|---|
 | `devops-package-copilot` | 用户用自然语言要求打包项目时，读取项目本地 `docs/docker-build-*.md` 规则，并调用已有打包脚本。 |
+| `devops-release-copilot` | 镜像打包完成后，准备发布交接：同步镜像 tag、Docker Compose 文件和 application 环境变量。 |
 
 计划中的 skills：
 
 - `devops-ci-diagnose-copilot`
-- `devops-release-copilot`
 
 ## 安装
 
@@ -27,6 +27,12 @@ DevOps Agent Copilot 是 Role Copilot Skills 里的 DevOps 角色组。
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-package-copilot
+```
+
+安装发布 skill：
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-release-copilot
 ```
 
 ## 典型流程

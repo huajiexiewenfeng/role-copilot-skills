@@ -15,11 +15,11 @@ It is designed for teams that already have build scripts, CI/CD workflows, deplo
 | Skill | Use When |
 |---|---|
 | `devops-package-copilot` | Package local projects from natural language by reading project-local `docs/docker-build-*.md` rules and calling existing build scripts. |
+| `devops-release-copilot` | Prepare release handoff updates by syncing built image tags, Docker Compose files, and application environment variables. |
 
 Planned skills:
 
 - `devops-ci-diagnose-copilot`
-- `devops-release-copilot`
 
 ## Install
 
@@ -27,6 +27,12 @@ Install the package skill:
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-package-copilot
+```
+
+Install the release skill:
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/devops-agent-copilot/devops-release-copilot
 ```
 
 ## Typical Workflow
