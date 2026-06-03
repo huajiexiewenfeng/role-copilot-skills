@@ -66,14 +66,19 @@ Reuse context only inside the same session. When the user changes `project_root`
    - Locate matching `image:` lines for each requested module.
    - Update stable release tags such as `<imageBaseName>-release:<version>`.
 6. Synchronize runtime environment variables when requested or naturally implied by the release update.
+   - For every updated Java/Spring service, environment synchronization is mandatory unless the user explicitly says to update image tags only.
+   - Locate the updated module's `application*.yml`, `application*.yaml`, and `application*.properties` files before reporting completion.
    - Compare application configuration placeholders with each service's compose `environment`.
    - Add missing variables with defaults only when they can be read from application configuration.
    - Do not overwrite existing compose values.
+   - Report variables that were added, already present, skipped because they lack defaults, or skipped because service/module mapping was ambiguous.
    - For the detailed compose workflow, read `references/compose-sync-workflow.md`.
 7. Verify.
    - Confirm the target version directory exists.
    - Confirm compose files exist in the target deployment path.
    - Re-read changed compose lines.
+   - Re-run the application-vs-compose environment comparison for updated Java/Spring services.
+   - Do not report the release update as complete while mandatory application placeholders are missing from compose unless they are explicitly listed as skipped with a reason.
    - Run `git diff` in the deployment repository if it is a Git worktree.
    - Confirm no unintended init/job images were changed.
 8. Report.
@@ -119,7 +124,7 @@ Ask only for missing critical values:
 - Multiple compose files contain plausible matches and the intended target is unclear.
 - Environment variable defaults are required but no application config can be found.
 
-Do not ask whether to inspect application configuration when the user says environment variables should be synchronized; inspect it.
+Do not ask whether to inspect application configuration when the user says environment variables should be synchronized; inspect it. When a Java/Spring service image tag is updated, inspect application configuration by default unless the user explicitly requested image-tag-only changes.
 
 ## Safety
 

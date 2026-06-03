@@ -94,6 +94,8 @@ unless the user explicitly requested the init image.
 
 ## Environment Variable Sync
 
+Environment sync is a completion gate for every updated Java/Spring service unless the user explicitly asks to update image tags only. Do not report the release update as complete until application placeholders have been compared with the compose service environment and every missing variable is either added or reported as skipped with a reason.
+
 For each updated Java/Spring service:
 
 1. Locate application configuration files under the module path:
@@ -111,6 +113,8 @@ For each updated Java/Spring service:
 5. Add missing variables using the default from application config.
 6. If no default exists, add an empty value only when the project convention already uses explicit empty values. Otherwise report it as needing review.
 7. Never overwrite existing compose values.
+8. Keep legacy compose variables when they may still be consumed by older code, but still add the new placeholders required by the updated service.
+9. Report variables in four groups: added, already present, skipped because no default was available, and skipped because service/module mapping was ambiguous.
 
 Use compose-specific operational values when already present. For example, if compose has:
 
@@ -140,7 +144,8 @@ After editing:
 4. Confirm the new release tag is present.
 5. Confirm known non-target images stayed unchanged.
 6. Re-run the application-vs-compose environment comparison for updated services.
-7. Show `git diff` for changed deployment files when available.
+7. Fail the verification mentally and continue editing if any mandatory placeholder is still absent from compose and not listed as skipped with a reason.
+8. Show `git diff` for changed deployment files when available.
 
 Report:
 
