@@ -9,7 +9,7 @@ description: Use when initializing or refreshing a project-local LLM Wiki, adopt
 
 Initialize or refresh project-local development context for Project Develop Copilot.
 
-This skill creates a usable `.llm-wiki` skeleton, discovers modules conservatively, records tool bridge markers, and migrates legacy `docs/ai-coding` as read-only source context. It does not modify production code.
+This skill creates a usable, stable `.llm-wiki` project-context structure, discovers modules conservatively, records tool bridge markers, and migrates legacy `docs/ai-coding` as read-only source context. It follows the project/user language context for generated prose and does not modify production code.
 
 It also produces a context completion plan. Init should not imply the agent fully understands every module. Whole-repository init normally reaches project navigation readiness, then guides the user to complete source-backed scoped contexts before feature or bug work.
 
@@ -54,6 +54,11 @@ Use when the router or user needs to:
 6. Check for legacy `docs/ai-coding/`.
 7. Treat graph outputs as optional supporting context only when explicitly active or requested.
 8. Preserve useful existing `.llm-wiki` content before writing updates.
+9. Detect the project language before writing generated prose:
+   - prefer the user conversation language when clear;
+   - otherwise prefer the dominant language of existing project docs and legacy context;
+   - keep code identifiers, paths, command names, status ids, and protocol terms unchanged;
+   - if the project is bilingual, use the user-facing language for prose and preserve technical English terms inline.
 
 ## Core Process
 
@@ -69,18 +74,71 @@ Workflow:
 
 1. Resolve project root.
 2. Inspect project markers under the resolved project root only: `.git`, build files, `docs/`, `.llm-wiki/`, legacy `docs/ai-coding/`, and explicitly active graph outputs.
-3. Create missing `.llm-wiki` directories and starter files.
-4. Ensure `.llm-wiki/working-context/` exists.
+3. Create missing `.llm-wiki` standard directories and starter files. Do not use an ad-hoc minimal layout when the project development lifecycle expects the standard structure.
+4. Ensure the standard `.llm-wiki` directory structure exists; create missing directories without deleting extra existing directories.
 5. Create or update `.llm-wiki/modules/index.md`.
 6. Create `.llm-wiki/modules/<scope>/` only for user-selected or clearly active scopes that need source-backed context.
 7. Detect modules conservatively from build files and top-level service directories.
 8. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
-8. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
-9. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
-10. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
-11. Preserve existing statuses unless evidence or user instruction changes them.
-12. Write a `.llm-wiki/log.md` entry.
-13. Return a concise handoff with the current init completion level.
+9. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
+10. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
+11. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
+12. Preserve existing statuses unless evidence or user instruction changes them.
+13. Write a `.llm-wiki/log.md` entry.
+14. Return a concise handoff with the current init completion level.
+15. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
+
+## Language Policy
+
+Generated `.llm-wiki` prose must follow the actual project and user language context.
+
+- If the user asks in Chinese and project docs are Chinese or bilingual, write wiki prose in Chinese.
+- If the repository docs are primarily English and the user has not asked for another language, write prose in English.
+- Preserve exact code identifiers, module names, paths, commands, protocol terms, status ids, and lifecycle level names.
+- For mixed-language projects, use the user's language for explanations and keep technical English terms inline where that is clearer.
+- Do not silently fall back to English templates when the surrounding context is Chinese.
+
+## Standard `.llm-wiki` Structure
+
+A project init must create or preserve this standard structure. Some directories may contain only a `README.md` or `.gitkeep` starter during init, but the directories themselves should exist so later lifecycle skills have stable targets.
+
+```text
+.llm-wiki/
+  README.md
+  log.md
+  project/
+  requirements/
+  ingest/
+  modules/
+  sources/
+  migration/
+  working-context/
+  decisions/
+  verification/
+  handoff/
+```
+
+Minimum starter files:
+
+- `.llm-wiki/README.md`: root evidence, init mode, current level, and key artifacts.
+- `.llm-wiki/project/overview.md`: project-level orientation and source-of-truth notes.
+- `.llm-wiki/requirements/README.md`: requirement intake/status landing area.
+- `.llm-wiki/ingest/README.md`: imported PRD/log/doc/source-proxy landing area.
+- `.llm-wiki/modules/index.md`: module inventory table.
+- `.llm-wiki/modules/<scope>/README.md`: scoped-context landing area only for selected or clearly active scopes.
+- `.llm-wiki/sources/registry.md`: source and supporting-context registry.
+- `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
+- `.llm-wiki/working-context/README.md`: active task scratch area.
+- `.llm-wiki/decisions/README.md`: durable project decisions landing area.
+- `.llm-wiki/verification/README.md`: verification commands, gaps, and evidence landing area.
+- `.llm-wiki/handoff/README.md`: handoff summaries and return handoffs.
+- `.llm-wiki/context-completion-plan.md`: recommended scoped contexts and missing facts.
+
+Refresh rules:
+
+- Preserve existing directories and richer files even if they are not listed above.
+- Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
+- If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
 
 ## Mode / Entry Selection
 
@@ -168,6 +226,8 @@ Return:
 - Do not deep-read every module in a monorepo.
 - Do not treat generated AI docs as source of truth.
 - Do not overwrite existing `.llm-wiki` summaries without preserving useful user or agent decisions.
+- Do not generate English prose by default when the project/user context is Chinese or another non-English language.
+- Do not omit standard lifecycle directories such as `requirements/`, `ingest/`, `project/`, `modules/`, `decisions/`, `verification/`, or `handoff/` during init.
 - Do not require codegraph generation.
 - Do not silently switch into a child module just because it has richer build files; record it as a module under the chosen root unless the user confirms it is the root.
 - Do not write facts from another checkout or previous conversation into the current `.llm-wiki`.
@@ -212,6 +272,8 @@ If the user corrects the project root after `.llm-wiki` was written:
 ## Common Mistakes
 
 - Turning init into full codebase analysis.
+- Using English boilerplate in a Chinese project or conversation.
+- Creating a smaller ad-hoc `.llm-wiki` layout that breaks lifecycle skills expecting standard directories.
 - Marking every discovered module active.
 - Rewriting existing wiki content destructively.
 - Treating legacy AI docs as authoritative.
