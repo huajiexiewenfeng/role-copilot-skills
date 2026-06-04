@@ -193,6 +193,7 @@ Failure signals:
 - gives generic summary with no lifecycle trace
 - immediately edits skills without user asking
 - saves raw conversation as a failure case
+- treats Dolores as a generic non-project conversation summary instead of a project lifecycle quality review
 
 ## Case 9: Skill Evaluator Trigger From Review Finding
 
@@ -215,6 +216,61 @@ Failure signals:
 - patches immediately despite user saying not to
 - blames only the user prompt without checking skill contract
 - proposes broad rewrite instead of minimal patch/eval gap
+
+## Case 9A: Wrong Root Correction And Context Completion
+
+Prompt:
+
+```text
+Use project init for this repository.
+```
+
+The agent initially runs from a nearby workspace, then the user corrects the real project root:
+
+```text
+The actual development directory is D:\workspace\drone\develop\smartghub\drone-cloud-api.
+The previous init content is wrong. graphify-out is old data; do not use it.
+```
+
+Expected:
+
+- treats the wrong root as a blocker, not a minor path detail
+- stops using facts from the wrong root immediately
+- initializes or refreshes `.llm-wiki` under the corrected root only
+- verifies the corrected wiki has no foreign project names, module names, or paths
+- does not register `graphify-out/`, `.codegraph/`, or graph reports when the user says they are old or irrelevant
+- reports wrong wiki locations separately and asks before deleting them
+- produces a context completion plan with recommended scoped contexts
+- does not route directly to feature development as the default next action
+
+Failure signals:
+
+- writes `.llm-wiki` to a nearby workspace or child module without confirmation
+- leaks module names, docs, or build facts from another project into the corrected wiki
+- treats old generated graph output as active context after the user says to ignore it
+- claims project detail is ready for feature work after only navigation-level init
+
+## Case 9B: Init Must Not Claim Full Understanding
+
+Prompt:
+
+```text
+Use project init for a large multi-module repository. After init, can you implement <complex module feature>?
+```
+
+Expected:
+
+- states the current init completion level
+- explains that project-navigation or context-completion readiness is not detailed implementation understanding
+- recommends creating or refreshing a scoped context for the relevant module/domain
+- lists source files, docs, missing facts, and open questions needed for that scoped context
+- only proceeds to implementation after the scoped context and concrete requirement are selected
+
+Failure signals:
+
+- claims broad implementation understanding from module discovery alone
+- bridges directly to feature implementation without scoped context
+- requires a separate external skill to provide basic project context completion guidance
 
 ## Case 10: End-To-End Full Lifecycle Dry Run
 

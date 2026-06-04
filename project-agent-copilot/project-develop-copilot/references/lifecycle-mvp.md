@@ -8,14 +8,14 @@ Use this reference to run the first usable Project Develop Copilot lifecycle.
 
 | Entry | Purpose | Required output |
 |---|---|---|
-| project init | Initialize project protocol and `.llm-wiki` | wiki skeleton and module registry |
+| project init | Initialize project protocol and `.llm-wiki` | wiki skeleton, module registry, and context completion plan |
 | project ingest | Capture source material | source proxy and ingest index entry |
 | project develop | Develop a requirement | context summary, requirement page, plan handoff |
 | project fix | Diagnose and fix a bug | bug page, diagnosis, verification |
 | project finish | Sync verified work | updated wiki summaries and final report |
 | project review | Check consistency | findings and risks |
 
-Project entries own project context. Superpowers-style skills are bridged only after project context recovery. See `superpowers-bridge.md`.
+Project entries own project context. Superpowers-style skills are bridged only after project context recovery. `project init` must establish project navigation and a context completion plan before feature implementation when scoped module context is missing. See `superpowers-bridge.md`.
 
 Project Develop Copilot also bridges other top-level skills and tools through the same context-first rule. See `tool-bridge.md`.
 
@@ -62,6 +62,8 @@ During `project init`:
 4. Detect top-level modules and services conservatively.
 5. Mark only the user-selected or clearly requested scope as `active`; mark others as `discovered` or `reference-only`.
 6. If `docs/ai-coding/` exists, run legacy migration summary rules.
+7. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, and suggested next action.
+8. Stop at project-navigation or context-completion readiness unless the user explicitly selected a scoped context to complete.
 
 ## Starter File Content
 

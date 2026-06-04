@@ -7,9 +7,9 @@ description: Use when reviewing project changes for code risk, test gaps, requir
 
 ## Purpose
 
-Review project work for correctness, scope, verification, lifecycle consistency, artifact drift, dashboard drift, and handoff readiness.
+Review project work for correctness, scope, verification, lifecycle consistency, artifact drift, dashboard drift, handoff readiness, and Project Develop Copilot skill improvement.
 
-This skill uses a review stance. Findings come first and are ordered by severity.
+This skill uses a review stance. Findings come first and are ordered by severity. It is the project-facing review gate for lifecycle and context failures, but it does not replace general-purpose conversation review or skill evaluation outside Project Develop Copilot.
 
 ## When to Use
 
@@ -19,6 +19,8 @@ Use when the user asks for:
 - scope drift, wiki drift, artifact drift, or dashboard drift check
 - lifecycle quality check after a project flow
 - evaluator or Dolores trigger decision from project process risk
+- wrong-root recovery, foreign project facts, or cross-session project continuity check
+- project skill rule gap or project lifecycle eval gap review
 
 ## When Not to Use
 
@@ -34,6 +36,20 @@ Use when the user asks for:
 - Artifact Sync Gate check
 - Progress Dashboard Sync Gate check
 - Evolution Gate
+- Project Lifecycle Evaluation Gate
+
+## Project Lifecycle Evaluation Lens
+
+`project-review` owns review for Project Develop Copilot lifecycle work.
+
+It may evaluate:
+
+- lifecycle trace: whether init, ingest, develop, fix, finish, or review followed the project workflow
+- project context integrity: whether `.llm-wiki`, scopes, sources, working-context, artifacts, dashboard, Change Briefs, and Bug Briefs stay consistent with source evidence and user decisions
+- project skill rule gaps: whether a failure shows that a project skill needs a rule, acceptance case, or smaller patch
+- cross-session project continuity: whether the agent recovered from project-local `.llm-wiki` evidence instead of relying on unrecorded chat memory
+
+It must not become a general-purpose Dolores or `skill-evaluator` replacement. For non-project skill failures, use the appropriate external review skill. For project workflow failures, report project skill improvement recommendations inside `project-review`.
 
 ## Required First Check
 
@@ -42,6 +58,7 @@ Use when the user asks for:
 3. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
 4. Check verification evidence.
 5. Check artifact registry and dashboard evidence when present.
+6. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
 
 ## Core Process
 
@@ -66,9 +83,12 @@ Workflow:
 8. Check artifact drift.
 9. Check dashboard drift.
 10. Check external bridge consistency.
-11. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
-12. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
-13. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
+11. Check project root and wiki placement when init/recovery occurred.
+12. Check cross-session project continuity when prior context or previous chat state affects the work.
+13. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
+14. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
+15. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
+16. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
 ## Mode / Entry Selection
 
@@ -90,6 +110,8 @@ Workflow:
 - artifact registry
 - progress dashboard
 - source material and acceptance criteria
+- user corrections that affect project root, scope, source status, or lifecycle behavior
+- cross-session handoff notes when available
 
 ## Outputs
 
@@ -109,6 +131,8 @@ Artifact/dashboard gaps:
 
 Lifecycle quality:
 
+Project skill improvement:
+
 Summary:
 ```
 
@@ -122,6 +146,7 @@ Verification gaps:
 Context/wiki gaps:
 Artifact/dashboard gaps:
 Lifecycle quality:
+Project skill improvement:
 Residual risk:
 Summary:
 ```
@@ -159,6 +184,18 @@ Lifecycle Quality output:
 - blocking: yes | no
 ```
 
+Project skill improvement output when a project workflow failed:
+
+```markdown
+## Project Skill Improvement
+
+- failure_type:
+- likely_project_skill_gap:
+- smallest_useful_patch:
+- suggested_acceptance_case:
+- overfitting_risk:
+```
+
 ## Boundaries
 
 - Do not rewrite code during review unless the user asks for fixes.
@@ -166,6 +203,8 @@ Lifecycle Quality output:
 - Do not report no findings without checking verification and lifecycle drift.
 - Do not run evaluator or Dolores for every ordinary review.
 - Do not treat dashboard as a source of truth.
+- Do not turn project-review into a general-purpose Dolores or skill-evaluator replacement.
+- Do not rely on unrecorded chat memory as project source of truth; prefer `.llm-wiki/log.md`, working-context, artifacts, Change Briefs, and Bug Briefs.
 
 ## Common Mistakes
 
@@ -174,3 +213,5 @@ Lifecycle Quality output:
 - Ignoring missing wiki/artifact/dashboard updates.
 - Treating external bridge output as authoritative without scope checks.
 - Turning Dolores into a generic summary.
+- Missing wrong-root `.llm-wiki` writes or foreign project facts after project-init recovery.
+- Reporting process failure without recommending the minimal project skill rule or acceptance-case improvement.
