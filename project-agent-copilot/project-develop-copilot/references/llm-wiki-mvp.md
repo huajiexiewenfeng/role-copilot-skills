@@ -29,6 +29,8 @@ This is the internalized project subset of the LLM Wiki idea: small, local, code
   working-context/
   modules/
     index.md
+    <scope>/
+      index.md
 ```
 
 ## File Responsibilities
@@ -42,4 +44,17 @@ This is the internalized project subset of the LLM Wiki idea: small, local, code
 - `bugs/`: bug summaries, diagnosis, and verification status.
 - `working-context/`: task-scoped context for complex or cross-module work.
 - `modules/index.md`: module and service registry.
-- `modules/<scope>.md`: only created for active scopes.
+- `modules/<scope>/index.md`: long-lived context for one active module, service, or domain.
+
+## Scope Context Storage
+
+Do not create a separate project-root `scope-context/`, `contexts/`, or new `docs/ai-coding/<scope>/` structure as the Project Develop Copilot primary context store.
+
+Use these locations instead:
+
+- Project-level context belongs in `.llm-wiki/index.md`, `.llm-wiki/modules/index.md`, and shared registries.
+- Scope-level long-lived context belongs under `.llm-wiki/modules/<scope>/`.
+- Change-level or bug-level working context belongs in `.llm-wiki/working-context/<change-id>.md`.
+- Legacy `docs/ai-coding/<scope>/` remains read-only source context unless the user explicitly asks to maintain it.
+
+This keeps one project knowledge entry point while preserving scoped context isolation. A requirement may involve multiple active scopes; in that case, each module keeps its own local context under `modules/<scope>/`, and the cross-module coordination lives in `working-context/<change-id>.md`.

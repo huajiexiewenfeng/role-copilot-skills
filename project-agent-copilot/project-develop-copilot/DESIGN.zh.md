@@ -855,13 +855,13 @@ docs/ai-coding/contexts.md
   -> .llm-wiki/modules/index.md
 
 docs/ai-coding/<scope>/project-profile.md
-  -> .llm-wiki/modules/<scope>.md 的项目画像 / scope 边界
+  -> .llm-wiki/modules/<scope>/index.md 的项目画像 / scope 边界
 
 docs/ai-coding/<scope>/architecture-summary.md
-  -> .llm-wiki/modules/<scope>.md 的架构摘要
+  -> .llm-wiki/modules/<scope>/architecture.md 的架构摘要
 
 docs/ai-coding/<scope>/coding-rules.md
-  -> .llm-wiki/modules/<scope>.md 的本地编码规则摘要
+  -> .llm-wiki/modules/<scope>/rules.md 的本地编码规则摘要
   -> 或 project-develop-copilot 的 scope rules reference
 
 docs/ai-coding/<scope>/ai-context-sources.md
@@ -869,11 +869,11 @@ docs/ai-coding/<scope>/ai-context-sources.md
   -> .llm-wiki/sources/<source-proxy>.md
 
 docs/ai-coding/<scope>/feature-prompt-context.md
-  -> .llm-wiki/modules/<scope>.md 的开发起手检查
+  -> .llm-wiki/modules/<scope>/development.md 的开发起手检查
   -> project develop 的 Context Enrichment Gate 输入
 
 docs/ai-coding/<scope>/open-questions.md
-  -> .llm-wiki/modules/<scope>.md 的 open questions
+  -> .llm-wiki/modules/<scope>/open-questions.md 的 open questions
   -> .llm-wiki/log.md
 ```
 
@@ -899,7 +899,7 @@ docs/ai-coding/dji-dock3-adapter/
   -> Review status: draft
 ```
 
-这种结构已经天然支持目录级 scoped context。迁移后，新体系继续保留 scope 隔离思想，但以 `.llm-wiki/modules/index.md` 和 `.llm-wiki/modules/<scope>.md` 作为主要入口。
+这种结构已经天然支持目录级 scoped context。迁移后，新体系继续保留 scope 隔离思想，但以 `.llm-wiki/modules/index.md` 和 `.llm-wiki/modules/<scope>/` 作为主要入口。
 
 弃用原则：
 
@@ -959,7 +959,7 @@ discovered -> candidate -> active
 升级到 active 后才创建或刷新：
 
 ```text
-.llm-wiki/modules/<scope>.md
+.llm-wiki/modules/<scope>/
 .llm-wiki/working-context/<change-id>.md
 ```
 
@@ -1071,7 +1071,7 @@ finish 阶段需要同步两层 wiki：
 
 ```text
 scope-level:
-  .llm-wiki/modules/<scope>.md
+  .llm-wiki/modules/<scope>/
 
 change-level:
   .llm-wiki/requirements/<change-id>.md

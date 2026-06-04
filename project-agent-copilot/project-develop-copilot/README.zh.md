@@ -1,5 +1,7 @@
 # Project Develop Copilot
 
+![Project Develop Copilot 领导层概览](./assets/project-develop-copilot-leadership.png)
+
 Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两个核心目标：
 
 1. 桥接各个顶级 skills 和 tools，纳入统一项目生命周期。
@@ -16,6 +18,8 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 完整生命周期实现计划见 `references/full-lifecycle-implementation-plan.zh.md`；当前能力缺口见 `references/capability-gap-audit.md`。
 
 生命周期验收场景见 `references/acceptance-cases.md`。
+
+面向领导层的简版设计说明见 `LEADERSHIP-DESIGN.zh.md`。
 
 [English](./README.md) | 简体中文
 
@@ -103,11 +107,18 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
   bugs/
   working-context/
   modules/
+    index.md
+    <scope>/
+      index.md
+      architecture.md
+      rules.md
+      development.md
+      open-questions.md
 ```
 
 这个 wiki 是 LLM Wiki 思想在项目开发中的内化子集：它是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
 
-`working-context/` 只用于复杂或跨模块工作，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个任务上下文里。
+`modules/<scope>/` 保存单个模块、微服务或业务域的长期上下文。`working-context/<change-id>.md` 保存一次需求、Bug 或跨模块变更的任务上下文，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个工作闭环里。
 
 旧版 `docs/ai-coding/` 目录视为迁移来源。新的项目上下文应写入 `.llm-wiki`。
 

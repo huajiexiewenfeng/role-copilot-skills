@@ -66,3 +66,16 @@ Record:
 - verification plan
 
 Scoped context owns local implementation rules. Change working context owns cross-scope coordination.
+
+## Storage Rule
+
+Project Develop Copilot does not create a second context tree under the project root for scope context.
+
+Use:
+
+- `.llm-wiki/modules/<scope>/` for long-lived scope context: module responsibility, boundaries, local architecture summary, local rules, verification commands, and open questions.
+- `.llm-wiki/working-context/<change-id>.md` for task context: active scopes, read-only scopes, candidate scopes, excluded scopes, assumptions, plan status, escalation log, and verification plan.
+
+Legacy `docs/ai-coding/<scope>/` can be indexed or migrated as source context, but it is not the primary write target for new Project Develop Copilot context.
+
+Scoped context is not a requirement boundary. A single requirement or bug may activate multiple module scopes. Keep each module's local knowledge in its own `modules/<scope>/` directory, then use the change working context to coordinate cross-module contracts, permissions, sequencing, and verification.

@@ -72,8 +72,9 @@ Workflow:
 3. Create missing `.llm-wiki` directories and starter files.
 4. Ensure `.llm-wiki/working-context/` exists.
 5. Create or update `.llm-wiki/modules/index.md`.
-6. Detect modules conservatively from build files and top-level service directories.
-7. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
+6. Create `.llm-wiki/modules/<scope>/` only for user-selected or clearly active scopes that need source-backed context.
+7. Detect modules conservatively from build files and top-level service directories.
+8. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
 8. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
 9. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
 10. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
@@ -171,6 +172,7 @@ Return:
 - Do not silently switch into a child module just because it has richer build files; record it as a module under the chosen root unless the user confirms it is the root.
 - Do not write facts from another checkout or previous conversation into the current `.llm-wiki`.
 - Do not route directly to feature development as the default init next action when scoped module context is missing.
+- Do not create a separate project-root `scope-context/`, `contexts/`, or new `docs/ai-coding/<scope>/` tree as the primary context store. Project-level context belongs in `.llm-wiki`; scope-level context belongs under `.llm-wiki/modules/<scope>/`; task-level context belongs in `.llm-wiki/working-context/<change-id>.md`.
 
 ## Init Completion Levels
 

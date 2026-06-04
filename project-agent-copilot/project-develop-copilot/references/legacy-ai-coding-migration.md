@@ -9,12 +9,12 @@ Do not delete, move, or rewrite legacy files during MVP migration.
 | Legacy file | New target |
 |---|---|
 | `docs/ai-coding/contexts.md` | `.llm-wiki/modules/index.md` |
-| `docs/ai-coding/<scope>/project-profile.md` | `.llm-wiki/modules/<scope>.md` |
-| `docs/ai-coding/<scope>/architecture-summary.md` | `.llm-wiki/modules/<scope>.md` |
-| `docs/ai-coding/<scope>/coding-rules.md` | `.llm-wiki/modules/<scope>.md` |
+| `docs/ai-coding/<scope>/project-profile.md` | `.llm-wiki/modules/<scope>/index.md` |
+| `docs/ai-coding/<scope>/architecture-summary.md` | `.llm-wiki/modules/<scope>/architecture.md` |
+| `docs/ai-coding/<scope>/coding-rules.md` | `.llm-wiki/modules/<scope>/rules.md` |
 | `docs/ai-coding/<scope>/ai-context-sources.md` | `.llm-wiki/ingest/index.md` and `.llm-wiki/sources/` |
-| `docs/ai-coding/<scope>/feature-prompt-context.md` | `.llm-wiki/modules/<scope>.md` |
-| `docs/ai-coding/<scope>/open-questions.md` | `.llm-wiki/modules/<scope>.md` and `.llm-wiki/log.md` |
+| `docs/ai-coding/<scope>/feature-prompt-context.md` | `.llm-wiki/modules/<scope>/development.md` |
+| `docs/ai-coding/<scope>/open-questions.md` | `.llm-wiki/modules/<scope>/open-questions.md` and `.llm-wiki/log.md` |
 
 ## Caution Rules
 
