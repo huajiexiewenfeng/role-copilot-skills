@@ -51,6 +51,16 @@ Project Develop Copilot 内化了项目级 LLM Wiki，把 `.llm-wiki` 作为项�
 
 `.llm-wiki` 不替代源码、PRD、issue、测试或设计文档。它更像一层“项目导航和记忆索引”，帮助 AI 在进入任务时快速知道：当前项目是什么、这次应该看哪里、哪些资料可信、哪些结论已经验证过。
 
+它采用三层结构：
+
+| 层级 | 作用 |
+|---|---|
+| 项目总 context | 放在 `.llm-wiki/index.md` 和 `.llm-wiki/modules/index.md`，记录项目整体背景、模块清单、全局规则和共享约束。 |
+| 模块 context | 放在 `.llm-wiki/modules/<scope>/`，每个模块、微服务或业务域有自己的长期上下文，包括职责边界、架构摘要、本地规则、开发起手信息和待补问题。 |
+| 需求工作 context | 放在 `.llm-wiki/working-context/<change-id>.md`，记录一次需求、Bug 或跨模块变更涉及哪些模块、各模块角色、读写权限、接口契约、执行顺序和验证计划。 |
+
+这里的 scope 不是“一个需求只能限定在一个模块里”。scope 是模块上下文的隔离单元；一个真实需求可以同时激活多个 scopes，由 working-context 负责协调跨模块协作。
+
 它主要沉淀六类信息：
 
 | 内容 | 作用 |
