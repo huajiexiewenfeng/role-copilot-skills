@@ -1,0 +1,162 @@
+# Bug Brief
+
+Bug Brief is the lifecycle session for bug, incident, regression, failed test, runtime error, log symptom, or unexpected behavior work.
+
+It is lighter than a full requirement spec, but it must preserve enough evidence, scope, diagnosis, fix plan, verification, and residual risk for another agent to resume safely.
+
+## Default Path
+
+```text
+.llm-wiki/bugs/<bug-id>.md
+```
+
+Use a stable, human-readable bug id when possible:
+
+```text
+YYYY-MM-DD-short-symptom
+```
+
+## Minimum Template
+
+```markdown
+# Bug Brief: <bug-id>
+
+## Summary
+
+- title:
+- status: draft | triaged | reproduced | diagnosed | planned | ready | executing | verified | done | blocked
+- severity:
+- owner:
+- updated_at:
+
+## Routing
+
+- intent:
+- primary_stage:
+- secondary_bridges:
+- confidence:
+- reason:
+- next_gate:
+- routed_at:
+
+## Source
+
+- path/url/log/user_report:
+- source_proxy:
+- sensitivity:
+
+## Symptom
+
+## Expected
+
+## Evidence
+
+## Reproduction
+
+- status: reproduced | not-reproduced | blocked
+- command_or_steps:
+- observed:
+- expected:
+- limitation:
+
+## Scope
+
+- active:
+- read_only:
+- candidate:
+- excluded:
+- escalation_history:
+
+## Diagnosis
+
+## Fix Plan
+
+## Verification
+
+- status: passed | failed | partial | blocked | not-run
+- commands_or_checks:
+- result_summary:
+- limitation:
+- residual_risk:
+
+## Artifacts
+
+## Open Questions
+
+## Residual Risk
+```
+
+## Status Rules
+
+| Status | Meaning |
+|---|---|
+| `draft` | Bug is reported but not yet triaged. |
+| `triaged` | Symptom, source, and likely scope are recorded. |
+| `reproduced` | Reproduction is available or evidence is strong enough to proceed. |
+| `diagnosed` | Likely cause is identified with evidence. |
+| `planned` | Fix plan exists but execution is not confirmed or not started. |
+| `ready` | Scope, plan, and risk are clear enough to execute. |
+| `executing` | Fix is in progress. |
+| `verified` | Fix has verification evidence but may still need finish/review sync. |
+| `done` | Finish sync and review readiness are complete or explicitly accepted. |
+| `blocked` | Progress requires user input, missing access, missing environment, or accepted limitation. |
+
+## Bug Evidence Gate
+
+Before broad diagnosis or code edits, record:
+
+```markdown
+- symptom:
+- expected:
+- evidence:
+- reproduction_status:
+- likely_scope:
+- severity:
+- safe_next_action:
+```
+
+If reproduction is blocked, explain the limitation and choose the safest next action.
+
+## Scope Rules
+
+- Start with the narrowest active scope supported by evidence.
+- Put suspected but unproven modules in `candidate` or `read_only`.
+- Do not edit read-only, candidate, or excluded scope without scope escalation.
+- Record escalation reason before expanding active scope.
+- If a debugging bridge recommends new scope, route that recommendation through Return Handoff before editing.
+
+## External Debugging Bridge
+
+Systematic debugging and similar skills are bridges. They receive Context Handoff and return Return Handoff.
+
+They must not:
+
+- choose project scope from scratch
+- bypass Bug Evidence Gate
+- edit outside active scope without escalation
+- declare the bug fixed without Verification Gate
+
+## Verification Rules
+
+Bug work is not done until verification is recorded or the user explicitly accepts a limitation.
+
+Use:
+
+```markdown
+- verification_status:
+- commands_or_checks:
+- observed_result:
+- limitation:
+- residual_risk:
+```
+
+Partial verification can support handoff, but the final response must not claim full completion.
+
+## Common Mistakes
+
+- Treating a log as enough to edit broad code without scope.
+- Starting systematic-debugging before Bug Brief exists.
+- Not distinguishing reproduced, not-reproduced, and blocked.
+- Expanding from one service to another without evidence.
+- Updating wiki or dashboard as if the fix is verified when tests did not run.
+- Saving sensitive raw logs instead of source proxies and summaries.

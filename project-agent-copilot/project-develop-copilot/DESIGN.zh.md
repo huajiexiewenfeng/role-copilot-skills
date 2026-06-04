@@ -119,7 +119,7 @@ review 和合并前检查。
 
 ## Lifecycle Router
 
-Project Develop Copilot 必须提供一个总入口，而不是要求用户准确选择 `project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish` 或 `project-review`。
+Project Develop Copilot 必须提供一个总入口，而不是要求用户准确选择 `project-query`、`project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish` 或 `project-review`。
 
 用户可以用自然语言进入项目生命周期，例如：
 
@@ -132,7 +132,7 @@ Project Develop Copilot 必须提供一个总入口，而不是要求用户准�
 帮我 review 一下
 ```
 
-Router 的职责不是简单分发子 skill，而是先创建或恢复一个生命周期会话，再决定当前应该进入哪个阶段。用户面对的是 Project Develop Copilot；六个 project skills 是内部阶段能力。
+Router 的职责不是简单分发子 skill，而是先创建或恢复一个生命周期会话，再决定当前应该进入哪个阶段。用户面对的是 Project Develop Copilot；七个 project skills 是内部阶段能力。
 
 Router 输入：
 
@@ -160,6 +160,7 @@ open_questions:
 
 - 如果项目没有 `.llm-wiki`，先建议或执行 `project-init`，但不要阻塞用户表达的真实目标。
 - 如果用户输入的是 PRD、设计文档、会议纪要、链接、PDF、Word、日志或截图，先进入 `project-ingest`，再判断是否转入 requirement、bug 或 evidence。
+- 如果用户表达“基于项目 wiki 回答、找一下相关需求/开发文档、把上下文找出来、先不要开发、我们先讨论”，进入 `project-query`。
 - 如果用户表达“开发、实现、改需求、做功能”，进入 `project-develop`，但必须先创建或恢复 Change Brief。
 - 如果用户表达“bug、报错、失败、异常、日志、线上问题”，进入 `project-fix`，但必须先创建或恢复 Bug Brief / Change Brief。
 - 如果用户表达“继续、上次、按计划执行”，优先恢复最近 active / ready / executing 的 Change Brief；若存在多个候选，询问用户选择。
@@ -167,6 +168,39 @@ open_questions:
 - 如果用户表达“review、检查、合并前看一下、有没有风险”，进入 `project-review`。
 - 如果用户意图不清楚，Router 只问一个最小澄清问题，不把用户拖进长表单。
 
+
+### Thinking Router 借鉴
+
+Lifecycle Router 可以参考 `huajiexiewenfeng/thinking-skills` 中 `thinking-router` 的路由纪律，但不能照搬为普通 domain skill router。
+
+可借鉴的原则：
+
+- Router 不解决实体问题，只判断意图、恢复状态和选择下一阶段。
+- Router 先判断是否需要进入完整生命周期；轻量问答可以走 lightweight-answer，不强行创建 Change Brief。
+- Router 选择一个 primary stage，例如 `project-develop` 或 `project-fix`。
+- Router 可以携带 optional secondary bridge，例如 brainstorming、systematic-debugging、writing-plans 或 verification-before-completion。
+- 低置信度时只问一个最小路由问题，不启动长表单。
+- Router 输出简短 routing record，供后续 Agent 恢复判断依据。
+
+与 thinking-router 的关键差异：
+
+- thinking-router 路由后可以把控制权交给 domain skill；Lifecycle Router 不能完全放手。
+- Project Develop Copilot 必须持续拥有 lifecycle session、scope、Change Brief / Bug Brief、Artifact Registry、progress dashboard、finish 和 review。
+- 外部 skills 只作为 bridge，不能成为生命周期主线。
+
+推荐 routing record：
+
+```text
+Intent:
+Primary stage:
+Secondary bridges:
+Lifecycle session:
+Active sources:
+Active scopes:
+Confidence:
+Reason:
+Next gate:
+```
 核心原则：
 
 ```text
@@ -177,6 +211,74 @@ Every entry returns to lifecycle.
 
 也就是说，不管从哪个入口进入，都必须能恢复上下文、限定 scope，并最终回到 finish / review / wiki sync / artifact sync 的生命周期闭环。
 
+## Lightweight Answer Mode
+
+Lifecycle Router 不应该把所有项目相关问题都强行升级为完整生命周期。Project Develop Copilot 需要保留轻量回答模式，用于用户只想快速理解、定位或确认某个信息的场景。
+
+适合 lightweight-answer 的场景：
+
+- 用户只询问某个 README、设计文档、skill 文件或目录的含义。
+- 用户询问当前设计里的某个概念，例如 Gate、Artifact Registry、Change Brief。
+- 用户只要求解释、对比、定位文件或给出建议，不要求执行开发、修复、同步、review 或交付。
+- 用户明确说“先讨论一下”“不开发”“不用进入流程”。
+
+lightweight-answer 的边界：
+
+- 不创建 Change Brief 或 Bug Brief，除非用户要求保存讨论结果。
+- 不修改代码、skill、wiki、artifact 或 dashboard。
+- 不宣称需求完成、bug 修复完成或项目状态已更新。
+- 不调用外部 implementation skills。
+- 可以引用 `.llm-wiki`、DESIGN、README、references 或源码作为只读证据。
+
+必须升级到完整 lifecycle 的场景：
+
+- 用户要求开发、修 bug、执行计划、finish、review、提交、发布或更新项目状态。
+- 用户提供 PRD、日志、错误信息、diff 或测试失败，并希望继续处理。
+- 讨论已经产生明确需求、bug、验收标准、计划或待执行项。
+- 回答会影响 scope、验证、artifact、dashboard 或 `.llm-wiki` 状态。
+
+升级时 Router 应说明升级原因，并创建或恢复 Lifecycle Session。
+## Project Query Mode
+
+`project-query` 是 Project Develop Copilot 的只读项目知识查询入口，设计目标接近 Obsidian LLM Wiki 的 `obsidian-wiki-query`，但作用域限定在当前项目的 `.llm-wiki`。
+
+它解决的不是“是否开发”，而是“先把和这个问题有关的项目证据找出来，方便继续讨论”。用户可能只是想理解历史需求、设计文档、bug 背景、模块边界、风险或之前的决策，不应该因此被强行带入 Change Brief、Bug Brief 或执行计划。
+
+适合 `project-query` 的触发语言：
+
+```text
+基于这个项目的 llm wiki 回答一下...
+帮我找一下某个功能相关的需求和开发文档。
+先把上下文找出来，我们讨论一下。
+这个模块之前有哪些设计、bug、风险和决策？
+不要开发，先看项目 wiki 里的证据。
+```
+
+`project-query` 的读取顺序：
+
+1. 解析项目根目录和 `.llm-wiki/index.md`。
+2. 查看 `.llm-wiki/modules/`、`.llm-wiki/ingest/index.md`、`.llm-wiki/requirements/`、`.llm-wiki/bugs/`、`.llm-wiki/sources/`、`.llm-wiki/working-context/` 和 artifact 记录。
+3. 根据用户主题搜索相关页面，必要时回到 source proxy 或原始文档进行只读核验。
+4. 输出 Project Context Pack，而不是实现计划。
+
+Project Context Pack 至少包含：
+
+- Answer：基于证据的直接回答。
+- Relevant Context：相关需求、bug、source proxy、artifact、working-context 或模块页面。
+- Evidence：引用哪些项目 wiki 页面或原始资料。
+- Inference：哪些判断是 Agent 推断，不是文档明说。
+- Confidence：上下文是否完整、是否可能过期。
+- Possible Next Routes：继续讨论、补充 ingest、创建 Change Brief、创建 Bug Brief、进入 review、触发 skill-evaluator 或 Dolores。
+
+边界：
+
+- 默认不创建 Change Brief / Bug Brief。
+- 默认不创建或更新 working-context。
+- 默认不改代码、不改 dashboard、不同步 artifact。
+- 如果发现 wiki 缺失或明显过期，可以建议 `project-ingest` 或 `project-init`，但不自动改写状态，除非用户同意。
+- 如果用户在讨论中明确说“那就开始做”“按这个修”“进入 review”“记录成需求”，Router 再升级到对应 lifecycle stage。
+
+`project-query` 和 `lightweight-answer` 的区别：lightweight-answer 适合不需要项目 wiki 搜索的快速解释；`project-query` 需要主动检索 `.llm-wiki` 并组装证据。`project-query` 和完整 lifecycle 的区别：它输出讨论上下文，不输出执行闭环。
 ## Lifecycle Session
 
 生命周期会话是 Project Develop Copilot 的状态主线。它不是用户手写表单，而是 Agent 在自然对话和项目操作中维护的轻量状态对象。
@@ -211,10 +313,113 @@ Lifecycle Session 至少要能回答：
 - 是否完成验证和知识回写？
 
 Change Brief 是需求类 Lifecycle Session 的默认实现。Bug Brief 可以复用相同状态思想，但字段更偏向 symptom、evidence、diagnosis、fix 和 verification。
+### Routing Record Persistence
+
+Router 每次进入完整生命周期时，都应保存简短 routing record，避免后续 Agent 不知道为什么进入某个阶段。
+
+保存位置：
+
+- requirement / feature：写入 `.llm-wiki/requirements/<change-id>.md` 的 `## Routing` 区。
+- bug / incident：写入 `.llm-wiki/bugs/<bug-id>.md` 的 `## Routing` 区。
+- cross-module work：同步摘要到 `.llm-wiki/working-context/<change-id>.md`。
+- review-only 且无法绑定现有 session：创建临时 review context，或在 `.llm-wiki/log.md` 记录 routing decision。
+- lightweight-answer：默认不保存 routing record，除非用户要求留痕。
+
+最小字段：
+
+```markdown
+## Routing
+
+- intent:
+- primary_stage:
+- secondary_bridges:
+- confidence:
+- reason:
+- next_gate:
+- routed_at:
+```
+
+Routing record 是决策痕迹，不是长篇推理。它只记录足够让后续 Agent 恢复上下文的结论。
+
+### Bug Brief Minimum
+
+Bug Brief 是 bug 类 Lifecycle Session 的默认状态对象。它不需要完整 PRD，但必须记录足够的证据、scope、诊断和验证状态。
+
+建议路径：
+
+```text
+.llm-wiki/bugs/<bug-id>.md
+```
+
+最小结构：
+
+```markdown
+# Bug Brief: <bug-id>
+
+## Summary
+
+- title:
+- status: draft | triaged | reproduced | diagnosed | planned | ready | executing | verified | done | blocked
+- severity:
+
+## Routing
+
+- intent:
+- primary_stage:
+- secondary_bridges:
+- confidence:
+- reason:
+- next_gate:
+- routed_at:
+
+## Source
+
+- path/url/log/user report:
+- source_proxy:
+
+## Symptom
+
+## Expected
+
+## Evidence
+
+## Reproduction
+
+- status: reproduced | not-reproduced | blocked
+- command_or_steps:
+- observed:
+- expected:
+
+## Scope
+
+- active:
+- read-only:
+- candidate:
+- excluded:
+
+## Diagnosis
+
+## Fix Plan
+
+## Verification
+
+## Artifacts
+
+## Open Questions
+
+## Residual Risk
+```
+
+规则：
+
+- 未复现或证据不足时，不得大范围修改代码，除非用户明确接受风险。
+- 修复计划必须绑定 active scope。
+- 修改 read-only、candidate 或 excluded scope 必须走 scope escalation。
+- 验证通过或限制被明确接受后，才能进入 Knowledge Sync Gate。
 
 ## Lifecycle Gate Stack
 
-Project Develop Copilot 的六个 project skills 不应该各自发明流程，而应该共享同一套生命周期门。不同入口可以跳过不相关的门，但不能绕过会影响安全、scope、状态或证据链的门。
+Project Develop Copilot 的七个 project skills 不应该各自发明流程，而应该共享同一套生命周期门。不同入口可以跳过不相关的门，但不能绕过会影响安全、scope、状态或证据链的门。
 
 推荐 Gate Stack：
 
@@ -249,7 +454,7 @@ Natural User Request
 
 扫描配置的 source directories、docs、PRD、设计文档、日志、会议纪要和用户刚提供的材料，发现未索引或已修改的资料。Discovery 只负责发现和登记候选，不默认深读所有资料。
 
-### Lifecycle Session Gate
+## Lifecycle Session Gate
 
 创建或恢复 Change Brief、Bug Brief 或 Working Context。任何 develop、fix、finish、review 都应该绑定到一个会话；如果无法绑定，必须说明原因并创建临时 review context 或询问用户。
 
@@ -349,6 +554,224 @@ Project Develop Copilot 负责：
 - 外部 skill 不得直接宣称项目完成；完成必须经过 Verification Gate、Knowledge Sync Gate 和 Review Gate。
 
 如果用户直接触发了外部 skill，例如“用 systematic debugging 看这个 bug”，Project Develop Copilot 仍应先建立 lifecycle session，再把该 skill 作为 bridge 调用，最后把诊断、修复、验证和知识回写收回生命周期。
+
+## Project Domain Skill Contract
+
+Project Develop Copilot 的 domain skills 应参考 Superpowers / Thinking Skills 的 skill 写法，让 Router 能稳定判断何时使用、何时不使用、需要先读什么、拥有哪些 Gate、输出什么 handoff。
+
+每个 project domain skill 不应只依赖 `description` 和文件名。它必须暴露足够的路由信号和边界说明。
+
+建议结构：
+
+```markdown
+---
+name:
+description:
+---
+
+# Skill Name
+
+## Purpose
+
+## When to Use
+
+## When Not to Use
+
+## Owned Gates
+
+## Required First Check
+
+## Core Process
+
+## Mode / Entry Selection
+
+## Inputs
+
+## Outputs
+
+## Context Handoff
+
+## Return Handoff
+
+## Boundaries
+
+## Common Mistakes
+```
+
+### Purpose
+
+说明这个 skill 在 Project Develop Copilot 生命周期里负责什么，不负责什么。
+
+### When to Use
+
+列出 Router 可以识别的自然语言信号、项目状态信号和文件/证据类型。例如 bug、PRD、diff、finish、review、resume。
+
+### When Not to Use
+
+列出容易误触发的反例。例如用户只是轻量讨论设计时，不进入 `project-develop`；用户只是问某个文件位置时，不创建 Change Brief。
+
+### Owned Gates
+
+声明这个 skill 负责执行或检查哪些 Gates，例如 Context Enrichment Gate、Bug Evidence Gate、Knowledge Sync Gate、Review Gate。
+
+### Required First Check
+
+进入 skill 后第一件必须确认的事。例如：
+
+- project root 是否明确。
+- 是否已有 `.llm-wiki`。
+- 是否已有 Lifecycle Session。
+- 是否存在 active scope。
+- 是否只是 lightweight-answer。
+
+### Mode / Entry Selection
+
+一个 skill 内部可以有轻量模式和完整模式。例如 `project-develop` 可以区分 requirement discussion、plan confirmation、execution；`project-review` 可以区分 quick diff review、full lifecycle review、Dolores-triggered review。
+
+### Handoff 规则
+
+所有会调用外部 skills 或被 Router 调用的 project skills，都必须支持 Context Handoff 和 Return Handoff。Handoff 必须保持短而结构化，不暴露长推理。
+
+### Common Mistakes
+
+每个 skill 都应该列出最容易导致生命周期割裂的错误。例如：
+
+- 过早实现。
+- 跳过 Context Enrichment Gate。
+- 未创建 Change Brief / Bug Brief。
+- 外部 skill 绕过 scope。
+- finish 未同步 artifact。
+- review 未检查 drift。
+
+这个 contract 的目的不是让每个 SKILL.md 变重，而是让 Router 能读懂 domain skill 的触发边界，并让实现者知道每个 skill 在生命周期里的职责。
+
+## Continuous Skill Evolution
+
+Project Develop Copilot 不只是一组执行 skills，还需要持续进化机制。真实项目使用会暴露 routing mistake、gate skip、scope drift、artifact drift、dashboard drift、输出过重、过早实现、缺少验证等问题；这些问题应该进入可复盘、可评估、可最小修补的改进闭环。
+
+持续进化层可以借鉴 `thinking-skills` 中的 `skill-evaluator` 和 `conversation-review` / Dolores，但对象从 Thinking Skills 的回答质量，转为 Project Develop Copilot 的生命周期质量。
+
+Continuous Skill Evolution 默认不阻塞正常交付；只有用户明确要求复盘、出现高风险流程失败、或 Review Gate 发现流程级问题时，才进入 evaluator 或 Dolores。
+
+### Project Skill Evaluator
+
+Project Skill Evaluator 用于评估一次具体的 project skill failure、golden case candidate 或用户反馈。
+
+触发场景：
+
+- Lifecycle Router 选错 primary stage。
+- Router 没有创建或恢复 Lifecycle Session。
+- `project-develop` 过早进入实现，没有完成 Clarification Gate。
+- `project-fix` 没有复现或诊断就修改代码。
+- 外部 skill 绕过 Project Develop Copilot 的 scope 或状态主线。
+- `project-finish` 没有同步 Change Brief、Bug Brief、Artifact Registry 或 progress dashboard。
+- `project-review` 没有发现 scope drift、wiki drift、artifact drift 或 dashboard drift。
+- 某次响应太长、太重、太像流程表单，破坏自然入口体验。
+- 某次流程特别顺畅，值得保存为 golden case 或 eval。
+
+Evaluator 输出：
+
+```markdown
+## Diagnosis
+
+Case summary:
+Failure or golden type:
+Likely source: router / stage skill / external bridge / gate / reference doc / eval gap
+
+## Eval Gap
+
+Existing coverage:
+New or updated eval:
+
+## Patch Plan
+
+Smallest useful change:
+Files likely affected:
+Overfitting risk:
+Recommendation:
+```
+
+Evaluator 规则：
+
+- 默认不直接重写 skill；先诊断、归因、提出最小 patch。
+- 优先补一个 eval 或明确一个 gate 规则，而不是为单个 case 重写整个 skill。
+- 区分 router 问题、stage skill 问题、external bridge 问题和 reference doc 问题。
+- 不保存原始私人对话、客户资料、真实日志、凭据或敏感上下文；必要时只保存抽象案例。
+- golden case 必须记录可复用行为，不记录普通表扬。
+
+### Project Conversation Review / Dolores
+
+Project Conversation Review 用于复盘完整项目对话轨迹。模式名可以沿用 Dolores，但它在这里关注的是 lifecycle trace，而不是普通回答流。
+
+核心世界观：
+
+```text
+A project conversation is not only an answer stream. It is an observable lifecycle trace.
+```
+
+Dolores 检查：
+
+- 用户从哪个自然入口进入。
+- Router 是否正确识别 intent、primary stage 和 secondary bridge。
+- 是否创建或恢复 Change Brief、Bug Brief 或 Working Context。
+- 哪些 Gates 被执行、跳过或顺序错误。
+- 外部 skills 是否在 scoped context 内工作。
+- scope escalation 是否有证据和确认。
+- implementation 是否过早开始。
+- verification、Knowledge Sync、Artifact Sync、Dashboard Sync 和 Review 是否形成闭环。
+- 哪些失败应该成为 failure case 或 eval。
+- 哪些成功路径值得成为 golden case。
+
+Dolores 输出：
+
+```markdown
+## Lifecycle Trace
+
+## Routing And Gate Trace
+
+## External Bridge Trace
+
+## What Worked
+
+## Failure Signals
+
+## Eval Gaps
+
+## Golden Signals
+
+## Patch Strategy
+
+## Dolores Note
+```
+
+Dolores 规则：
+
+- 轻量复盘只给一两个关键改进点。
+- 深度 Dolores 才展开完整 lifecycle trace。
+- 不把普通总结伪装成 Dolores。
+- 不直接 patch skills，除非用户明确要求进入修改阶段。
+- 不记录原始敏感对话；只抽象为 eval candidate 或 failure pattern。
+
+### Evolution Artifacts
+
+持续进化需要轻量产物，但不应变成大型流程系统。
+
+推荐目录：
+
+```text
+project-agent-copilot/project-develop-copilot/evals/
+project-agent-copilot/project-develop-copilot/cases/failures/
+project-agent-copilot/project-develop-copilot/cases/golden/
+project-agent-copilot/project-develop-copilot/docs/improvement-loop.md
+```
+
+完整开发版本应先落地 reference 级持续进化约定，并预留 eval runner 扩展点。实现时优先覆盖这些 eval：
+
+- 自然语言 bug 请求应进入 Router -> Lifecycle Session -> project-fix，而不是直接 systematic-debugging。
+- 需求讨论请求不应直接进入实现。
+- finish 缺少验证时不得宣称完成。
+- review 应检查 Change Brief、Artifact Registry 和 dashboard drift。
+- 外部 skill 输出必须通过 Return Handoff 回到 Lifecycle Session。
 ## LLM Wiki 合约
 
 项目级 LLM Wiki 是 LLM 自己维护的索引层和归纳层，不是让用户手写的新文档系统。
@@ -861,6 +1284,8 @@ Project Develop Copilot 后续可以维护一个单文件静态 HTML 页面，�
 
 页面定位是“项目状态可视化索引”，不是新的事实源。源码、测试、设计文档、`.llm-wiki`、验收记录和 Artifact Registry 仍然是事实来源；HTML 只负责汇总、展示和帮助团队快速判断当前进度、风险、证据和下一步。
 
+Dashboard 上任何关键状态都必须能回溯到 artifact、`.llm-wiki` 页面、验证记录或 git diff。不能只写自然语言状态，也不能让 dashboard 成为独立事实源。
+
 建议页面分为四个区域：
 
 1. 上半屏：项目驾驶舱
@@ -1318,31 +1743,63 @@ project-test-copilot = 测试质量域 skill
 
 详细协议放入 references，避免主 skill 变成不可维护的超大提示词。
 
-## 最小可行版本
+## 完整开发版本范围
 
-第一版不要做太重。
+这一版不再以割裂 MVP 为目标，而是直接实现完整 Project Develop Copilot 生命周期，再进行集中测试。原因是旧的 MVP 版本已经证明：只实现分散 child skills 会让用户重新面对入口选择问题，无法形成自然、连续、可恢复的项目开发体验。
 
-MVP 包含：
+完整开发版本必须包含：
 
-- `project init`
-- `project ingest`
-- `project develop`
-- `project fix`
-- `project finish`
-- `.llm-wiki/index.md`
-- `.llm-wiki/ingest/index.md`
-- `.llm-wiki/artifacts/index.md`
-- `.llm-wiki/sources/`
-- `.llm-wiki/requirements/`
-- `.llm-wiki/bugs/`
-- `.llm-wiki/log.md`
+- 顶层 Lifecycle Router / 总入口。
+- 七个内部能力 skills：`project-query`、`project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish`、`project-review`。
+- Lightweight Answer Mode。
+- Lifecycle Session：Change Brief、Bug Brief、Working Context。
+- Context Discovery Gate。
+- Context Enrichment Gate。
+- Clarification Gate / Bug Evidence Gate。
+- Context Lock Gate。
+- External Skill Bridge Gate。
+- Verification Gate。
+- Knowledge Sync Gate。
+- Artifact Sync Gate。
+- Progress Dashboard Sync Gate。
+- Review Gate。
+- Project Domain Skill Contract。
+- Continuous Skill Evolution：Project Skill Evaluator、Project Conversation Review / Dolores、eval / failure / golden case 约定。
 
-暂缓：
+完整开发版本需要创建或维护的项目 `.llm-wiki` 能力：
 
-- 自动 CI 集成
-- 自动 CodeGraph 生成
-- 完整 OpenSpec CLI 兼容
-- 复杂提醒系统
+```text
+.llm-wiki/index.md
+.llm-wiki/log.md
+.llm-wiki/AGENTS.md
+.llm-wiki/ingest/index.md
+.llm-wiki/sources/
+.llm-wiki/requirements/
+.llm-wiki/bugs/
+.llm-wiki/working-context/
+.llm-wiki/modules/index.md
+.llm-wiki/artifacts/index.md
+```
+
+完整开发版本需要覆盖的用户入口：
+
+- 从 PRD / 设计文档进入。
+- 从 bug / 日志 / 错误信息进入。
+- 从“继续上次”进入。
+- 从“按计划执行”进入。
+- 从 finish / 交付 / 是否完成进入。
+- 从 review / 合并前检查进入。
+- 从轻量设计讨论或文件定位进入，并正确保持 lightweight-answer。
+
+完整开发版本暂缓但必须保留扩展点：
+
+- 自动 CI 集成。
+- 自动 CodeGraph 生成。
+- 完整 OpenSpec CLI 兼容。
+- 完整 eval runner。
+- 自动创建 GitHub issue / PR automation。
+
+开发顺序可以分阶段，但测试验收应以完整生命周期为对象，而不是只验证单个分散 skill。
 
 ## 流程例外模式
 
@@ -1388,10 +1845,11 @@ MVP 包含：
 Level 1: project init + project ingest + project finish wiki sync
 Level 2: project develop/fix + scoped working context
 Level 3: artifact registry + context freshness + review checks
-Level 4: CI/wiki lint/reminder automation
+Level 3.5: continuous evolution hooks + evaluator/Dolores artifacts
+Level 4: CI/wiki lint/reminder automation + automated eval runner
 ```
 
-默认 MVP 建议做到 Level 2，团队稳定后再进入 Level 3/4。
+完整开发版本建议达到 Level 3.5：总入口、生命周期会话、完整 Gate Stack、Artifact Registry、progress dashboard、review drift 检查，以及 evaluator / Dolores 的触发与记录机制形成闭环。团队稳定后再进入 Level 4，把 CI、wiki lint、提醒和自动 eval runner 接入自动化。
 
 ## 成功标准
 
@@ -1404,4 +1862,7 @@ Level 4: CI/wiki lint/reminder automation
 - 过期 wiki 摘要能被 Context Freshness Check 发现。
 - finish 后 wiki 能反映真实实现结果。
 - wiki 内容轻量，不成为人工文档负担。
+- Project skill 失败可以由 evaluator 复盘，并遵守最小 patch 与 eval-gap 纪律。
+- 完整生命周期对话可以用 Dolores 模式复盘为可观察的 lifecycle trace。
+- 可复用失败和黄金路径可以沉淀为抽象 eval 或 golden case，但不保存原始私人对话。
 - 没有 superpower、CodeGraph 或 OpenSpec 时，流程仍可运行。

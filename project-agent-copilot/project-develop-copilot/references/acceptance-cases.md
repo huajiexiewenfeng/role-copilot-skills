@@ -1,115 +1,275 @@
 # Acceptance Cases
 
-Use these cases before claiming the MVP is complete. They are pressure scenarios for checking whether the six project skills work as a real team workflow.
+Use these cases before claiming the complete Level 3.5 lifecycle is ready for broad testing. They are pressure scenarios for checking whether Project Develop Copilot behaves as one natural lifecycle, not as six isolated skills.
 
-## Case 1: Existing Project With Legacy Context
+Each case should be tested from the top-level `project-develop-copilot` router once the root router skill exists. Child skills may still be invoked directly for narrow verification, but direct invocation does not prove the lifecycle experience works.
 
-Prompt:
-
-```text
-Use project init for this repository. It has docs/ai-coding, multiple services, and may already have .codegraph. Migrate useful context into .llm-wiki without modifying production code.
-```
-
-Expected:
-
-- creates or refreshes `.llm-wiki`
-- preserves existing useful wiki content
-- records modules with `active`, `reference-only`, `discovered`, or `unknown`
-- records `.codegraph` as read-only supporting context when present
-- does not delete or grow legacy `docs/ai-coding`
-
-## Case 2: Many Docs, One Active Requirement
+## Case 1: Lightweight Design Discussion
 
 Prompt:
 
 ```text
-I copied many PRDs into docs/prd, but today I only want to develop the payment callback requirement.
+我们先讨论 Project Develop Copilot 的 dashboard 设计，不开发，也不要更新项目状态。
 ```
 
 Expected:
 
-- reports unindexed or changed docs
-- activates only the relevant source
-- marks other docs as candidate, discovered, or excluded
-- creates or updates one requirement page
-- avoids loading every PRD deeply
+- routes to lightweight-answer
+- does not create Change Brief or Bug Brief
+- does not modify code, `.llm-wiki`, artifacts, or dashboard
+- can reference design docs and existing files as read-only evidence
+- offers a clear upgrade path if the user later says to implement or save the decision
 
-## Case 3: Temporary Source Ingest
+Failure signals:
+
+- creates lifecycle state without user intent
+- invokes implementation/planning/debugging skills
+- claims project status changed
+
+## Case 2: Natural Bug Request With External Debugging Bridge
 
 Prompt:
 
 ```text
-Use project ingest for this PDF/log/URL. It may contain sensitive production details.
+我想改一个 bug，这是 payment callback 的失败日志。先从 payment-service 看，如果需要 order-service，先说明为什么。
 ```
 
 Expected:
 
-- asks before deep reading binary, remote, large, or sensitive material
-- path-indexes or cautious-summarizes as appropriate
-- creates ingest index row and source proxy
-- does not copy secrets or long raw content
+- top-level router selects full lifecycle and primary stage `project-fix`
+- creates or resumes a Bug Brief
+- saves routing record
+- runs Context Enrichment Gate and Bug Evidence Gate
+- marks payment-service active and order-service candidate or read-only until escalation is justified
+- invokes systematic-debugging only as a scoped bridge when useful
+- external debugging returns through Return Handoff
+- does not let systematic-debugging become lifecycle owner
 
-## Case 4: Cross-Service Feature
+Failure signals:
+
+- jumps straight into systematic-debugging with no Bug Brief
+- edits order-service without scope escalation
+- declares fixed before verification
+
+## Case 3: Feature Request With Change Brief And Scope Lock
 
 Prompt:
 
 ```text
-Use project develop for this feature. It should touch order-service and payment-service only. notification-service is reference-only unless evidence requires otherwise.
+我要开发支付回调补偿功能，只允许先改 payment-service 和 order-service，notification-service 只能参考。
 ```
 
 Expected:
 
+- router selects primary stage `project-develop`
+- creates or resumes Change Brief
+- records routing decision
 - runs Context Enrichment Gate
-- outputs Context Handoff
-- creates requirement page
-- creates working-context page
-- records active/read-only/excluded scopes
-- asks before expanding scope
+- records active/read-only/candidate/excluded scopes
+- runs Clarification Gate before planning
+- locks context before execution
+- asks before expanding scope or changing acceptance criteria
 
-## Case 5: Bug With Scope Escalation
+Failure signals:
 
-Prompt:
+- starts implementation before clarification
+- silently includes notification-service as active scope
+- writes a plan that is not linked back to Change Brief
 
-```text
-Use project fix for this failed callback log. Start with payment-service. If order-service is needed, explain why before editing it.
-```
-
-Expected:
-
-- captures bug source
-- reproduces or explains why not
-- bridges systematic-debugging after scoped evidence
-- records scope escalation before editing a new service
-- updates bug summary and working-context after verification
-
-## Case 6: Finish After Partial Verification
+## Case 4: Temporary Source Ingest Attached To Lifecycle
 
 Prompt:
 
 ```text
-Use project finish. Tests could not run locally, but compile passed and manual verification was done.
+这里有一份客户反馈 PDF，可能包含生产细节。把它作为当前支付回调需求的参考资料，但不要复制敏感原文。
 ```
 
 Expected:
 
+- router selects `project-ingest` or routes through current Change Brief into ingest
+- asks before deep-reading binary, large, remote, or sensitive content
+- creates ingest index entry and source proxy
+- links the source proxy to the active Change Brief or working-context
+- stores summary, status, relationship, and gaps, not long raw content
+- registers important document evidence as artifact when appropriate
+
+Failure signals:
+
+- copies long sensitive content into `.llm-wiki`
+- ingests source but does not attach it to lifecycle session
+- treats the PDF as the source of truth over code/tests/user decisions
+
+## Case 5: Finish Sync With Dashboard Evidence
+
+Prompt:
+
+```text
+Use project finish. Tests could not run locally, but compile passed and manual verification was done. Update the project progress page if needed.
+```
+
+Expected:
+
+- checks Verification Gate
 - records explicit verification limitation
 - does not claim full completion
-- updates only affected wiki pages
-- marks working-context status correctly
+- updates affected Change Brief or Bug Brief state
+- updates relevant `.llm-wiki` summaries only from actual changes and accepted limitations
+- registers artifacts and verification evidence
+- updates dashboard state only with links to `.llm-wiki`, artifacts, verification records, or git diff evidence
 - reports residual risk
 
-## Case 7: Review Finds Drift
+Failure signals:
+
+- says done without limitation
+- updates dashboard as an independent fact source
+- writes large implementation narrative into `.llm-wiki`
+
+## Case 6: Review Finds Scope, Wiki, Artifact, And Dashboard Drift
 
 Prompt:
 
 ```text
-Use project review before commit.
+Use project review before commit. 检查这个改动有没有范围漂移、wiki 漂移、artifact 漂移和 dashboard 漂移。
 ```
 
 Expected:
 
 - findings first
 - checks code risk and verification gaps
-- detects changed active scopes that are not in working-context
-- detects missing requirement, bug, module, or source proxy updates
-- checks tool-bridge consistency
+- compares diff against Change Brief, Bug Brief, or working-context active scopes
+- detects changed files outside locked active scope
+- detects missing requirement/bug/module/source updates
+- checks whether important plans, reports, specs, or dashboards are registered as artifacts
+- checks dashboard status against evidence
+- reports no findings only when these checks were actually considered
+
+Failure signals:
+
+- only performs ordinary code review
+- ignores lifecycle state
+- misses dashboard status that is not backed by evidence
+
+## Case 7: Resume Previous Lifecycle Session
+
+Prompt:
+
+```text
+继续上次支付回调那个需求，看看现在下一步该做什么。
+```
+
+Expected:
+
+- router searches for relevant Change Brief, Bug Brief, working-context, recent `.llm-wiki/log.md`, or artifact entries
+- reports the recovered session and confidence
+- identifies current status and next gate
+- asks one minimal clarification only if multiple sessions match
+- does not restart from scratch when recoverable state exists
+
+Failure signals:
+
+- asks the user to choose a child skill
+- ignores existing lifecycle session
+- creates duplicate Change Brief without checking existing context
+
+## Case 8: Conversation Review / Dolores Trigger
+
+Prompt:
+
+```text
+复盘一下刚刚这个 project develop 流程是不是跑偏了，用 Dolores 视角看下。
+```
+
+Expected:
+
+- routes to lifecycle quality review, not ordinary project implementation
+- reconstructs lifecycle trace at a useful abstraction level
+- checks routing, gates, external bridges, scope escalation, verification, sync, dashboard, and review behavior
+- identifies failure signals and eval gaps
+- suggests smallest useful patch or eval candidate
+- does not store raw private conversation or sensitive project data
+
+Failure signals:
+
+- gives generic summary with no lifecycle trace
+- immediately edits skills without user asking
+- saves raw conversation as a failure case
+
+## Case 9: Skill Evaluator Trigger From Review Finding
+
+Prompt:
+
+```text
+Review 发现 project-fix 跳过了 Bug Evidence Gate。评估一下这个 skill 需要怎么改，但先不要直接改。
+```
+
+Expected:
+
+- routes to evaluator-style analysis
+- classifies source as router, stage skill, external bridge, gate, reference doc, or eval gap
+- proposes the smallest useful patch
+- suggests a pressure case if coverage is missing
+- does not rewrite the whole skill by default
+
+Failure signals:
+
+- patches immediately despite user saying not to
+- blames only the user prompt without checking skill contract
+- proposes broad rewrite instead of minimal patch/eval gap
+
+## Case 10: End-To-End Full Lifecycle Dry Run
+
+Prompt sequence:
+
+```text
+Use project init for this repository.
+Use project ingest for docs/prd/payment-callback.md.
+Develop the payment callback requirement with payment-service active and order-service read-only unless needed.
+Now implement the confirmed plan.
+Use project finish after verification.
+Use project review before commit.
+```
+
+Expected:
+
+- init creates or refreshes `.llm-wiki`
+- ingest creates source proxy and links it to requirement context
+- develop creates Change Brief and scoped working-context if cross-module
+- implementation proceeds only after clarification, context lock, and confirmation
+- finish syncs verification, wiki, artifact registry, and dashboard state
+- review checks code risk, test gaps, scope drift, wiki drift, artifact drift, dashboard drift, and bridge consistency
+- final handoff states what is done, what is verified, what is limited, and what remains risky
+
+Failure signals:
+
+- any stage is successful in isolation but lifecycle state cannot be recovered by the next stage
+- external plans/specs/reports are not linked as artifacts
+- dashboard and `.llm-wiki` diverge
+
+
+## Case 11: Project Wiki Query Discussion
+
+Prompt:
+
+```text
+基于这个项目的 llm wiki，帮我找一下支付回调相关的需求、开发文档和之前的讨论上下文。先不要开发，我们先讨论。
+```
+
+Expected:
+
+- router selects `project-query`, not `project-develop`
+- reads `.llm-wiki/index.md` and lightweight indexes first
+- finds related requirement, bug, source proxy, working-context, artifact, or dashboard pages when present
+- returns a Project Context Pack with pages used and confidence
+- does not create Change Brief, Bug Brief, working-context, artifact rows, dashboard updates, or code changes by default
+- offers possible next routes only after answering: develop, fix, ingest, review, evaluator, or Dolores
+
+Failure signals:
+
+- routes directly to implementation or planning
+- creates lifecycle state for exploratory discussion
+- deep-reads raw source before checking `.llm-wiki` indexes
+- answers without naming wiki pages used
+```
+## Completion Rule
+
+Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, and at least one of Cases 8 or 9. Case 10 should be run before release or public recommendation.

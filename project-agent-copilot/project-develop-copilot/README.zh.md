@@ -13,9 +13,9 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 当目标、边界或实现取舍不清楚时，以 `references/north-star.md` 作为对齐来源。
 
-当前 MVP 缺口和实现优先级见 `references/capability-gap-audit.md`。
+完整生命周期实现计划见 `references/full-lifecycle-implementation-plan.zh.md`；当前能力缺口见 `references/capability-gap-audit.md`。
 
-MVP 验收场景见 `references/acceptance-cases.md`。
+生命周期验收场景见 `references/acceptance-cases.md`。
 
 [English](./README.md) | 简体中文
 
@@ -23,6 +23,8 @@ MVP 验收场景见 `references/acceptance-cases.md`。
 
 | Skill | 使用场景 |
 |---|---|
+| `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
+| `project-query` | 查询项目 `.llm-wiki`，查找相关需求、bug、source proxy、artifact 和讨论上下文，不默认进入实现。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
@@ -32,34 +34,60 @@ MVP 验收场景见 `references/acceptance-cases.md`。
 
 ## 安装
 
-安装单个 skill：
+安装顶层 router skill：
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
-本地开发时，在仓库根目录执行：
+本地开发时，在仓库根目录列出所有可用 skills：
 
 ```bash
-npx skills add .
+npx skills add . --list
 ```
+
+子阶段 skills 仍然可以直接安装用于窄范围测试，但正常面向用户的入口是 project-develop-copilot。
 
 ## 生命周期
 
 ```text
-project-init
--> project-ingest
+project-develop-copilot
+-> lightweight-answer
+
+或
+
+project-develop-copilot
+-> project-query / project-init / project-ingest
 -> project-develop 或 project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询和讨论上下文组装。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
 其他顶级工具也遵循同样的 context-first 桥接规则。见 `references/tool-bridge.md`。
 
+## 只读项目查询
+
+当用户只是想基于项目 `.llm-wiki` 讨论问题，而不是立即开发、修 bug 或更新状态时，使用 `project-query`。典型说法包括：
+
+```text
+基于这个项目的 llm wiki，帮我找一下支付回调相关的需求、开发文档和之前的讨论上下文。先不要开发，我们先讨论。
+找一下通知重试相关的需求文档、bug 记录和之前的决策。
+这个模块在项目 wiki 里有哪些风险和历史背景？
+```
+
+预期输出是 Project Context Pack：
+
+- Answer
+- 相关 requirements、bugs、source proxies、artifacts 和 working-context 页面
+- 证据和推断分开
+- 置信度，以及缺失或过期的上下文
+- 可能的下一步路由，例如补充 ingest、创建 Change Brief、创建 Bug Brief、进入 review，或触发 Lifecycle Quality Review
+
+`project-query` 不等同于 `lightweight-answer`：它会主动搜索项目 `.llm-wiki` 并组装证据。它也不等同于完整 lifecycle：除非用户明确要求继续开发、修复、摄入、评审或做 skill 进化，否则它保持只读。
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
@@ -93,6 +121,10 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 - 在上下文恢复或需求讨论阶段，不修改代码；只有用户确认实现后才进入代码修改。
 
 ## 示例
+
+```text
+基于这个项目的 llm wiki，帮我找一下支付回调相关的需求、开发文档和之前的讨论上下文。先不要开发，我们先讨论。
+```
 
 ```text
 Use project init for this repository and migrate legacy docs/ai-coding into .llm-wiki.

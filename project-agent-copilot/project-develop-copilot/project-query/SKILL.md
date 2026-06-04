@@ -1,0 +1,198 @@
+---
+name: project-query
+description: Use when answering, discussing, locating, or synthesizing project questions from a project-local `.llm-wiki`, including finding related requirements, bugs, source proxies, working-context pages, design docs, artifacts, and development notes without starting implementation.
+---
+
+# Project Query
+
+## Purpose
+
+Answer and discuss project questions from a project-local `.llm-wiki` and its linked source materials.
+
+This skill is the Project Develop Copilot equivalent of an Obsidian LLM Wiki query flow. It helps the user quickly find relevant requirements, development docs, bug notes, artifacts, and source proxies, then assemble a small discussion context for follow-up thinking.
+
+It is read-only by default. It does not create Change Briefs, Bug Briefs, working-context pages, dashboard updates, or code changes unless the user explicitly asks to save or act on the discussion.
+
+## When to Use
+
+Use when the user asks to:
+
+- answer a project question from `.llm-wiki`
+- find the requirement, bug, design doc, source proxy, or artifact related to a topic
+- discuss project architecture, decisions, progress, or tradeoffs using existing project context
+- summarize what the project wiki says about a feature, module, bug, or decision
+- assemble context for later development without starting development yet
+- compare related requirements, bugs, source materials, or working-context pages
+- locate evidence before deciding whether to create a requirement, fix a bug, or review a change
+
+Example triggers:
+
+- "基于这个项目的 llm wiki 回答"
+- "从项目 wiki 里找一下这个需求"
+- "这个功能之前有什么开发文档"
+- "帮我找到相关 requirement / bug / working-context"
+- "先把上下文找出来，我们讨论一下"
+- "what does the project wiki say about this module"
+- "find related project docs before we decide what to do"
+
+## When Not to Use
+
+- Do not use for implementation after the user clearly asks to develop; route to `project-develop`.
+- Do not use for bug diagnosis/fix after the user clearly asks to fix; route to `project-fix`.
+- Do not use for adding new source material; route to `project-ingest`.
+- Do not use for finish sync; route to `project-finish`.
+- Do not use for commit/PR review; route to `project-review`.
+- Do not save synthesis back to `.llm-wiki` unless the user explicitly asks to save it.
+
+## Owned Gates
+
+- Lightweight Answer Boundary
+- Context Discovery Gate
+- Project Wiki Query Gate
+- Optional Upgrade Gate
+
+## Required First Check
+
+1. Resolve project root.
+2. Confirm `.llm-wiki` exists.
+3. Decide whether this is read-only project query or full lifecycle work.
+4. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
+5. If the user asks to act on the answer, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
+
+## Core Process
+
+Read as needed:
+
+- `../references/north-star.md`
+- `../references/lifecycle-router.md`
+- `../references/lifecycle-gates.md`
+- `.llm-wiki/index.md`
+- `.llm-wiki/modules/index.md`
+- `.llm-wiki/ingest/index.md`
+- `.llm-wiki/artifacts/index.md`
+- `.llm-wiki/log.md`
+- relevant `.llm-wiki/requirements/*.md`
+- relevant `.llm-wiki/bugs/*.md`
+- relevant `.llm-wiki/sources/*.md`
+- relevant `.llm-wiki/working-context/*.md`
+
+Workflow:
+
+1. Resolve project root and `.llm-wiki` root.
+2. Read `.llm-wiki/index.md` first.
+3. Search lightweight indexes before deep-reading pages.
+4. Read the smallest relevant set of wiki pages.
+5. Fall back to original source files only when wiki summaries are insufficient or stale.
+6. Separate sourced wiki facts from inference.
+7. Return a concise answer and a Project Context Pack.
+8. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
+
+## Mode / Entry Selection
+
+| Mode | Use when |
+|---|---|
+| `quick-lookup` | user asks where a requirement/doc/page/artifact is |
+| `wiki-answer` | user asks a question answerable from project wiki pages |
+| `discussion-context` | user wants context assembled before discussion |
+| `evidence-map` | user asks which docs, requirements, bugs, or artifacts relate to a topic |
+| `upgrade-candidate` | query reveals a likely requirement, bug, stale source, or review issue |
+
+## Inputs
+
+- user question
+- project root
+- `.llm-wiki` root
+- topic, module, requirement, bug, source, artifact, or dashboard hint
+- optional current conversation context
+
+## Outputs
+
+Answer format:
+
+```markdown
+## Answer
+
+## Project Context Pack
+
+- project_root:
+- wiki_pages_used:
+- source_proxies_used:
+- artifacts_used:
+- related_requirements:
+- related_bugs:
+- related_modules:
+- open_questions:
+- confidence:
+
+## Evidence
+
+## Inference
+
+## Possible Next Routes
+```
+
+Rules:
+
+- Name the wiki pages used.
+- State when evidence is insufficient.
+- Do not expose sensitive raw content.
+- Do not present inference as sourced fact.
+- Keep the context pack small enough to feed into later discussion or lifecycle work.
+
+## Context Handoff
+
+If the user upgrades after query, provide a handoff:
+
+```markdown
+## Context Handoff
+
+- lifecycle_session:
+- user_intent:
+- active_sources:
+- active_scope:
+- read_only_scope:
+- candidate_scope:
+- excluded_scope:
+- current_gate:
+- requested_stage_or_bridge:
+- constraints:
+```
+
+For pure query mode, `lifecycle_session` can be `none`.
+
+## Return Handoff
+
+Return:
+
+```markdown
+## Return Handoff
+
+- stage_or_bridge_used: project-query
+- result_summary:
+- changed_assumptions:
+- recommended_scope_changes:
+- artifacts:
+- verification_notes:
+- lifecycle_updates_needed:
+- next_gate:
+```
+
+For read-only query, `lifecycle_updates_needed` is usually `none`.
+
+## Boundaries
+
+- Do not modify code.
+- Do not create or update `.llm-wiki` by default.
+- Do not create Change Brief, Bug Brief, or working-context unless the user explicitly asks to save or act.
+- Do not deep-read every source or module.
+- Do not treat stale wiki summaries as authoritative over source code, tests, or current user decisions.
+- Do not route to full lifecycle just because a topic is development-related.
+
+## Common Mistakes
+
+- Treating every project question as `project-develop`.
+- Creating Change Briefs for exploratory discussion.
+- Ignoring `.llm-wiki` indexes and jumping straight to raw source files.
+- Returning a broad essay instead of a small context pack.
+- Failing to name the wiki pages used.
+- Hiding uncertainty when wiki evidence is stale or missing.

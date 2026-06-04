@@ -29,8 +29,8 @@ External tools must not bypass scoped context or write long transcripts into `.l
 | Bridge | Use | Rule |
 |---|---|---|
 | Superpowers-style skills | brainstorming, planning, TDD, debugging, execution, verification, review | Use after Context Enrichment Gate. See `superpowers-bridge.md`. |
-| OpenSpec-style mechanism | requirement discussion, change spec, acceptance criteria, implementation plan | Use the mechanism and concepts when useful; do not require OpenSpec tooling. Store concise summaries in requirement or working-context pages. |
-| codegraph / codeGraphify | existing generated code graph or module dependency insight | Use when `.codegraph/`, generated graph files, or an installed graph tool already exists. Do not force generation during MVP. |
+| OpenSpec-style mechanism | requirement discussion, change spec, acceptance criteria, implementation plan | Use the lightweight Change Brief mechanism in `change-brief.md`; do not require OpenSpec tooling. Store concise summaries in requirement or working-context pages. |
+| codegraph / codeGraphify | generated code graph, module dependency insight, impact navigation, or ambiguous cross-module scope | Optional enhancement. Detect existing graph context during init, use or suggest during develop/fix when scope is unclear, and verify graph-derived assumptions during review. Do not require generation. |
 | Obsidian LLM Wiki ideas | index, source proxy, summaries, links, gaps, maintenance log | Internalize the project subset as `.llm-wiki`; do not depend on a separate Obsidian workflow. |
 
 ## Internalized Predecessor
@@ -47,6 +47,8 @@ Do not bridge project-coding-skills as an external skill. Treat it as the predec
 When a project still has `docs/ai-coding/`, migrate useful summaries into `.llm-wiki` during `project-init`; do not keep growing the legacy directory.
 
 ## OpenSpec-Style Handoff
+
+For the internalized MVP mechanism, use `change-brief.md`.
 
 When using an OpenSpec-style mechanism, keep the handoff small:
 

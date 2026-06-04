@@ -13,9 +13,9 @@ It also supports OpenSpec-style requirements, existing codegraph context, and Ob
 
 When goals, scope, or implementation choices are unclear, use `references/north-star.md` as the source of alignment.
 
-For current MVP gaps and implementation priority, use `references/capability-gap-audit.md`.
+For the complete lifecycle implementation plan, use `references/full-lifecycle-implementation-plan.zh.md`. For current capability gaps, use `references/capability-gap-audit.md`.
 
-For MVP validation scenarios, use `references/acceptance-cases.md`.
+For lifecycle validation scenarios, use `references/acceptance-cases.md`.
 
 English | [Simplified Chinese](./README.zh.md)
 
@@ -23,6 +23,8 @@ English | [Simplified Chinese](./README.zh.md)
 
 | Skill | Use When |
 |---|---|
+| `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
+| `project-query` | Query project `.llm-wiki` to find related requirements, bugs, source proxies, artifacts, and discussion context without starting implementation. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
@@ -32,34 +34,60 @@ English | [Simplified Chinese](./README.zh.md)
 
 ## Install
 
-Install one skill:
+Install the top-level router skill:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
-For local development from the repository root:
+For local development from the repository root, list all available skills:
 
 ```bash
-npx skills add .
+npx skills add . --list
 ```
+
+Child stage skills can still be installed directly for narrow testing, but the normal user-facing entry is project-develop-copilot.
 
 ## Lifecycle
 
 ```text
-project-init
--> project-ingest
+project-develop-copilot
+-> lightweight-answer
+
+or
+
+project-develop-copilot
+-> project-query / project-init / project-ingest
 -> project-develop or project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup and discussion context. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
 Other top-level tools follow the same context-first bridge rule. See `references/tool-bridge.md`.
 
+## Read-Only Project Query
+
+Use `project-query` when the user wants to discuss the project from its `.llm-wiki` without starting implementation. Typical prompts include:
+
+```text
+Based on this project's llm wiki, find the requirements and development notes related to payment callback. Do not develop yet; let's discuss first.
+Find the related requirement docs, bug notes, and previous decisions for notification retries.
+What does the project wiki say about this module and its current risks?
+```
+
+The expected response is a Project Context Pack:
+
+- Answer
+- Relevant requirements, bugs, source proxies, artifacts, and working-context pages
+- Evidence vs inference
+- Confidence and missing or stale context
+- Possible next routes, such as ingesting missing docs, creating a Change Brief, creating a Bug Brief, starting review, or running Lifecycle Quality Review
+
+`project-query` is different from `lightweight-answer`: it actively searches project `.llm-wiki` and assembles evidence. It is also different from full lifecycle work: it stays read-only unless the user explicitly asks to continue into development, fixing, ingest, review, or skill evolution.
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:
@@ -93,6 +121,10 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 - Do not modify code during context recovery or requirement discussion unless the user confirms implementation.
 
 ## Examples
+
+`	ext
+Based on this project's llm wiki, find the payment callback requirement docs and previous development context. Do not develop yet; let's discuss first.
+`
 
 ```text
 Use project init for this repository and migrate legacy docs/ai-coding into .llm-wiki.

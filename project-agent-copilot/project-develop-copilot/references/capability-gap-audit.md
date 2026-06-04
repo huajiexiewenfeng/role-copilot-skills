@@ -1,152 +1,210 @@
 # Capability Gap Audit
 
-Use this audit after `north-star.md` when deciding what to implement next. It translates the North Star into concrete MVP gaps across the six project skills.
+Use this audit after
+orth-star.md`, `full-lifecycle-implementation-plan.zh.md`, and `dry-run-report-2026-06-04.md` when deciding what remains before broad testing.
+
+This file reflects the current Level 3.5 documentation implementation state. It distinguishes implemented documentation contracts from behavior that still needs real or fixture project validation.
 
 ## Summary
 
-The current collection is installable and directionally aligned. The main remaining work is to turn each skill from a compact workflow description into a reliable operating guide with clear gates, required outputs, and drift checks.
+Project Develop Copilot has moved from a fragmented child-skill collection toward a documented Level 3.5 lifecycle system.
 
-## MVP Status
+Implemented in documentation:
 
-| Done Means item | Status | Notes |
+- top-level `project-develop-copilot` router
+- lightweight-answer boundary
+- lifecycle router protocol
+- lifecycle gate stack
+- domain skill contract
+- Change Brief and Bug Brief protocols
+- Context Handoff / Return Handoff
+- progress dashboard evidence protocol
+- evaluator / Dolores continuous evolution protocol
+- Level 3.5 acceptance cases
+- simulated dry-run report
+
+Not yet proven in runtime:
+
+- full Case 10 end-to-end run on a real project; fixture dry run passed on 2026-06-04
+- duplicate lifecycle session avoidance during resume
+- external bridge behavior with actual `systematic-debugging`, `writing-plans`, and `verification-before-completion`
+- dashboard HTML maintainability and evidence links
+- review detection from real git diffs
+
+## Level 3.5 Status
+
+| Capability | Status | Notes |
 |---|---|---|
-| all six project skills are installable and discoverable | Met | `npx skills add . --list` discovers all six project skills. |
-| project init creates a usable `.llm-wiki` | Strengthened | Starter output, refresh behavior, module statuses, and codegraph read-only handling are now in `project-init`. Needs real-project dry run. |
-| project ingest captures source material safely | Strengthened | Confirmation prompts, stale-source handling, processing modes, and final report are now in `project-ingest`. Needs file-type dry run. |
-| project develop and project fix load only relevant scoped context | Partial | `project-develop` now has handoff, OpenSpec-style summary, escalation, and return handoff. `project-fix` still needs P1 detail. |
-| working-context handles complex or cross-module work | Partial | Template and lifecycle hooks exist, but escalation and contract update behavior need examples and review checks. |
-| project finish updates wiki only after verification or explicit limitation | Strengthened | Verification gate, changed-file mapping, skipped verification handling, source proxy status, and working-context status are now present. Needs dry run. |
-| project review checks code risk, test gaps, scope drift, tool-bridge consistency, and wiki drift | Strengthened | Review checklist, severity, no-finding output, wiki drift, and tool-bridge consistency are now in `project-review`. Needs dry run. |
-| real project can run end-to-end without old project-coding-skills | Not yet proven | Needs an acceptance run or dry-run on a real multi-module project. |
+| Top-level `project-develop-copilot` router | Implemented | Root `SKILL.md` exists and is discoverable from repository-root install listing. |
+| Lightweight Answer Mode | Implemented in router docs | Root router and `lifecycle-router.md` define lightweight-answer; simulated Case 1 passes. |
+| Project Query | Implemented | `project-query` handles read-only `.llm-wiki` lookup and discussion context; Acceptance Case 11 added. |
+| Lifecycle Session | Strengthened | Change Brief reference exists, Bug Brief reference exists, and routing record persistence is defined. Real project resume still needs testing. |
+| Routing Record | Defined | Present in root router, `lifecycle-router.md`, `lifecycle-gates.md`, Change Brief, and Bug Brief protocols. |
+| Gate Stack | Implemented in docs | `lifecycle-gates.md` exists and all root/child SKILL files declare owned gates. |
+| External Skill Bridge | Strengthened | Context Handoff / Return Handoff are defined in router, gates, and child skills. Real bridge testing remains. |
+| Domain Skill Contract | Implemented | `domain-skill-contract.md` exists and root/child SKILL files share the router-friendly section structure. |
+| Artifact Registry | Strengthened | Artifact row format exists in `lifecycle-gates.md` and dashboard protocol; real artifact sync still needs dry run. |
+| Progress Dashboard | Protocol implemented | `progress-dashboard.md` exists; finish/review include dashboard evidence and drift rules. Real HTML fixture remains. |
+| Continuous Skill Evolution | Protocol implemented | `continuous-evolution.md`, `evals/`, `cases/failures/`, and `cases/golden/` exist; review exposes Lifecycle Quality output. |
+| Acceptance Pressure Cases | Updated | `acceptance-cases.md` covers router, lightweight, bridge, dashboard, review drift, evaluator, and Dolores; simulated dry run recorded. |
+| Install Discovery | Passed | `npx.cmd skills add . --list` from repository root finds 13 skills, including root router and seven project child skills. |
 
-## Skill Gaps
+## Skill-Level Status
+
+### project-develop-copilot root router
+
+Status: implemented in documentation.
+
+Evidence:
+
+- root `SKILL.md` exists
+- `references/lifecycle-router.md` exists
+- lightweight vs full lifecycle decision is explicit
+- routing record persistence is defined
+- primary stage and secondary bridge selection is defined
+- resume lookup order is defined
+
+Remaining validation:
+
+- run live prompts for lightweight-answer, bug, feature, finish, review, resume, evaluator, and Dolores routes
+- verify agents do not over-create lifecycle state for lightweight discussion
 
 ### project-init
 
-Already present:
+Status: contract-aligned.
 
-- project root resolution through lifecycle reference
-- `.llm-wiki` skeleton creation
-- legacy `docs/ai-coding` migration source handling
-- conservative module discovery
-- `.codegraph/` inspection as a marker
+Evidence:
 
-MVP gaps addressed:
+- Domain Skill Contract structure added
+- owned gates declared
+- Return Handoff added
+- project root, `.llm-wiki`, legacy context, modules, and codegraph marker behavior preserved
 
-- Exact starter/update behavior, refresh mode, module table fields, statuses, and codegraph read-only handling were added.
+Remaining validation:
 
-Remaining:
-
-- Run against a real multi-module project and tune module discovery language.
-
-Priority: dry-run.
+- run against a real multi-module project
+- verify existing `.llm-wiki` content is preserved on refresh
 
 ### project-ingest
 
-Already present:
+Status: contract-aligned.
 
-- supported source types
-- confirmation before deep-reading binary, large, or sensitive sources
-- ingest index and source proxy model
-- source safety boundaries
+Evidence:
 
-MVP gaps addressed:
+- Domain Skill Contract structure added
+- sensitivity modes preserved
+- lifecycle attachment to Change Brief, Bug Brief, module, or working-context added
+- artifact awareness and Return Handoff added
 
-- Confirmation prompts, stale-source detection, processing modes, and final report fields were added.
+Remaining validation:
 
-Remaining:
-
-- Validate with Markdown, PDF, Word, URL, and log examples.
-
-Priority: dry-run.
+- validate with Markdown, PDF, URL, Word, and log examples
+- verify sensitive content is summarized or path-indexed safely
 
 ### project-develop
 
-Already present:
+Status: contract-aligned.
 
-- context-first workflow
-- source of truth order
-- scoped context recovery
-- Superpowers bridge after context recovery
-- requirement and working-context page creation
+Evidence:
 
-MVP gaps addressed:
+- Change Brief creation/resume required
+- Context Enrichment, Clarification, Context Lock, and External Skill Bridge gates declared
+- lightweight-answer boundary added
+- external planning/TDD/execution handoff added
 
-- Context Handoff, Return Handoff, OpenSpec-style summary, scope escalation, and implementation confirmation were added.
+Remaining validation:
 
-Remaining:
-
-- Validate with a cross-service feature.
-
-Priority: dry-run.
+- run Case 3 with active/read-only/reference-only scopes
+- verify planning artifacts are linked back to Change Brief and artifact registry
 
 ### project-fix
 
-Already present:
+Status: contract-aligned.
 
-- evidence-first bug flow
-- systematic-debugging bridge
-- regression coverage guidance
-- verification and bug summary update
+Evidence:
 
-MVP gaps addressed:
+- Bug Brief creation/resume required
+- Bug Evidence Gate and Context Lock Gate declared
+- systematic-debugging is explicitly a scoped bridge
+- Return Handoff and verification boundaries added
 
-- Reproduction evidence format, failure-to-reproduce path, bug scope escalation, and final report were added.
+Remaining validation:
 
-Remaining:
-
-- Validate with a real failed test, log, or runtime symptom.
-
-Priority: dry-run.
+- run Case 2 with a realistic failed log or test
+- verify candidate scope escalation before editing another service
 
 ### project-finish
 
-Already present:
+Status: contract-aligned.
 
-- verification gate
-- verification-before-completion bridge
-- affected wiki page sync
-- handoff report
+Evidence:
 
-MVP gaps addressed:
+- Verification, Knowledge Sync, Artifact Sync, and Progress Dashboard Sync gates declared
+- dashboard evidence rule referenced
+- partial verification and residual risk behavior preserved
 
-- Changed-file mapping, source proxy status, skipped verification handling, and working-context status transitions were added.
+Remaining validation:
 
-Remaining:
-
-- Validate with a real finished change.
-
-Priority: dry-run.
+- run Case 5 with partial verification
+- verify dashboard facts link to evidence and do not become source of truth
 
 ### project-review
 
-Already present:
+Status: contract-aligned.
 
-- findings-first review stance
-- git diff and evidence inputs
-- scope drift and wiki drift checks
-- requesting-code-review bridge
+Evidence:
 
-MVP gaps addressed:
+- Review Gate, Artifact Sync check, Progress Dashboard Sync check, and Evolution Gate declared
+- findings-first stance preserved
+- scope/wiki/artifact/dashboard/bridge drift checks added
+- Lifecycle Quality output added
 
-- Tool-bridge consistency checklist, wiki drift checklist, severity definitions, and no-finding output were added.
+Remaining validation:
 
-Remaining:
+- run Case 6 on a real diff
+- run Case 8 or Case 9 to verify evaluator/Dolores remains non-blocking
 
-- Validate against a real diff with wiki drift.
+## Reference-Level Status
 
-Priority: dry-run.
+| Reference | Status | Notes |
+|---|---|---|
+|
+orth-star.md` | Updated | Defines Level 3.5 target and done means. |
+| `full-lifecycle-implementation-plan.zh.md` | Added | Main implementation plan. |
+| `lifecycle-router.md` | Added | Router decisions, routing records, resume behavior, handoff contract. |
+| `lifecycle-gates.md` | Added | Shared Gate Stack. |
+| `domain-skill-contract.md` | Added | Required child skill structure. |
+| `bug-brief.md` | Added | Bug lifecycle session protocol. |
+| `change-brief.md` | Present | Requirement lifecycle session protocol; should be included in commit if this change set is accepted. |
+| `progress-dashboard.md` | Added | Static HTML dashboard protocol and evidence rules. |
+| `continuous-evolution.md` | Added | evaluator / Dolores protocol. |
+| `acceptance-cases.md` | Updated | Level 3.5 pressure cases. |
+| `static-lifecycle-review.md` | Added | Static review of case coverage. |
+| `dry-run-report-2026-06-04.md` | Added | Simulated dry run for Cases 1, 2, 3, 5, 6, 8, 9. |
+| older `*-mvp.md` references | Legacy | Still exist for historical detail; new implementation should prefer the Level 3.5 references above. |
 
-## Next Implementation Order
+## Remaining Priority
 
-1. Use `acceptance-cases.md` to run pressure scenarios.
-2. Run one end-to-end dry run on a real multi-module project.
-3. Update this audit from dry-run findings.
+1. Run Case 10 on a real project. Fixture dry run passed on 2026-06-04.
+2. Record actual dry-run findings.
+3. Patch any over-routing, missing handoff, missing artifact sync, or dashboard evidence issues found during runtime testing.
+4. Only then claim broad testing readiness.
 
 ## Do Not Do Yet
 
-- Do not add automations or reminders.
+- Do not build automated CI integration before Case 10 passes.
+- Do not add reminder automation as a core dependency.
 - Do not require codegraph generation.
 - Do not implement a full OpenSpec clone.
-- Do not add CI or PR integration.
+- Do not add GitHub issue or PR automation as required behavior.
 - Do not expand `.llm-wiki` into a large documentation system.
+- Do not make evaluator or Dolores run on every normal task.
+
+## Ready For Broad Testing When
+
+- Natural feature, bug, finish, review, resume, and lightweight discussion prompts route correctly in real testing. Fixture Case 10 has passed.
+- Full work creates or resumes a lifecycle session without duplicates.
+- External skill calls are scoped and return through handoff.
+- Finish sync updates wiki, artifacts, and dashboard state only from evidence.
+- Review detects scope, wiki, artifact, dashboard, and bridge drift from real diffs.
+- Evaluator or Dolores can be triggered for lifecycle quality issues without blocking ordinary delivery.

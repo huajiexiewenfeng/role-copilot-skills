@@ -31,10 +31,52 @@ Do not let Superpowers-style skills choose project scope from scratch. Run proje
 
 | Project entry | Superpowers bridge |
 |---|---|
-| `project-develop` | After Context Enrichment Gate, use brainstorming and writing-plans when available. Use test-driven-development before implementation when the change is code-facing. Use executing-plans when a written plan exists. |
+| `project-develop` | After Context Enrichment Gate and during Clarification Gate, naturally use brainstorming for requirement discussion before implementation planning. The user does not need to explicitly request brainstorming. Use writing-plans for implementation planning, test-driven-development before code-facing implementation, and executing-plans when a written plan exists. |
 | `project-fix` | After bug evidence and scoped context are captured, use systematic-debugging. Use test-driven-development when creating regression coverage is feasible. |
 | `project-finish` | Before claiming completion, use verification-before-completion when available, then sync verified facts to `.llm-wiki`. |
 | `project-review` | Use code-review stance. When requesting-code-review is available, use it as an additional quality pass, then report findings in project-review format. |
+
+## Brainstorming Modes
+
+Brainstorming is a requirement clarification capability. It is not the project state system.
+
+Change Brief is the project state system. Brainstorming outputs must be summarized back into `.llm-wiki/requirements/<change-id>.md`.
+
+Use two modes:
+
+### Light Mode
+
+Default mode for `project-develop`.
+
+Use brainstorming's discipline:
+
+- understand user intent
+- ask one high-value question at a time
+- explore 2-3 viable approaches when useful
+- discuss tradeoffs
+- get confirmation before planning or implementation
+
+But do not force a separate `docs/superpowers/specs/` file or git commit.
+
+Write the result into Change Brief:
+
+- summary
+- scope
+- acceptance
+- non-goals
+- plan status
+- open questions
+
+### Full Spec Mode
+
+Use only when:
+
+- the requirement is complex enough to need a standalone design spec
+- the user asks for a spec
+- the team has explicitly adopted `docs/superpowers/specs/`
+- multiple subsystems need a reviewed design before planning
+
+When full spec mode writes `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, register that spec as a source or plan-related artifact in the Change Brief. Do not let the spec become an unlinked parallel documentation track.
 
 ## Context Handoff
 
@@ -66,6 +108,10 @@ After Superpowers-style work, update project context:
 ## Safety
 
 - Do not invoke implementation planning before project context recovery.
+- Do not skip requirement clarification after ingest. Brainstorming belongs after scoped context recovery and before implementation planning.
+- Do not make the user name Superpowers or brainstorming explicitly; bridge it when the discussion needs requirement exploration, tradeoff analysis, or scope clarification.
+- Do not let brainstorming create unlinked parallel docs; summarize outputs into Change Brief.
+- Do not force full spec mode for every feature.
 - Do not use Superpowers output to override source code, tests, user decisions, or original requirement sources.
 - Do not expand active scopes just because a plan suggests it; require evidence or user confirmation.
 - Do not write long Superpowers reasoning transcripts into `.llm-wiki`; store summaries, decisions, status, and gaps.

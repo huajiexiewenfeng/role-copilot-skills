@@ -7,51 +7,85 @@ description: Use when initializing or refreshing a project-local LLM Wiki, adopt
 
 ## Purpose
 
-Initialize or refresh project-local development context for the project development skill collection.
+Initialize or refresh project-local development context for Project Develop Copilot.
 
-This skill creates a usable `.llm-wiki` skeleton, discovers modules conservatively, and migrates legacy `docs/ai-coding` as read-only source context. It does not modify production code.
+This skill creates a usable `.llm-wiki` skeleton, discovers modules conservatively, records tool bridge markers, and migrates legacy `docs/ai-coding` as read-only source context. It does not modify production code.
 
-## Required Shared References
+## When to Use
 
-Read these role-level references:
+Use when the router or user needs to:
 
-- `../references/north-star.md`
-- `../references/lifecycle-mvp.md`
-- `../references/tool-bridge.md`
-- `../references/llm-wiki-mvp.md`
-- `../references/legacy-ai-coding-migration.md`
+- adopt a repository into Project Develop Copilot
+- create `.llm-wiki` for the first time
+- refresh stale project context
+- discover modules and service boundaries
+- prepare tool bridge markers such as existing `.codegraph/`
+- migrate useful legacy `docs/ai-coding` context into `.llm-wiki`
 
-If installed in a flattened environment, locate equivalent `references/` paths near the skill root.
+## When Not to Use
 
-## Workflow
+- Do not use for ordinary feature development after project context already exists.
+- Do not use for bug diagnosis unless the project context is missing or stale.
+- Do not use for source ingest of one PRD/log/PDF; use `project-ingest`.
+- Do not use to edit production code.
+
+## Owned Gates
+
+- Context Discovery Gate
+- Knowledge Sync Gate
+- Artifact Sync Gate when init produces important context artifacts
+
+## Required First Check
 
 1. Resolve `project_root`.
-2. Decide mode:
-   - `init`: no `.llm-wiki` exists or user asks to adopt a repository
-   - `refresh`: `.llm-wiki` exists and user asks to rescan, after docs were copied in, or after modules changed
-3. Inspect project markers:
-   - `.git`
-   - build files
-   - `docs/`
-   - existing `.llm-wiki/`
-   - legacy `docs/ai-coding/`
-   - `.codegraph/`
-4. Create missing `.llm-wiki` directories and starter files.
-5. Ensure `.llm-wiki/working-context/` exists for future complex or cross-module work.
-6. Create or update `.llm-wiki/modules/index.md`.
-7. Detect modules conservatively from build files and top-level service directories.
-8. Mark modules:
-   - `active`: explicitly selected by user or current task
-   - `reference-only`: shared libraries, API contracts, DTOs, SDKs, or direct dependencies
-   - `discovered`: found but not in current work
-   - `unknown`: found but unclear; ask or leave as gap
-9. If `.codegraph/` or generated graph files exist, record them as read-only supporting context in `.llm-wiki/index.md` or `.llm-wiki/modules/index.md`; do not generate codegraph during MVP.
-10. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
-11. On refresh, preserve existing statuses unless evidence or user instruction changes them.
-12. Write a `.llm-wiki/log.md` entry.
-13. Report created files, refreshed files, discovered modules, migrated context, codegraph context, and open questions.
+2. Check whether `.llm-wiki` exists.
+3. Decide `init` vs `refresh`.
+4. Check for legacy `docs/ai-coding/` and existing `.codegraph/` markers.
+5. Preserve useful existing `.llm-wiki` content before writing updates.
 
-## Required Outputs
+## Core Process
+
+Read as needed:
+
+- `../references/north-star.md`
+- `../references/lifecycle-gates.md`
+- `../references/domain-skill-contract.md`
+- `../references/tool-bridge.md`
+- `../references/legacy-ai-coding-migration.md`
+
+Workflow:
+
+1. Resolve project root.
+2. Inspect project markers: `.git`, build files, `docs/`, `.llm-wiki/`, legacy `docs/ai-coding/`, `.codegraph/`.
+3. Create missing `.llm-wiki` directories and starter files.
+4. Ensure `.llm-wiki/working-context/` exists.
+5. Create or update `.llm-wiki/modules/index.md`.
+6. Detect modules conservatively from build files and top-level service directories.
+7. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
+8. Record existing `.codegraph/` or generated graph files as read-only supporting context; do not generate codegraph by default.
+9. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
+10. Preserve existing statuses unless evidence or user instruction changes them.
+11. Write a `.llm-wiki/log.md` entry.
+12. Return a concise handoff.
+
+## Mode / Entry Selection
+
+| Mode | Use when |
+|---|---|
+| `init` | no `.llm-wiki` exists or user asks to adopt a repository |
+| `refresh` | `.llm-wiki` exists and user asks to rescan, context changed, or docs/modules were added |
+| `migration-check` | legacy `docs/ai-coding` exists and should be indexed as source context |
+
+## Inputs
+
+- project root or repository path
+- existing `.llm-wiki`
+- build files and top-level directories
+- legacy `docs/ai-coding`
+- existing `.codegraph` or graph output paths
+- user-selected active modules when provided
+
+## Outputs
 
 Report:
 
@@ -68,21 +102,62 @@ Open questions:
 Next action:
 ```
 
-## Module Index Minimum
-
-Use this shape:
+Module index minimum:
 
 ```markdown
 | Module | Path | Type | Context | Status | Notes |
 |---|---|---|---|---|---|
 ```
 
-Allowed `Status` values: `active`, `reference-only`, `discovered`, `unknown`.
+## Context Handoff
 
-## Safety
+When called by the root router, accept:
+
+```markdown
+## Context Handoff
+
+- lifecycle_session:
+- user_intent:
+- active_sources:
+- active_scope:
+- read_only_scope:
+- candidate_scope:
+- excluded_scope:
+- current_gate:
+- requested_stage_or_bridge:
+- constraints:
+```
+
+## Return Handoff
+
+Return:
+
+```markdown
+## Return Handoff
+
+- stage_or_bridge_used: project-init
+- result_summary:
+- changed_assumptions:
+- recommended_scope_changes:
+- artifacts:
+- verification_notes:
+- lifecycle_updates_needed:
+- next_gate:
+```
+
+## Boundaries
 
 - Do not modify production code.
 - Do not delete, move, or rewrite legacy `docs/ai-coding`.
 - Do not deep-read every module in a monorepo.
 - Do not treat generated AI docs as source of truth.
 - Do not overwrite existing `.llm-wiki` summaries without preserving useful user or agent decisions.
+- Do not require codegraph generation.
+
+## Common Mistakes
+
+- Turning init into full codebase analysis.
+- Marking every discovered module active.
+- Rewriting existing wiki content destructively.
+- Treating legacy AI docs as authoritative.
+- Generating codegraph when only recording existing graph context was needed.

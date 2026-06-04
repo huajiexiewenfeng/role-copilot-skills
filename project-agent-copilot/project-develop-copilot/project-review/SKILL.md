@@ -7,83 +7,91 @@ description: Use when reviewing project changes for code risk, test gaps, requir
 
 ## Purpose
 
-Review project work for correctness, scope, verification, and context consistency before handoff, commit, PR, or merge.
+Review project work for correctness, scope, verification, lifecycle consistency, artifact drift, dashboard drift, and handoff readiness.
 
 This skill uses a review stance. Findings come first and are ordered by severity.
 
-## Review Inputs
+## When to Use
 
-Use available evidence:
+Use when the user asks for:
 
-- git diff
-- changed files
-- tests and verification output
-- active requirement or bug summary
-- active working context page
-- `.llm-wiki` updates
-- source material and acceptance criteria
+- review, risk check, before commit, before PR, before merge, handoff readiness
+- scope drift, wiki drift, artifact drift, or dashboard drift check
+- lifecycle quality check after a project flow
+- evaluator or Dolores trigger decision from project process risk
 
-## Required Shared References
+## When Not to Use
 
-Read these references when relevant:
+- Do not use to implement fixes unless the user explicitly asks.
+- Do not use for initial bug diagnosis; use `project-fix`.
+- Do not use for ordinary lightweight design discussion unless the user asks to review the process.
+- Do not use as a replacement for verification commands.
+
+## Owned Gates
+
+- Review Gate
+- Verification Gate check
+- Artifact Sync Gate check
+- Progress Dashboard Sync Gate check
+- Evolution Gate
+
+## Required First Check
+
+1. Resolve project root.
+2. Inspect git status and diff.
+3. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
+4. Check verification evidence.
+5. Check artifact registry and dashboard evidence when present.
+
+## Core Process
+
+Read as needed:
 
 - `../references/north-star.md`
+- `../references/lifecycle-gates.md`
+- `../references/progress-dashboard.md`
+- `../references/continuous-evolution.md`
 - `../references/tool-bridge.md`
-- `../references/superpowers-bridge.md` when Superpowers-style review skills are available.
+- `../references/superpowers-bridge.md`
 
-## Workflow
+Workflow:
 
-1. Resolve `project_root`.
+1. Resolve project root.
 2. Inspect current git status and diff.
-3. Identify active requirement, bug, or source context when present.
-4. Check:
-   - correctness and behavior risks
-   - scope drift
-   - missing tests or verification
-   - stale or missing `.llm-wiki` updates
-   - stale or missing working-context status
-   - cross-scope contract risks
-   - accidental unrelated file changes
-5. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output format.
-6. Report findings first.
-7. Include open questions, residual risks, and suggested fixes.
+3. Identify active requirement, bug, working context, source, artifact, or dashboard context.
+4. Check code risk and behavior correctness.
+5. Check verification gaps.
+6. Check scope drift against active/read-only/candidate/excluded scopes.
+7. Check wiki drift.
+8. Check artifact drift.
+9. Check dashboard drift.
+10. Check external bridge consistency.
+11. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
+12. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
+13. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
-## Review Checklist
+## Mode / Entry Selection
 
-Code risk:
+| Mode | Use when |
+|---|---|
+| `quick-diff-review` | user wants a narrow code risk pass |
+| `full-lifecycle-review` | user asks before commit/PR/merge or drift checks |
+| `dashboard-drift-review` | progress page/status may be stale or unsupported |
+| `dolores-trigger-review` | user asks to review whether the lifecycle flow went wrong |
+| `evaluator-trigger-review` | one skill/gate failure needs focused improvement analysis |
 
-- changed behavior matches requirement or bug summary
-- no unrelated files or modules were modified
-- active scopes match changed files
-- read-only scopes were not modified without escalation
+## Inputs
 
-Verification:
+- git diff and changed files
+- tests and verification output
+- active Change Brief or Bug Brief
+- working-context page
+- `.llm-wiki` updates
+- artifact registry
+- progress dashboard
+- source material and acceptance criteria
 
-- tests, compile, lint, or manual checks are recorded
-- skipped verification has an explicit reason
-- verification covers changed behavior or residual risk is stated
-
-Wiki drift:
-
-- related requirement or bug page status matches the change
-- working-context status matches implementation state
-- affected module summaries are updated when behavior or contracts changed
-- source proxy status is updated when a source was implemented, superseded, or invalidated
-
-Tool-bridge consistency:
-
-- Superpowers/OpenSpec-style outputs did not override source code, tests, user decisions, or original source materials
-- external tool output stayed inside active/read-only scopes
-- scope escalation is recorded when external output required broader scope
-- codegraph output, if used, is treated as read-only supporting context
-
-## Severity
-
-- `blocker`: likely incorrect behavior, unsafe scope expansion, missing verification for risky change, or source-of-truth conflict.
-- `major`: meaningful bug risk, incomplete wiki sync, missing test for important behavior, or unclear cross-scope contract.
-- `minor`: small maintainability, documentation, or handoff issue.
-
-## Output
+## Outputs
 
 Use this format:
 
@@ -97,10 +105,14 @@ Verification gaps:
 
 Context/wiki gaps:
 
+Artifact/dashboard gaps:
+
+Lifecycle quality:
+
 Summary:
 ```
 
-If no issues are found, say:
+If no issues are found:
 
 ```text
 Findings:
@@ -108,12 +120,57 @@ Findings:
 
 Verification gaps:
 Context/wiki gaps:
+Artifact/dashboard gaps:
+Lifecycle quality:
 Residual risk:
 Summary:
 ```
 
-## Safety
+## Context Handoff
+
+Before requesting-code-review, evaluator, Dolores, or another bridge, provide scoped context and the review focus.
+
+## Return Handoff
+
+Return:
+
+```markdown
+## Return Handoff
+
+- stage_or_bridge_used: project-review
+- result_summary:
+- changed_assumptions:
+- recommended_scope_changes:
+- artifacts:
+- verification_notes:
+- lifecycle_updates_needed:
+- next_gate:
+```
+
+Lifecycle Quality output:
+
+```markdown
+## Lifecycle Quality
+
+- evaluator_needed: yes | no
+- dolores_review_needed: yes | no
+- reason:
+- suggested_artifact:
+- blocking: yes | no
+```
+
+## Boundaries
 
 - Do not rewrite code during review unless the user asks for fixes.
 - Do not bury blocking findings under summaries.
-- If no issues are found, say so and mention remaining test or context risk.
+- Do not report no findings without checking verification and lifecycle drift.
+- Do not run evaluator or Dolores for every ordinary review.
+- Do not treat dashboard as a source of truth.
+
+## Common Mistakes
+
+- Performing only code review and ignoring lifecycle state.
+- Missing changed files outside active scope.
+- Ignoring missing wiki/artifact/dashboard updates.
+- Treating external bridge output as authoritative without scope checks.
+- Turning Dolores into a generic summary.

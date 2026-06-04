@@ -7,48 +7,98 @@ description: Use when finishing verified project work, syncing actual changes ba
 
 ## Purpose
 
-Finish project work by syncing verified implementation knowledge back into `.llm-wiki` and preparing a concise handoff.
+Finish project work by syncing verified implementation knowledge back into `.llm-wiki`, artifact registry, and progress dashboard when enabled, then preparing a concise handoff.
 
-## Required Shared References
+This skill does not perform broad code review. Use `project-review` for review readiness and drift findings.
 
-Read these role-level references:
+## When to Use
+
+Use when the user says:
+
+- finish, done, sync, update status, prepare handoff
+- work is implemented and verification is available or limited
+- update wiki, requirement status, bug status, artifact registry, or progress dashboard
+- summarize what changed and what remains risky
+
+## When Not to Use
+
+- Do not use before implementation or verification exists.
+- Do not use for initial project setup; use `project-init`.
+- Do not use for bug diagnosis; use `project-fix`.
+- Do not use as a substitute for findings-first review.
+
+## Owned Gates
+
+- Verification Gate
+- Knowledge Sync Gate
+- Artifact Sync Gate
+- Progress Dashboard Sync Gate
+
+## Required First Check
+
+1. Resolve project root.
+2. Identify active Change Brief, Bug Brief, or working-context.
+3. Check verification evidence or accepted limitation.
+4. Inspect changed files.
+5. Decide affected wiki pages, artifacts, and dashboard sections.
+
+## Core Process
+
+Read as needed:
 
 - `../references/north-star.md`
-- `../references/finish-mvp.md`
+- `../references/lifecycle-gates.md`
+- `../references/progress-dashboard.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
-- `../references/llm-wiki-mvp.md`
 - `../references/templates.md`
 
-If installed in a flattened environment, locate equivalent `references/` paths near the skill root.
+Workflow:
 
-## Workflow
-
-1. Resolve `project_root`.
-2. Confirm verification evidence:
-   - tests passed
-   - compile passed
-   - lint passed
-   - manual verification completed
-   - or user accepted that verification could not be run
+1. Resolve project root and lifecycle session.
+2. Confirm verification evidence: tests, compile, lint, manual verification, or explicit accepted limitation.
 3. Use verification-before-completion when available before claiming completion.
 4. Summarize actual code and behavior changes.
 5. Map changed files to affected wiki pages.
-6. Update only affected `.llm-wiki` pages:
-   - `.llm-wiki/log.md`
-   - related requirement summary
-   - related bug summary
-   - related module summary
-   - related source proxy status
-   - related working context status
-7. Mark related `.llm-wiki/working-context/<change-id>.md` as verified, done, blocked, or skipped when one exists.
-8. If verification was skipped, record the exact reason, user decision, and residual risk.
-9. Record remaining gaps or skipped updates.
-10. Report implementation summary, verification, wiki updates, and next action.
+6. Update only affected `.llm-wiki` pages.
+7. Mark related working-context as verified, done, blocked, or skipped.
+8. Record verification limitation and residual risk when verification was partial or blocked.
+9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
+10. Update progress dashboard only with evidence-backed facts when enabled or requested.
+11. Report implementation summary, verification, sync updates, residual risk, and next action.
 
-## Changed File Mapping
+## Mode / Entry Selection
 
-Map changed files before wiki sync:
+| Mode | Use when |
+|---|---|
+| `verified-finish` | verification passed and sync can mark work verified/done |
+| `partial-finish` | verification is partial or blocked but user accepts limitation |
+| `status-sync` | user wants wiki/artifact/dashboard state updated from known evidence |
+| `handoff-only` | user wants summary without changing files |
+
+## Inputs
+
+- active Change Brief, Bug Brief, or working-context
+- changed files or git diff
+- verification command output or manual verification notes
+- artifact paths
+- dashboard path when enabled
+
+## Outputs
+
+Report:
+
+```text
+Implementation summary:
+Verification:
+Wiki updates:
+Artifact updates:
+Dashboard updates:
+Residual risk:
+Next action:
+```
+
+Changed file mapping:
 
 ```text
 Changed file:
@@ -60,33 +110,39 @@ Wiki pages to update:
 Reason:
 ```
 
-Rules:
+## Context Handoff
 
-- Code or contract behavior change: consider module summary and requirement or bug page.
-- Test-only change: record verification and affected requirement or bug when relevant.
-- Config/build change: record module or project-level note when it changes behavior.
-- Source interpretation changed: update the related source proxy status.
+Accept router or stage handoff with lifecycle session, active sources, scope, artifacts, verification notes, and constraints.
 
-## Source Proxy Status
+## Return Handoff
 
-Use:
+Return:
 
-- `implemented`: source requirement was implemented.
-- `superseded`: newer source or user decision replaced it.
-- `invalidated`: source no longer matches code or accepted behavior.
-- `open`: source remains relevant but unfinished.
+```markdown
+## Return Handoff
 
-## Working Context Status
+- stage_or_bridge_used: project-finish
+- result_summary:
+- changed_assumptions:
+- recommended_scope_changes:
+- artifacts:
+- verification_notes:
+- lifecycle_updates_needed:
+- next_gate:
+```
 
-Use:
-
-- `verified`: implementation is verified but may still need handoff.
-- `done`: work is complete and handed off.
-- `blocked`: work cannot finish; record blocker.
-- `skipped`: no working-context update was needed; explain why.
-
-## Safety
+## Boundaries
 
 - Do not claim work is complete without verification evidence or an explicit limitation.
 - Do not write large implementation narratives into `.llm-wiki`.
 - Do not update unrelated modules or sources.
+- Do not update dashboard without evidence links.
+- Do not hide residual risk when tests could not run.
+
+## Common Mistakes
+
+- Marking done when verification is partial.
+- Updating every wiki page instead of affected pages.
+- Forgetting artifact registry entries for plans/reports/dashboards.
+- Letting dashboard become the only status record.
+- Skipping review when the user asked for merge readiness.
