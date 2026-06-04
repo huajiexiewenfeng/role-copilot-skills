@@ -59,6 +59,30 @@ Project Develop Copilot 内化了项目级 LLM Wiki，把 `.llm-wiki` 作为项�
 | 模块 context | 放在 `.llm-wiki/modules/<scope>/`，每个模块、微服务或业务域有自己的长期上下文，包括职责边界、架构摘要、本地规则、开发起手信息和待补问题。 |
 | 需求工作 context | 放在 `.llm-wiki/working-context/<change-id>.md`，记录一次需求、Bug 或跨模块变更涉及哪些模块、各模块角色、读写权限、接口契约、执行顺序和验证计划。 |
 
+建议目录形态：
+
+```text
+.llm-wiki/
+  index.md
+  log.md
+  AGENTS.md
+  ingest/
+    index.md
+  sources/
+  requirements/
+  bugs/
+  working-context/
+    <change-id>.md
+  modules/
+    index.md
+    <scope>/
+      index.md
+      architecture.md
+      rules.md
+      development.md
+      open-questions.md
+```
+
 这里的 scope 不是“一个需求只能限定在一个模块里”。scope 是模块上下文的隔离单元；一个真实需求可以同时激活多个 scopes，由 working-context 负责协调跨模块协作。
 
 它主要沉淀六类信息：
