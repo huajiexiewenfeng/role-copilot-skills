@@ -61,6 +61,8 @@ The agent must infer and maintain the Change Brief, then ask only for key confir
 
 `project-develop` generates or reuses `change-id` during Clarification Gate.
 
+This `change-id` is also the default `flow_id`. Follow `flow-record.md` matching rules before creating a new id.
+
 Use this order:
 
 1. User-provided issue, ticket, requirement, or task id.
@@ -74,6 +76,7 @@ Rules:
 - Prefer English/kebab-case for filenames.
 - Do not create a new id when a matching existing requirement is confirmed.
 - If only a candidate match exists, ask before reusing it.
+- Do not create duplicate Change Briefs for the same source/design document and acceptance behavior.
 
 ## Minimum Structure
 

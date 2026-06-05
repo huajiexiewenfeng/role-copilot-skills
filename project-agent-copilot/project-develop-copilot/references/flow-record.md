@@ -68,6 +68,42 @@ Rules:
 - Ask before reusing a candidate match when the evidence is ambiguous.
 - Do not encode temporary status into the id.
 
+## Matching Existing Records
+
+Before creating a new Flow Record, search:
+
+```text
+.llm-wiki/requirements/
+.llm-wiki/bugs/
+.llm-wiki/working-context/
+.llm-wiki/artifacts/index.md
+.llm-wiki/log.md
+```
+
+Match by:
+
+- same user-provided id or issue/ticket id
+- same source document path
+- same source proxy id
+- same title and acceptance behavior
+- same active module/scope and same plan evidence
+
+Decision:
+
+```text
+clear match:
+  reuse existing flow_id
+
+candidate match:
+  summarize evidence
+  ask one confirmation question before reusing
+
+no match:
+  create a new flow_id
+```
+
+Never create duplicate Flow Records only because the user phrased the same requirement differently in chat.
+
 ## Storage
 
 Primary storage:

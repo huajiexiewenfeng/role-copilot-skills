@@ -1,5 +1,7 @@
 # Bug Brief
 
+Read `flow-record.md` when changing bug lifecycle state.
+
 Bug Brief is the lifecycle session for bug, incident, regression, failed test, runtime error, log symptom, or unexpected behavior work.
 
 It is lighter than a full requirement spec, but it must preserve enough evidence, scope, diagnosis, fix plan, verification, and residual risk for another agent to resume safely.
@@ -25,6 +27,7 @@ YYYY-MM-DD-short-symptom
 
 - title:
 - status: draft | triaged | reproduced | diagnosed | planned | ready | executing | verified | done | blocked
+- flow_id: <bug-id>
 - severity:
 - owner:
 - updated_at:
@@ -78,6 +81,17 @@ YYYY-MM-DD-short-symptom
 - result_summary:
 - limitation:
 - residual_risk:
+
+## Flow Record
+
+| Step | Status | Evidence | Updated |
+|---|---|---|---|
+| source | pending |  |  |
+| design | pending |  |  |
+| plan | pending |  |  |
+| development | pending |  |  |
+| testing | pending |  |  |
+| archive | pending |  |  |
 
 ## Artifacts
 
@@ -151,6 +165,25 @@ Use:
 ```
 
 Partial verification can support handoff, but the final response must not claim full completion.
+
+## Flow Record Rules
+
+Bug work uses the same Flow Record model as requirements:
+
+```text
+source -> design/diagnosis -> plan/fix direction -> development -> testing -> archive
+```
+
+Mapping:
+
+- `source`: user report, log, failed test, incident note, or source proxy
+- `design`: diagnosis or behavior decision
+- `plan`: fix plan
+- `development`: changed files or implementation summary
+- `testing`: reproduction/verification evidence
+- `archive`: handoff, done note, or accepted limitation
+
+Do not mark `testing` or `archive` as `done` without verification evidence or explicit accepted limitation.
 
 ## Common Mistakes
 

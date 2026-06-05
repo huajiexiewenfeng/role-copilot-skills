@@ -49,6 +49,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/bug-brief.md`
+- `../references/flow-record.md`
 - `../references/scoped-working-context.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
@@ -58,17 +59,19 @@ Workflow:
 
 1. Resolve project root and Bug Brief.
 2. Capture source, symptom, expected behavior, evidence, and likely scope.
-3. Run Context Enrichment Gate.
-4. Reproduce the issue or state why reproduction is not currently possible.
-5. Bridge to systematic-debugging only after evidence and scoped context are captured.
-6. Diagnose likely cause before changing code.
-7. Use test-driven-development for regression coverage when feasible.
-8. Run Context Lock Gate before edits.
-9. If the fix needs candidate or excluded scope, run scope escalation before editing.
-10. Fix only active scopes unless escalation is justified.
-11. Verify the fix or record limitation.
-12. Update Bug Brief and working-context after verification.
-13. Return diagnosis, verification, residual risk, and next gate.
+3. Create or update the Bug Brief Flow Record with source evidence.
+4. Run Context Enrichment Gate.
+5. Reproduce the issue or state why reproduction is not currently possible.
+6. Bridge to systematic-debugging only after evidence and scoped context are captured.
+7. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.
+8. Use test-driven-development for regression coverage when feasible.
+9. Record or confirm the fix plan and update the Flow Record `plan` step before edits.
+10. Run Context Lock Gate before edits.
+11. If the fix needs candidate or excluded scope, run scope escalation before editing.
+12. Fix only active scopes unless escalation is justified.
+13. Verify the fix or record limitation.
+14. Update Bug Brief, Flow Record, and working-context after verification.
+15. Return diagnosis, verification, Flow Record updates, residual risk, and next gate.
 
 ## Mode / Entry Selection
 
@@ -100,6 +103,7 @@ Scope escalation:
 Regression coverage:
 Verification:
 Bug Brief updates:
+Flow Record updates:
 Artifacts:
 Residual risk:
 Next action:

@@ -48,6 +48,7 @@ Read as needed:
 
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
+- `../references/flow-record.md`
 - `../references/progress-dashboard.md`
 - `../references/progress-dashboard-template.html`
 - `../references/tool-bridge.md`
@@ -62,7 +63,7 @@ Workflow:
 4. Summarize actual code and behavior changes.
 5. Map changed files to affected wiki pages.
 6. Update only affected `.llm-wiki` pages.
-7. Mark related working-context and Change Brief Flow Record steps as verified, done, blocked, or skipped.
+7. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules.
 8. Record verification limitation and residual risk when verification was partial or blocked.
 9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
 10. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
@@ -111,6 +112,29 @@ Related source proxy:
 Wiki pages to update:
 Reason:
 ```
+
+Flow Record update mapping:
+
+```text
+flow_id:
+development:
+  status:
+  evidence:
+testing:
+  status:
+  evidence:
+archive:
+  status:
+  evidence:
+unsupported_done_claims_downgraded:
+```
+
+Rules:
+
+- `development` can be `done` only when changed files or implementation evidence are recorded.
+- `testing` can be `done` only when verification passed or an explicit accepted limitation is recorded.
+- `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists.
+- Partial verification should mark `testing` as `blocked`, `active`, or `done with limitation` in notes, not silently complete.
 
 ## Context Handoff
 

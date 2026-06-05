@@ -68,20 +68,22 @@ Authority order:
 Workflow:
 
 1. Resolve project root and output language when relevant.
-2. Create or resume Change Brief.
-3. Run Context Enrichment Gate before brainstorming, planning, or implementation.
-4. Produce a concise context summary.
-5. Run Clarification Gate before implementation planning.
-6. Guide the user conversationally through requirement discussion.
-7. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
-8. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
-9. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
-10. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
-11. Provide Context Handoff before external planning/TDD/execution bridges.
-12. Run Context Lock Gate before implementation.
-13. Ask for implementation confirmation unless the user already explicitly asked to implement now.
-14. Update Change Brief and working-context after clarification, planning, or implementation.
-15. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
+2. Search existing Change Briefs, working-context pages, artifacts, and source indexes for a matching `flow_id`.
+3. Create or resume Change Brief.
+4. Run Context Enrichment Gate before brainstorming, planning, or implementation.
+5. Produce a concise context summary.
+6. Run Clarification Gate before implementation planning.
+7. Guide the user conversationally through requirement discussion.
+8. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
+9. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
+10. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
+11. If a candidate Flow Record match exists, ask one confirmation question before reusing it.
+12. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
+13. Provide Context Handoff before external planning/TDD/execution bridges.
+14. Run Context Lock Gate before implementation.
+15. Ask for implementation confirmation unless the user already explicitly asked to implement now.
+16. Update Change Brief and working-context after clarification, planning, or implementation.
+17. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
 
 ## Mode / Entry Selection
 
@@ -112,6 +114,7 @@ Workflow:
 - open questions
 - OpenSpec-style change summary
 - Flow Record status updates
+- flow_id reused or created
 - Context Handoff for external bridges
 - Return Handoff after planning or implementation
 - recommendation: continue discussion, write plan, implement, finish, or review

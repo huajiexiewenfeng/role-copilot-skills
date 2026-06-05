@@ -95,7 +95,7 @@ Workflow:
 5. Fall back to original source files only when wiki summaries are insufficient or stale.
 6. Separate sourced wiki facts from inference.
 7. Return a concise answer and a Project Context Pack.
-8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages.
+8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages using `progress-dashboard.md` projection rules.
 9. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
 ## Mode / Entry Selection
@@ -210,6 +210,7 @@ For dashboard refresh:
 - Do not modify code.
 - Do not create or update `.llm-wiki` by default.
 - In `dashboard-refresh` mode, modify only `.llm-wiki/dashboard/progress.html`, `.llm-wiki/artifacts/index.md` dashboard metadata when needed, and `.llm-wiki/log.md`.
+- In `dashboard-refresh` mode, do not create Change Briefs or mark plan/development/testing/archive done; show unmatched source/design docs as candidate or pending.
 - Do not create Change Brief, Bug Brief, or working-context unless the user explicitly asks to save or act.
 - Do not deep-read every source or module.
 - Do not treat stale wiki summaries as authoritative over source code, tests, or current user decisions.

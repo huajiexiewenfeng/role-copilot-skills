@@ -182,6 +182,63 @@ Direct refresh is appropriate after `project-init`, `project-ingest`, requiremen
 
 Direct refresh should prefer existing Flow Records. If a new source/design document has no Flow Record yet, show it as a `candidate` or `pending` card and recommend creating or confirming the related Change Brief instead of silently inventing an execution plan.
 
+## Flow Board Projection
+
+When refreshing the dashboard, build the flow board in this order:
+
+1. Read Flow Records from:
+   - `.llm-wiki/requirements/*.md`
+   - `.llm-wiki/bugs/*.md`
+   - `.llm-wiki/working-context/*.md`
+2. Read supporting context from:
+   - `.llm-wiki/artifacts/index.md`
+   - `.llm-wiki/ingest/index.md`
+   - `.llm-wiki/sources/registry.md`
+   - `.llm-wiki/log.md`
+3. For each Flow Record row, create a card only when:
+   - status is not empty, or
+   - evidence is present, or
+   - the step is currently active/blocked.
+4. Put cards into lanes:
+
+| Flow step | Dashboard lane |
+|---|---|
+| `source` | 需求/来源 |
+| `design` | 设计 |
+| `plan` | 执行计划 |
+| `development` | 开发 |
+| `testing` | 测试 |
+| `archive` | 归档 |
+
+5. Preserve one stable `flow_id` across cards.
+6. Link card evidence to the source `.md` page whenever possible.
+7. If evidence is missing, keep status `pending`, `candidate`, `unknown`, or `blocked`; do not promote to `done`.
+
+Candidate source/design documents without Flow Records may be shown in the 需求/来源 lane, but they must be clearly labeled `candidate` and must not appear in plan/development/testing/archive lanes.
+
+## Dashboard Data Contract
+
+The template should keep a structured data section that is easy for LLMs to update:
+
+```javascript
+window.dashboardData = {
+  flowRecords: [
+    {
+      flowId: "",
+      title: "",
+      step: "source",
+      lane: "需求/来源",
+      status: "pending",
+      source: "",
+      evidence: "",
+      updated: ""
+    }
+  ]
+};
+```
+
+Agents should prefer updating this data and the marked `BOARD_START` / `BOARD_END` section over rewriting the full page.
+
 ## Init Rules
 
 During `project-init` or `project-init refresh`:

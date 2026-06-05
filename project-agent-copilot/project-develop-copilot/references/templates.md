@@ -30,23 +30,52 @@
 ## Requirement Summary
 
 ```markdown
-# Requirement: <change-id>
-
-## Source Artifacts
+# Change Brief: <change-id>
 
 ## Summary
 
+- title:
+- status: draft | clarified | planned | ready | executing | done | blocked
+- flow_id: <change-id>
+
+## Sources
+
+- 
+
 ## Scope
 
-## Out of Scope
+- active:
+- reference-only:
+- excluded:
 
-## Acceptance Criteria
+## Acceptance
 
-## Active Context
+- 
 
-## Status
+## Plan
 
-## Related
+- active_plan:
+- status: none | candidate | confirmed | stale
+- evidence:
+
+## Flow Record
+
+| Step | Status | Evidence | Updated |
+|---|---|---|---|
+| source | pending |  |  |
+| design | pending |  |  |
+| plan | pending |  |  |
+| development | pending |  |  |
+| testing | pending |  |  |
+| archive | pending |  |  |
+
+## Open Questions
+
+- 
+
+## Notes
+
+- 
 ```
 
 ## Working Context
@@ -76,7 +105,14 @@
 ## Bug Summary
 
 ```markdown
-# Bug: <bug-id>
+# Bug Brief: <bug-id>
+
+## Summary
+
+- title:
+- status: draft | triaged | reproduced | diagnosed | planned | ready | executing | verified | done | blocked
+- flow_id: <bug-id>
+- severity:
 
 ## Source
 
@@ -91,6 +127,17 @@
 ## Fix
 
 ## Verification
+
+## Flow Record
+
+| Step | Status | Evidence | Updated |
+|---|---|---|---|
+| source | pending |  |  |
+| design | pending |  |  |
+| plan | pending |  |  |
+| development | pending |  |  |
+| testing | pending |  |  |
+| archive | pending |  |  |
 
 ## Related
 ```

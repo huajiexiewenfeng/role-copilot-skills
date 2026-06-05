@@ -66,6 +66,7 @@ Read as needed:
 
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
+- `../references/flow-record.md`
 - `../references/progress-dashboard.md`
 - `../references/continuous-evolution.md`
 - `../references/tool-bridge.md`
@@ -82,13 +83,14 @@ Workflow:
 7. Check wiki drift.
 8. Check artifact drift.
 9. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, and language consistency.
-10. Check external bridge consistency.
-11. Check project root and wiki placement when init/recovery occurred.
-12. Check cross-session project continuity when prior context or previous chat state affects the work.
-13. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
-14. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
-15. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
-16. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
+10. Check Flow Record drift.
+11. Check external bridge consistency.
+12. Check project root and wiki placement when init/recovery occurred.
+13. Check cross-session project continuity when prior context or previous chat state affects the work.
+14. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
+15. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
+16. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
+17. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
 ## Mode / Entry Selection
 
@@ -134,6 +136,18 @@ Lifecycle quality:
 Project skill improvement:
 
 Summary:
+```
+
+Flow Record drift checklist:
+
+```text
+- dashboard card has no matching Flow Record
+- dashboard card step/status differs from Flow Record
+- Flow Record `done` step has no evidence
+- `development` done but no changed files or implementation evidence
+- `testing` done but no verification evidence or accepted limitation
+- `archive` done but no handoff/release/done evidence
+- same source/design document has duplicate active flow_id values
 ```
 
 If no issues are found:
