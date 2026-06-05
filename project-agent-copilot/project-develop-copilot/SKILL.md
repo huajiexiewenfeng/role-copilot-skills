@@ -22,6 +22,7 @@ Use this skill when the user asks for project development help from natural lang
 - Diagnosing or fixing a bug, failed test, runtime error, log symptom, regression, incident, or unexpected behavior.
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
+- Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -44,6 +45,7 @@ The router owns lifecycle coherence across gates:
 - Routing Record Gate
 - External Skill Bridge Gate
 - Review/Evolution Routing Gate
+- Progress Dashboard Sync Gate when the user explicitly asks to refresh the dashboard
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 
@@ -70,6 +72,7 @@ Before doing project work:
    - requirement or feature development
    - bug or incident fixing
    - finish or progress sync
+   - dashboard refresh
    - review
    - resume
    - evaluator / self-review / Dolores / lifecycle-quality review
@@ -89,6 +92,7 @@ Before doing project work:
 | User asks to initialize/adopt/refresh project context | full-lifecycle | `project-init` |
 | User asks for a feature, requirement, plan, or implementation | full-lifecycle | `project-develop` |
 | User reports a bug, log, error, failed test, or incident | full-lifecycle | `project-fix` |
+| User asks to update, refresh, or sync the static dashboard/progress page only | dashboard-refresh | `project-query` |
 | User asks finish, done, sync, update status, or handoff | full-lifecycle | `project-finish` |
 | User asks review, risk check, before commit/PR/merge | full-lifecycle | `project-review` |
 | User says continue or resume previous work | full-lifecycle | resume then choose stage |
@@ -136,6 +140,12 @@ For read-only query:
 - related requirements/bugs/sources/artifacts
 - possible next routes
 - no lifecycle state changes unless requested
+
+For dashboard-refresh:
+
+- recover project dashboard evidence from `.llm-wiki`
+- update only `.llm-wiki/dashboard/progress.html` and related dashboard artifact metadata/log when needed
+- do not mark work done unless finish/verification evidence already exists
 
 For full lifecycle:
 

@@ -51,6 +51,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/change-brief.md`
+- `../references/flow-record.md`
 - `../references/scoped-working-context.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
@@ -74,12 +75,13 @@ Workflow:
 6. Guide the user conversationally through requirement discussion.
 7. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
 8. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
-9. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
-10. Provide Context Handoff before external planning/TDD/execution bridges.
-11. Run Context Lock Gate before implementation.
-12. Ask for implementation confirmation unless the user already explicitly asked to implement now.
-13. Update Change Brief and working-context after clarification, planning, or implementation.
-14. Return decisions, plan or changes, verification notes, artifacts, and next gate.
+9. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
+10. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
+11. Provide Context Handoff before external planning/TDD/execution bridges.
+12. Run Context Lock Gate before implementation.
+13. Ask for implementation confirmation unless the user already explicitly asked to implement now.
+14. Update Change Brief and working-context after clarification, planning, or implementation.
+15. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
 
 ## Mode / Entry Selection
 
@@ -109,6 +111,7 @@ Workflow:
 - non-goals and constraints
 - open questions
 - OpenSpec-style change summary
+- Flow Record status updates
 - Context Handoff for external bridges
 - Return Handoff after planning or implementation
 - recommendation: continue discussion, write plan, implement, finish, or review

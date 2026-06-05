@@ -1,6 +1,6 @@
 ---
 name: project-query
-description: Use when answering, discussing, locating, or synthesizing project questions from a project-local `.llm-wiki`, including finding related requirements, bugs, source proxies, working-context pages, design docs, artifacts, and development notes without starting implementation.
+description: Use when answering, discussing, locating, or synthesizing project questions from a project-local `.llm-wiki`, including finding related requirements, bugs, source proxies, working-context pages, design docs, artifacts, dashboard state, and development notes without starting implementation.
 ---
 
 # Project Query
@@ -9,9 +9,9 @@ description: Use when answering, discussing, locating, or synthesizing project q
 
 Answer and discuss project questions from a project-local `.llm-wiki` and its linked source materials.
 
-This skill is the Project Develop Copilot equivalent of an Obsidian LLM Wiki query flow. It helps the user quickly find relevant requirements, development docs, bug notes, artifacts, and source proxies, then assemble a small discussion context for follow-up thinking.
+This skill is the Project Develop Copilot equivalent of an Obsidian LLM Wiki query flow. It helps the user quickly find relevant requirements, development docs, bug notes, artifacts, dashboard state, and source proxies, then assemble a small discussion context for follow-up thinking.
 
-It is read-only by default. It does not create Change Briefs, Bug Briefs, working-context pages, dashboard updates, or code changes unless the user explicitly asks to save or act on the discussion.
+It is read-only by default. It does not create Change Briefs, Bug Briefs, working-context pages, dashboard updates, or code changes unless the user explicitly asks to save or act on the discussion. When the user explicitly asks to update or refresh the dashboard, this skill may run `dashboard-refresh` mode and update only dashboard-related files.
 
 ## When to Use
 
@@ -24,6 +24,7 @@ Use when the user asks to:
 - assemble context for later development without starting development yet
 - compare related requirements, bugs, source materials, or working-context pages
 - locate evidence before deciding whether to create a requirement, fix a bug, or review a change
+- update, refresh, or sync the static project dashboard/progress page from existing `.llm-wiki` evidence
 
 Example triggers:
 
@@ -34,6 +35,10 @@ Example triggers:
 - "先把上下文找出来，我们讨论一下"
 - "what does the project wiki say about this module"
 - "find related project docs before we decide what to do"
+- "更新项目看板"
+- "刷新 dashboard"
+- "同步项目状态页"
+- "update progress dashboard"
 
 ## When Not to Use
 
@@ -43,6 +48,7 @@ Example triggers:
 - Do not use for finish sync; route to `project-finish`.
 - Do not use for commit/PR review; route to `project-review`.
 - Do not save synthesis back to `.llm-wiki` unless the user explicitly asks to save it.
+- Do not use dashboard refresh to imply finish, done, verified, or review-passed status; route to `project-finish` or `project-review` for those claims.
 
 ## Owned Gates
 
@@ -50,6 +56,7 @@ Example triggers:
 - Context Discovery Gate
 - Project Wiki Query Gate
 - Optional Upgrade Gate
+- Progress Dashboard Sync Gate in explicit `dashboard-refresh` mode
 
 ## Required First Check
 
@@ -57,7 +64,8 @@ Example triggers:
 2. Confirm `.llm-wiki` exists.
 3. Decide whether this is read-only project query or full lifecycle work.
 4. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
-5. If the user asks to act on the answer, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
+5. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
+6. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
 
 ## Core Process
 
@@ -66,6 +74,8 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-router.md`
 - `../references/lifecycle-gates.md`
+- `../references/progress-dashboard.md`
+- `../references/flow-record.md`
 - `.llm-wiki/index.md`
 - `.llm-wiki/modules/index.md`
 - `.llm-wiki/ingest/index.md`
@@ -85,7 +95,8 @@ Workflow:
 5. Fall back to original source files only when wiki summaries are insufficient or stale.
 6. Separate sourced wiki facts from inference.
 7. Return a concise answer and a Project Context Pack.
-8. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
+8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages.
+9. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
 ## Mode / Entry Selection
 
@@ -95,6 +106,7 @@ Workflow:
 | `wiki-answer` | user asks a question answerable from project wiki pages |
 | `discussion-context` | user wants context assembled before discussion |
 | `evidence-map` | user asks which docs, requirements, bugs, or artifacts relate to a topic |
+| `dashboard-refresh` | user explicitly asks to refresh or update the static project dashboard/progress page |
 | `upgrade-candidate` | query reveals a likely requirement, bug, stale source, or review issue |
 
 ## Inputs
@@ -179,10 +191,25 @@ Return:
 
 For read-only query, `lifecycle_updates_needed` is usually `none`.
 
+For dashboard refresh:
+
+```markdown
+## Dashboard Refresh
+
+- dashboard_path:
+- evidence_used:
+- flow_records_used:
+- updated_sections:
+- unchanged_sections:
+- unsupported_claims_downgraded:
+- next_action:
+```
+
 ## Boundaries
 
 - Do not modify code.
 - Do not create or update `.llm-wiki` by default.
+- In `dashboard-refresh` mode, modify only `.llm-wiki/dashboard/progress.html`, `.llm-wiki/artifacts/index.md` dashboard metadata when needed, and `.llm-wiki/log.md`.
 - Do not create Change Brief, Bug Brief, or working-context unless the user explicitly asks to save or act.
 - Do not deep-read every source or module.
 - Do not treat stale wiki summaries as authoritative over source code, tests, or current user decisions.
@@ -196,3 +223,4 @@ For read-only query, `lifecycle_updates_needed` is usually `none`.
 - Returning a broad essay instead of a small context pack.
 - Failing to name the wiki pages used.
 - Hiding uncertainty when wiki evidence is stale or missing.
+- Treating dashboard refresh as project finish.

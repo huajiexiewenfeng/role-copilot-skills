@@ -62,7 +62,7 @@ Workflow:
 4. Summarize actual code and behavior changes.
 5. Map changed files to affected wiki pages.
 6. Update only affected `.llm-wiki` pages.
-7. Mark related working-context as verified, done, blocked, or skipped.
+7. Mark related working-context and Change Brief Flow Record steps as verified, done, blocked, or skipped.
 8. Record verification limitation and residual risk when verification was partial or blocked.
 9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
 10. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
@@ -139,6 +139,7 @@ Return:
 - Do not write large implementation narratives into `.llm-wiki`.
 - Do not update unrelated modules or sources.
 - Do not update dashboard without evidence links.
+- Do not mark Flow Record `testing` or `archive` done without verification or handoff evidence.
 - Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.
 - Do not hide residual risk when tests could not run.
 

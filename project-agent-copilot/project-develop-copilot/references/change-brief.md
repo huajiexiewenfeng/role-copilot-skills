@@ -1,6 +1,6 @@
 ﻿# Change Brief
 
-Read `north-star.md` first. Change Brief is the lightweight internal OpenSpec-style mechanism for Project Develop Copilot.
+Read `north-star.md` and `flow-record.md` first. Change Brief is the lightweight internal OpenSpec-style mechanism for Project Develop Copilot.
 
 ## Purpose
 
@@ -9,6 +9,14 @@ Change Brief solves one practical problem:
 ```text
 How does the agent know what requirement is being developed, which sources and plans belong to it, whether it is ready to execute, and what still needs confirmation?
 ```
+
+It also acts as the project's lightweight flow record:
+
+```text
+design/source document -> execution plan -> development -> testing -> archive
+```
+
+Every meaningful requirement or design document that enters development should map to one stable `change-id` / `flow_id`, so the dashboard can show where that work is in the lifecycle and which evidence supports each step.
 
 It is not a full OpenSpec clone.
 It is not a separate tool.
@@ -99,6 +107,17 @@ Use this compact shape:
 - status: none | candidate | confirmed | stale
 - evidence:
 
+## Flow Record
+
+| Step | Status | Evidence | Updated |
+|---|---|---|---|
+| source | pending |  |  |
+| design | pending |  |  |
+| plan | pending |  |  |
+| development | pending |  |  |
+| testing | pending |  |  |
+| archive | pending |  |  |
+
 ## Open Questions
 
 - 
@@ -110,6 +129,30 @@ Use this compact shape:
 
 The selected output language controls headings, prose, summaries, and notes.
 Keep paths, commands, code identifiers, and status values stable in English.
+
+## Flow Record Rules
+
+The Flow Record is not another source of truth. It is a compact index that links lifecycle steps to evidence.
+
+Use this small status set for each step:
+
+| Status | Meaning |
+|---|---|
+| `pending` | Step has not started or evidence is missing. |
+| `active` | Step is currently being worked on. |
+| `done` | Step has supporting evidence. |
+| `blocked` | Step cannot progress; blocker is recorded. |
+| `skipped` | Step is intentionally not needed for this change. |
+
+Evidence should be a path or short note pointing to:
+
+- original source or design document
+- confirmed implementation plan
+- changed files or implementation summary
+- verification notes, command output, or manual test notes
+- handoff/archive note
+
+Do not mark `development`, `testing`, or `archive` as `done` without matching evidence. If the user only asks to refresh dashboard, update the dashboard from existing Flow Records but do not invent new done states.
 
 ## Status
 
@@ -188,6 +231,7 @@ The user does not need to ask for brainstorming explicitly.
 
 - status
 - plan status
+- Flow Record development/testing/archive steps
 - verification notes
 - implementation notes
 - residual risk
@@ -195,6 +239,7 @@ The user does not need to ask for brainstorming explicitly.
 `project-review` checks:
 
 - code changes match the Change Brief
+- dashboard cards match Flow Record evidence
 - scope did not drift
 - candidate plans were not executed without confirmation
 - verification matches acceptance

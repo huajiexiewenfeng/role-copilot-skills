@@ -1,5 +1,7 @@
 # Progress Dashboard
 
+Read `flow-record.md` when changing the development flow board or dashboard card model.
+
 The progress dashboard is a static HTML status surface maintained by LLM agents. It helps users see project progress quickly, but it is not a source of truth.
 
 Source of truth remains:
@@ -28,7 +30,7 @@ The skill template is:
 ../references/progress-dashboard-template.html
 ```
 
-`project-init` should create the dashboard when missing. `project-finish` should update it after verified lifecycle progress. `project-review` should check dashboard drift. Users should not need to manually edit this file during normal development.
+`project-init` should create the dashboard when missing. `project-query` can refresh it on explicit user request. `project-finish` should update it after verified lifecycle progress. `project-review` should check dashboard drift. Users should not need to manually edit this file during normal development.
 
 ## Layout Contract
 
@@ -55,15 +57,16 @@ Shows overall project state:
 
 ### Development Flow Board
 
-Shows work cards grouped by lifecycle state:
+Shows Flow Record cards grouped by lifecycle step:
 
-- Backlog / Candidate
-- Clarifying / Triaging
-- Planned
-- Executing
-- Verifying
-- Done
-- Blocked
+- Source / Requirement
+- Design
+- Plan / Execute
+- Development
+- Testing
+- Archive
+
+Each card should represent one stable `flow_id` / Change Brief / Bug Brief, not an unrelated loose task. The same `flow_id` may appear in multiple lanes only when each lane shows a different evidence-backed step.
 
 ### Document Evidence
 
@@ -115,6 +118,32 @@ Status: Verified
 Evidence: .llm-wiki/bugs/2026-06-04-payment-callback.md#Verification
 ```
 
+## Flow Record Rule
+
+The dashboard's flow board should be generated from Flow Records stored in Change Briefs, Bug Briefs, or working-context pages.
+
+Minimum card fields:
+
+```text
+flow_id:
+title:
+step: source | design | plan | development | testing | archive
+status: pending | active | done | blocked | skipped
+source:
+evidence:
+updated:
+```
+
+The user-facing effect should be:
+
+```text
+one design/source document
+-> one linked flow record
+-> visible progress across execute/develop/test/archive
+```
+
+If a source document contains multiple separable changes, split them into multiple flow records only when the implementation or verification path is meaningfully different. Otherwise keep one record and use notes/open questions.
+
 ## Update Rules
 
 Update dashboard only when one of these happens:
@@ -123,11 +152,35 @@ Update dashboard only when one of these happens:
 - active scope changes
 - verification status changes
 - finish sync changes project state
+- user asks for dashboard-only refresh from existing evidence
 - review finds or clears drift
 - user explicitly asks to update progress page
 - evaluator/Dolores creates a lifecycle quality artifact worth surfacing
 
 Do not update dashboard during ordinary lightweight discussion.
+
+## Direct Dashboard Refresh Rules
+
+Use direct dashboard refresh when the user explicitly says:
+
+- update dashboard
+- refresh dashboard
+- update progress page
+- 更新看板
+- 刷新 dashboard
+- 同步项目状态页
+
+This route does not mean development is finished. It should:
+
+- read `.llm-wiki/README.md`, `.llm-wiki/log.md`, `.llm-wiki/artifacts/index.md`, active Change Briefs, Bug Briefs, working-context pages, verification notes, and module/source indexes as needed
+- update only `.llm-wiki/dashboard/progress.html` plus dashboard artifact metadata/log when needed
+- keep unsupported items as `candidate`, `incomplete`, `unknown`, `blocked`, or `not verified`
+- preserve existing dashboard layout and update `dashboardData` or marked sections
+- avoid creating Change Briefs, Bug Briefs, implementation plans, or code changes
+
+Direct refresh is appropriate after `project-init`, `project-ingest`, requirement discussion, planning, partial verification, review feedback, or any point where the team wants the visible status page to catch up.
+
+Direct refresh should prefer existing Flow Records. If a new source/design document has no Flow Record yet, show it as a `candidate` or `pending` card and recommend creating or confirming the related Change Brief instead of silently inventing an execution plan.
 
 ## Init Rules
 
@@ -159,7 +212,7 @@ During `project-finish`, update only evidence-backed sections:
 - active requirement or bug
 - current stage/status
 - progress percentage when justified by completed gates
-- active task cards
+- Flow Record cards
 - risk and evidence gap cards
 - evidence list
 - last update timestamp
@@ -184,7 +237,8 @@ During `project-review`, check:
 
 - dashboard file exists when registered as an artifact
 - dashboard stage/status is supported by Change Brief, Bug Brief, working-context, verification, or `.llm-wiki/log.md`
-- dashboard task cards reference existing evidence
+- dashboard Flow Record cards reference existing evidence
+- each card's `flow_id`, step, and status match the linked Change Brief/Bug Brief/working-context
 - dashboard does not hide blocked or high-risk active work
 - dashboard does not claim verification success without verification evidence
 - dashboard language matches the project/user-facing language

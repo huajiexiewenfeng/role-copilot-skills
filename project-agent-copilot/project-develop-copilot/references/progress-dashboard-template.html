@@ -144,11 +144,11 @@
         <h2>开发流程看板</h2>
         <!-- BOARD_START -->
         <div class="board" id="flow-board">
-          <div class="column"><h3>需求</h3></div>
+          <div class="column"><h3>需求/来源</h3></div>
           <div class="column"><h3>设计</h3></div>
-          <div class="column"><h3>实现</h3></div>
-          <div class="column"><h3>验证</h3></div>
-          <div class="column"><h3>完成</h3></div>
+          <div class="column"><h3>执行计划</h3></div>
+          <div class="column"><h3>开发</h3></div>
+          <div class="column"><h3>测试/归档</h3></div>
         </div>
         <!-- BOARD_END -->
       </section>
@@ -194,6 +194,17 @@
       evidenceCount: 1,
       summary: "项目已初始化。等待 ingest 需求或选择 scoped context。",
       nextAction: "执行 project-ingest 或 project-init refresh。",
+      flowRecords: [
+        {
+          flowId: "example-change",
+          title: "示例需求",
+          step: "source",
+          status: "pending",
+          source: ".llm-wiki/requirements/example-change.md",
+          evidence: ".llm-wiki/requirements/example-change.md#Flow-Record",
+          updated: ""
+        }
+      ],
       cards: [],
       evidence: [".llm-wiki/README.md"],
       maintenance: ["init 创建 dashboard；finish 更新状态；review 检查 drift。"]
