@@ -3,66 +3,581 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Project Progress Dashboard</title>
+  <title>Project Flow Dashboard</title>
   <style>
     :root {
-      --bg: #f6f7f4;
-      --panel: #ffffff;
-      --ink: #202124;
-      --muted: #666b72;
-      --line: #d8ddd2;
-      --accent: #1d6f8f;
-      --ok: #1f7a4d;
-      --warn: #9a6a00;
-      --bad: #a93b3b;
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface-soft: #f9fafb;
+      --line: #d9dee8;
+      --text: #172033;
+      --muted: #667085;
+      --subtle: #8a94a6;
+      --blue: #2563eb;
+      --green: #0f766e;
+      --amber: #b45309;
+      --red: #b42318;
+      --shadow: 0 18px 55px rgba(20, 34, 58, .08);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-      color: var(--ink);
       background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.5;
     }
-    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-    aside { border-right: 1px solid var(--line); padding: 24px 18px; background: #eef2ec; }
-    main { padding: 28px; }
-    h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
-    h1 { font-size: 28px; }
-    h2 { font-size: 18px; margin-bottom: 12px; }
-    h3 { font-size: 15px; }
-    p { margin: 0; color: var(--muted); line-height: 1.55; }
-    .nav { display: grid; gap: 10px; margin-top: 24px; font-size: 14px; }
-    .nav a { color: var(--ink); text-decoration: none; }
-    .note { margin-top: 28px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-    .hero { display: grid; gap: 18px; margin-bottom: 22px; }
-    .meta { display: flex; flex-wrap: wrap; gap: 8px; }
-    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; background: var(--panel); font-size: 13px; }
-    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
-    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
-    .metric { font-size: 26px; font-weight: 700; margin-top: 6px; }
-    .summary { display: grid; grid-template-columns: 1.3fr .7fr; gap: 14px; margin-bottom: 18px; }
-    .board { display: grid; grid-template-columns: repeat(6, minmax(180px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 6px; }
-    .column { min-width: 180px; display: grid; gap: 10px; align-content: start; }
-    .card { background: #fbfcfa; border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 8px; }
-    .status { font-size: 12px; font-weight: 650; color: var(--accent); }
-    .risk-high { color: var(--bad); }
-    .risk-medium { color: var(--warn); }
-    .risk-low { color: var(--ok); }
-    .list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
-    .list li { border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: 14px; }
+
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, h4, p { margin: 0; letter-spacing: 0; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #e5e7eb;
+      color: #111827;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+
+    .brand-title {
+      display: block;
+      font-size: 14px;
+      font-weight: 750;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand-subtitle {
+      display: block;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+
+    .nav-group { display: grid; gap: 6px; }
+
+    .nav-label {
+      color: #9ca3af;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin: 4px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 36px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+
+    .nav-item.active { background: #273244; color: #ffffff; }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .75;
+      flex: 0 0 auto;
+    }
+
+    .sidebar-note {
+      margin-top: auto;
+      border: 1px solid rgba(255, 255, 255, .11);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .sidebar-note strong {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .sidebar-note p {
+      color: #aab4c3;
+      font-size: 12px;
+    }
+
+    .main {
+      min-width: 0;
+      padding: 22px 26px 34px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .page-title h1 {
+      font-size: 25px;
+      line-height: 1.2;
+      font-weight: 750;
+    }
+
+    .page-title p {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 7px;
+      padding: 7px 11px;
+      font: inherit;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    .button.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+    }
+
+    .icon {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(340px, .95fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-header {
+      min-height: 48px;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-title { min-width: 0; }
+
+    .panel-title h2,
+    .panel-title h3 {
+      font-size: 15px;
+      line-height: 1.25;
+      font-weight: 750;
+    }
+
+    .panel-title p {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .badge.green { color: var(--green); background: #ecfdf3; border-color: #b7e4cf; }
+    .badge.blue { color: var(--blue); background: #eff6ff; border-color: #bfdbfe; }
+    .badge.amber { color: var(--amber); background: #fffbeb; border-color: #fde68a; }
+    .badge.red { color: var(--red); background: #fef3f2; border-color: #fecdca; }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, .9fr) minmax(0, 1.1fr);
+      gap: 14px;
+      padding: 15px;
+    }
+
+    .phase-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .phase-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 9px;
+    }
+
+    .phase-card h2 {
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 760;
+    }
+
+    .progress-row { margin-top: 18px; }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .progress-track {
+      height: 10px;
+      background: #e8edf5;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #0f766e);
+      border-radius: inherit;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 21px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary { display: grid; gap: 11px; }
+
+    .llm-summary {
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      border-radius: 8px;
+      padding: 13px;
+    }
+
+    .llm-summary h3 {
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    .llm-summary p {
+      color: #344054;
+      font-size: 13px;
+    }
+
+    .mini-list { display: grid; gap: 8px; }
+
+    .mini-item {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 10px;
+      background: var(--surface);
+      font-size: 13px;
+    }
+
+    .severity {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--blue);
+    }
+
+    .severity.red { background: var(--red); }
+    .severity.amber { background: var(--amber); }
+    .severity.green { background: var(--green); }
+
+    .mini-item small {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .side-stack { display: grid; gap: 14px; }
+
+    .next-actions,
+    .source-list,
+    .activity-list {
+      padding: 13px 15px 15px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .action-item {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      display: grid;
+      gap: 5px;
+      background: var(--surface-soft);
+    }
+
+    .action-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .action-item p {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .source-item,
+    .activity-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid #edf0f5;
+      padding-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .source-item:last-child,
+    .activity-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .path {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section-band {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(190px, 1fr));
+      gap: 10px;
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    .lane {
+      min-width: 190px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+    }
+
+    .lane-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .lane-header h3 {
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .count {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #344054;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .task-list { display: grid; gap: 8px; }
+
+    .task-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .task-card h4 {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .task-card p {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--subtle);
+      font-size: 11px;
+    }
+
+    .task-source {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .automation-panel {
+      display: grid;
+      gap: 11px;
+      padding: 13px 15px 15px;
+    }
+
+    .rule {
+      border-left: 3px solid var(--blue);
+      padding: 2px 0 2px 10px;
+    }
+
+    .rule strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .rule span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
     .doc-viewer {
       position: fixed;
       inset: 24px;
       z-index: 20;
       display: none;
       grid-template-rows: auto 1fr;
-      background: var(--panel);
+      background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 8px;
       box-shadow: 0 18px 48px rgba(32, 33, 36, .18);
       overflow: hidden;
     }
+
     .doc-viewer.open { display: grid; }
+
     .doc-viewer header {
       display: flex;
       align-items: center;
@@ -72,13 +587,15 @@
       border-bottom: 1px solid var(--line);
       background: #eef2ec;
     }
+
     .doc-viewer button {
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: var(--panel);
+      background: var(--surface);
       padding: 6px 10px;
       cursor: pointer;
     }
+
     .doc-viewer article {
       overflow: auto;
       padding: 18px;
@@ -87,91 +604,255 @@
       font-size: 14px;
       line-height: 1.6;
     }
-    @media (max-width: 860px) {
-      .shell { grid-template-columns: 1fr; }
-      aside { border-right: 0; border-bottom: 1px solid var(--line); }
-      main { padding: 18px; }
-      .grid, .summary { grid-template-columns: 1fr; }
+
+    @media (max-width: 1180px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        flex-direction: row;
+        align-items: center;
+        overflow-x: auto;
+      }
+      .nav-group {
+        grid-auto-flow: column;
+        grid-auto-columns: max-content;
+      }
+      .nav-label,
+      .sidebar-note { display: none; }
+      .dashboard,
+      .section-band { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .main { padding: 16px; }
+      .topbar,
+      .hero-grid {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+      .top-actions { justify-content: flex-start; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .phase-card h2 { font-size: 24px; }
       .doc-viewer { inset: 10px; }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <aside>
-      <h2 id="nav-project-name">项目开发看板</h2>
-      <nav class="nav">
-        <a href="#cockpit">项目驾驶舱</a>
-        <a href="#board">开发流程</a>
-        <a href="#evidence">文档证据</a>
-        <a href="#maintenance">Skills 更新</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="项目导航">
+      <a class="brand" href="#">
+        <span class="brand-mark">PW</span>
+        <span>
+          <span class="brand-title" id="nav-project-name">Project Wiki Home</span>
+          <span class="brand-subtitle">LLM-maintained flow</span>
+        </span>
+      </a>
+
+      <nav class="nav-group">
+        <span class="nav-label">Overview</span>
+        <a class="nav-item active" href="#dashboard"><span class="nav-dot"></span>项目驾驶舱</a>
+        <a class="nav-item" href="#flow"><span class="nav-dot"></span>开发流程</a>
+        <a class="nav-item" href="#evidence"><span class="nav-dot"></span>文档证据</a>
+        <a class="nav-item" href="#maintenance"><span class="nav-dot"></span>Skills 更新</a>
       </nav>
-      <p class="note">这是 LLM / skills 维护的静态状态页，不是事实源。状态必须能回溯到源码、测试、.llm-wiki、Artifact Registry 或验证记录。</p>
+
+      <div class="sidebar-note">
+        <strong>静态页面维护约定</strong>
+        <p>页面不直接读取文件；由 project skills 根据 LLM Wiki 和 Markdown 改写状态区块。</p>
+      </div>
     </aside>
-    <main>
-      <section class="hero" id="cockpit">
-        <h1 id="project-name">项目名称</h1>
-        <div class="meta">
-          <span class="pill" id="current-stage">阶段：init</span>
-          <span class="pill" id="last-updated">更新：未记录</span>
-          <span class="pill" id="active-scope">范围：project</span>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <h1 id="project-name">项目名称</h1>
+          <p>本页由项目内 LLM Wiki / Markdown 维护，汇总阶段、Flow Record、风险、证据缺口和下一步动作。</p>
         </div>
-      </section>
+        <div class="top-actions" aria-label="页面动作">
+          <button class="button" type="button" title="由 project-query dashboard-refresh 更新">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            同步快照
+          </button>
+          <button class="button primary" type="button" title="由 project-finish 写回证据">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            记录进展
+          </button>
+        </div>
+      </header>
 
-      <section class="grid" aria-label="Project metrics">
-        <div class="panel"><p>整体进度</p><div class="metric" id="progress">0%</div></div>
-        <div class="panel"><p>当前任务</p><div class="metric" id="active-count">0</div></div>
-        <div class="panel"><p>风险</p><div class="metric risk-medium" id="risk-count">0</div></div>
-        <div class="panel"><p>证据</p><div class="metric" id="evidence-count">0</div></div>
-      </section>
-
-      <section class="summary">
+      <section class="dashboard" id="dashboard">
         <div class="panel">
-          <h2>LLM 最新总结</h2>
-          <!-- LLM_SUMMARY_START -->
-          <p id="llm-summary">项目已初始化。等待 ingest 需求或选择 scoped context。</p>
-          <!-- LLM_SUMMARY_END -->
+          <div class="panel-header">
+            <div class="panel-title">
+              <h2>项目驾驶舱</h2>
+              <p>面向每天开局的总览：阶段、健康度、风险和下一步。</p>
+            </div>
+            <span class="badge amber" id="health-badge">健康度：待补全</span>
+          </div>
+
+          <div class="hero-grid">
+            <div class="phase-card">
+              <div class="phase-meta">
+                <span>当前阶段</span>
+                <span id="last-updated">更新：未记录</span>
+              </div>
+              <h2 id="current-stage">init</h2>
+              <div class="progress-row">
+                <div class="progress-label">
+                  <span>整体进度</span>
+                  <strong id="progress">0%</strong>
+                </div>
+                <div class="progress-track" aria-label="整体进度">
+                  <div class="progress-fill" id="progress-fill"></div>
+                </div>
+              </div>
+              <div class="metrics">
+                <div class="metric"><strong id="active-count">0</strong><span>活动记录</span></div>
+                <div class="metric"><strong id="done-count">0</strong><span>完成步骤</span></div>
+                <div class="metric"><strong id="risk-count">0</strong><span>风险项</span></div>
+                <div class="metric"><strong id="evidence-count">1</strong><span>证据文档</span></div>
+              </div>
+            </div>
+
+            <div class="summary">
+              <div class="llm-summary">
+                <h3>LLM 最新总结</h3>
+                <!-- LLM_SUMMARY_START -->
+                <p id="llm-summary">项目已初始化。等待 ingest 需求或选择 scoped context。</p>
+                <!-- LLM_SUMMARY_END -->
+              </div>
+              <div class="mini-list">
+                <!-- RISKS_START -->
+                <div class="mini-item">
+                  <span class="severity amber"></span>
+                  <span>scoped context 未完成前，feature work 仍需补证据。</span>
+                  <small>中</small>
+                </div>
+                <!-- RISKS_END -->
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="panel">
-          <h2>下一步建议</h2>
-          <!-- NEXT_ACTION_START -->
-          <p id="next-action">执行 project-ingest 或 project-init refresh。</p>
-          <!-- NEXT_ACTION_END -->
+
+        <div class="side-stack">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>下一步建议</h3>
+                <p>由 skills 后续维护为可执行动作。</p>
+              </div>
+              <span class="badge blue">next</span>
+            </div>
+            <div class="next-actions">
+              <!-- NEXT_ACTION_START -->
+              <div class="action-item">
+                <div class="action-title"><span>补齐上下文</span><span class="badge amber">待处理</span></div>
+                <p id="next-action">执行 project-ingest 或 project-init refresh。</p>
+              </div>
+              <!-- NEXT_ACTION_END -->
+            </div>
+          </div>
+
+          <div class="panel" id="evidence">
+            <div class="panel-header">
+              <div class="panel-title">
+                <h3>文档证据</h3>
+                <p>页面内容应能追溯到这些 Markdown。</p>
+              </div>
+            </div>
+            <div class="source-list">
+              <!-- EVIDENCE_START -->
+              <div class="source-item">
+                <span>项目总览</span>
+                <a class="path" href="../README.md">.llm-wiki/README.md</a>
+              </div>
+              <!-- EVIDENCE_END -->
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="panel" id="board">
-        <h2>开发流程看板</h2>
-        <!-- BOARD_START -->
-        <div class="board" id="flow-board">
-          <div class="column"><h3>需求/来源</h3></div>
-          <div class="column"><h3>设计</h3></div>
-          <div class="column"><h3>执行计划</h3></div>
-          <div class="column"><h3>开发</h3></div>
-          <div class="column"><h3>测试</h3></div>
-          <div class="column"><h3>归档</h3></div>
+      <section class="section-band" id="flow">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <h2>开发流程看板</h2>
+              <p>卡片来自 Flow Record：需求/来源、设计、执行计划、开发、测试、归档。</p>
+            </div>
+            <span class="badge blue">静态快照</span>
+          </div>
+
+          <!-- BOARD_START -->
+          <div class="kanban" id="flow-board" aria-label="开发流程看板">
+            <section class="lane">
+              <div class="lane-header"><h3>需求/来源</h3><span class="count">1</span></div>
+              <div class="task-list">
+                <article class="task-card" data-flow-id="example-change" data-step="source">
+                  <span class="badge amber">pending</span>
+                  <h4>示例需求</h4>
+                  <p>等待确认来源文档与开发范围。</p>
+                  <div class="task-meta"><span class="task-source">.llm-wiki/requirements/example-change.md</span><span>--</span></div>
+                </article>
+              </div>
+            </section>
+            <section class="lane"><div class="lane-header"><h3>设计</h3><span class="count">0</span></div><div class="task-list"></div></section>
+            <section class="lane"><div class="lane-header"><h3>执行计划</h3><span class="count">0</span></div><div class="task-list"></div></section>
+            <section class="lane"><div class="lane-header"><h3>开发</h3><span class="count">0</span></div><div class="task-list"></div></section>
+            <section class="lane"><div class="lane-header"><h3>测试</h3><span class="count">0</span></div><div class="task-list"></div></section>
+            <section class="lane"><div class="lane-header"><h3>归档</h3><span class="count">0</span></div><div class="task-list"></div></section>
+          </div>
+          <!-- BOARD_END -->
         </div>
-        <!-- BOARD_END -->
+
+        <aside class="panel" id="maintenance">
+          <div class="panel-header">
+            <div class="panel-title">
+              <h3>Skills 维护约定</h3>
+              <p>给后续自动更新留下清晰区块。</p>
+            </div>
+          </div>
+          <div class="automation-panel">
+            <!-- MAINTENANCE_START -->
+            <div class="rule">
+              <strong>扫描 Flow Record</strong>
+              <span>读取 requirements、bugs、working-context 中的 Flow Record。</span>
+            </div>
+            <div class="rule">
+              <strong>更新驾驶舱</strong>
+              <span>改写阶段、进度、风险数量、LLM 总结和下一步建议。</span>
+            </div>
+            <div class="rule">
+              <strong>维护看板</strong>
+              <span>根据 Flow Record 生成卡片，保留 flow_id、证据路径和更新时间。</span>
+            </div>
+            <div class="rule">
+              <strong>保留人工判断</strong>
+              <span>阻塞项、发布动作、危险操作仍需要人确认后再变更。</span>
+            </div>
+            <!-- MAINTENANCE_END -->
+          </div>
+        </aside>
       </section>
 
-      <section class="summary" id="evidence" style="margin-top:18px;">
-        <div class="panel">
-          <h2>文档证据</h2>
-          <!-- EVIDENCE_START -->
-          <ul class="list" id="evidence-list">
-            <li>.llm-wiki/README.md</li>
-          </ul>
-          <!-- EVIDENCE_END -->
+      <section class="panel" style="margin-top:14px">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>更新日志</h2>
+            <p>记录 skills 或人工对本页面做出的状态变更。</p>
+          </div>
         </div>
-        <div class="panel" id="maintenance">
-          <h2>Skills 更新</h2>
-          <!-- MAINTENANCE_START -->
-          <ul class="list" id="maintenance-list">
-            <li>init 创建 dashboard；finish 更新状态；review 检查 drift。</li>
-          </ul>
-          <!-- MAINTENANCE_END -->
+        <div class="activity-list">
+          <!-- ACTIVITY_START -->
+          <div class="activity-item">
+            <span>初始化项目驾驶舱与 Flow Record 看板静态结构。</span>
+            <span class="path">--</span>
+          </div>
+          <!-- ACTIVITY_END -->
         </div>
       </section>
+
+      <p class="footer-note">Static Project Flow Dashboard · HTML only · Evidence-backed</p>
     </main>
   </div>
 
@@ -190,8 +871,9 @@
       lastUpdated: "",
       activeScope: "project",
       progress: 0,
-      activeCount: 0,
-      riskCount: 0,
+      activeCount: 1,
+      doneCount: 0,
+      riskCount: 1,
       evidenceCount: 1,
       summary: "项目已初始化。等待 ingest 需求或选择 scoped context。",
       nextAction: "执行 project-ingest 或 project-init refresh。",
@@ -207,10 +889,32 @@
           updated: ""
         }
       ],
-      cards: [],
       evidence: [".llm-wiki/README.md"],
       maintenance: ["init 创建 dashboard；finish 更新状态；review 检查 drift。"]
     };
+
+    (function () {
+      const data = window.dashboardData || {};
+      const setText = function (id, value) {
+        const node = document.getElementById(id);
+        if (node && value !== undefined && value !== null) node.textContent = value;
+      };
+
+      setText("project-name", data.projectName);
+      setText("nav-project-name", data.projectName || "Project Wiki Home");
+      setText("current-stage", data.stage);
+      setText("last-updated", data.lastUpdated ? "更新：" + data.lastUpdated : "更新：未记录");
+      setText("progress", (data.progress || 0) + "%");
+      setText("active-count", data.activeCount || 0);
+      setText("done-count", data.doneCount || 0);
+      setText("risk-count", data.riskCount || 0);
+      setText("evidence-count", data.evidenceCount || 0);
+      setText("llm-summary", data.summary);
+      setText("next-action", data.nextAction);
+
+      const progressFill = document.getElementById("progress-fill");
+      if (progressFill) progressFill.style.width = Math.max(0, Math.min(100, data.progress || 0)) + "%";
+    })();
 
     (function () {
       const viewer = document.getElementById("doc-viewer");
