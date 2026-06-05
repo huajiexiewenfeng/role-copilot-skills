@@ -72,7 +72,7 @@ Workflow:
 4. Produce a concise context summary.
 5. Run Clarification Gate before implementation planning.
 6. Guide the user conversationally through requirement discussion.
-7. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion.
+7. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
 8. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
 9. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
 10. Provide Context Handoff before external planning/TDD/execution bridges.
@@ -163,6 +163,20 @@ Risks:
 Verification:
 ```
 
+## Team-Shared Wiki Rules
+
+`.llm-wiki` is a team-shared project knowledge base, not a workstation scratchpad. When writing requirement, design, working-context, source, index, manifest, or module pages under `.llm-wiki`:
+
+- Use project-relative or `.llm-wiki`-relative paths, such as `../sources/proxies/<batch-id>/<source>.md`, `../modules/<module>/context.md`, or `../../dji-dock3-adapter/...`.
+- Do not write workstation-specific absolute paths such as `C:\Users\...`, `D:\workspace\...`, `/Users/...`, or `/home/...` into durable `.llm-wiki` pages.
+- For external local files used as evidence, ingest or summarize them through project-ingest first, then cite the wiki-local proxy/original path. If they are only inspected temporarily, describe them as temporary local references and do not persist their absolute paths.
+- Do not create new durable requirement/design artifacts under `docs/superpowers/` unless the user explicitly asks for Superpowers output or the repository has an active team convention to keep that feature's source artifacts there.
+- If a source exists both in the original repository path and under `.llm-wiki/sources/originals/`, prefer the wiki-local source path when writing team-shared wiki pages; use original paths only as transient investigation context.
+
+## Brainstorming Override
+
+When bridging to brainstorming, project-develop owns durable project outputs. Brainstorming may shape questions, tradeoff analysis, and design review, but its generic instruction to write validated specs under `docs/superpowers/specs/` is overridden unless the user explicitly requested a Superpowers spec or the repository has an active team convention for that feature. In the normal project-local workflow, write requirement and design results to `.llm-wiki/requirements/<change-id>.md`, and create `.llm-wiki/working-context/<change-id>.md` when broader implementation context is needed.
+
 ## Boundaries
 
 - Do not pull all services in a monorepo into context by default.
@@ -172,13 +186,15 @@ Verification:
 - Do not copy secrets or long original content into `.llm-wiki`.
 - Do not modify production code during requirement discussion, context recovery, or planning unless the user explicitly asks to proceed.
 - Do not generate or require codegraph unless scope is ambiguous, cross-module impact is complex, or the user asks for it.
-- Do not force full brainstorming/spec output for every feature.
+- Do not force full brainstorming/spec output for every feature. In project-local `.llm-wiki` workflows, do not inherit brainstorming's default `docs/superpowers/specs/` output path.
 
 ## Common Mistakes
 
 - Starting implementation during clarification.
 - Creating plans without linking them to Change Brief.
 - Letting brainstorming or writing-plans choose project scope from scratch.
+- Letting brainstorming write new durable docs under `docs/superpowers/` when the project target is `.llm-wiki`.
+- Persisting local workstation absolute paths in `.llm-wiki` requirement, source, module, or working-context pages.
 - Expanding scope because a plan suggests it, without evidence or user confirmation.
 - Treating lightweight design discussion as full lifecycle.
 - Forgetting Return Handoff after planning or implementation.
