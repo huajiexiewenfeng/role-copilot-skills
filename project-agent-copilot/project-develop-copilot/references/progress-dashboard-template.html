@@ -50,11 +50,49 @@
     .risk-low { color: var(--ok); }
     .list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
     .list li { border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: 14px; }
+    .doc-viewer {
+      position: fixed;
+      inset: 24px;
+      z-index: 20;
+      display: none;
+      grid-template-rows: auto 1fr;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 48px rgba(32, 33, 36, .18);
+      overflow: hidden;
+    }
+    .doc-viewer.open { display: grid; }
+    .doc-viewer header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #eef2ec;
+    }
+    .doc-viewer button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .doc-viewer article {
+      overflow: auto;
+      padding: 18px;
+      white-space: pre-wrap;
+      font-family: Consolas, "Microsoft YaHei", monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
     @media (max-width: 860px) {
       .shell { grid-template-columns: 1fr; }
       aside { border-right: 0; border-bottom: 1px solid var(--line); }
       main { padding: 18px; }
       .grid, .summary { grid-template-columns: 1fr; }
+      .doc-viewer { inset: 10px; }
     }
   </style>
 </head>
@@ -136,6 +174,14 @@
     </main>
   </div>
 
+  <div class="doc-viewer" id="doc-viewer" aria-hidden="true">
+    <header>
+      <h2 id="doc-viewer-title">文档</h2>
+      <button type="button" id="doc-viewer-close">关闭</button>
+    </header>
+    <article id="doc-viewer-content"></article>
+  </div>
+
   <script>
     window.dashboardData = {
       projectName: "项目名称",
@@ -152,6 +198,39 @@
       evidence: [".llm-wiki/README.md"],
       maintenance: ["init 创建 dashboard；finish 更新状态；review 检查 drift。"]
     };
+
+    (function () {
+      const viewer = document.getElementById("doc-viewer");
+      const title = document.getElementById("doc-viewer-title");
+      const content = document.getElementById("doc-viewer-content");
+      const close = document.getElementById("doc-viewer-close");
+      const decoder = new TextDecoder("utf-8");
+
+      document.addEventListener("click", async function (event) {
+        const link = event.target.closest('a[href$=".md"], a[href*=".md#"]');
+        if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        event.preventDefault();
+        title.textContent = link.textContent.trim() || link.getAttribute("href");
+        content.textContent = "正在读取文档...";
+        viewer.classList.add("open");
+        viewer.setAttribute("aria-hidden", "false");
+
+        try {
+          const response = await fetch(link.href, { cache: "no-store" });
+          if (!response.ok) throw new Error(response.status + " " + response.statusText);
+          const buffer = await response.arrayBuffer();
+          content.textContent = decoder.decode(buffer);
+        } catch (error) {
+          content.textContent = "无法读取文档：" + error.message + "\n\n可按住 Ctrl 后点击链接，在新页面打开原始 Markdown。";
+        }
+      });
+
+      close.addEventListener("click", function () {
+        viewer.classList.remove("open");
+        viewer.setAttribute("aria-hidden", "true");
+      });
+    })();
   </script>
 </body>
 </html>

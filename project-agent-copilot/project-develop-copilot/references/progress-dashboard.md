@@ -220,6 +220,7 @@ Review should report dashboard drift as a lifecycle finding, not a visual nit.
 - Do not fetch remote assets by default.
 - Keep status data easy to update without rewriting the full layout.
 - Preserve evidence links in visible text or `data-evidence` attributes.
+- When linking to local Markdown evidence, avoid raw navigation that depends on browser/server charset detection. Prefer the template's inline Markdown viewer, which fetches bytes and decodes as UTF-8 with `TextDecoder("utf-8")`.
 
 ## Common Mistakes
 
