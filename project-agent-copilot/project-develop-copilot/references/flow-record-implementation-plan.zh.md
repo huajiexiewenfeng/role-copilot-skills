@@ -163,6 +163,8 @@ Status: next.
 
 ### 测试场景 A：单需求完整链路
 
+Status: dry-run applied on 2026-06-05; see `flow-record-dry-run-2026-06-05.md`.
+
 项目：
 
 ```text
