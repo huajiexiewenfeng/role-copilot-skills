@@ -81,7 +81,7 @@ Workflow:
 6. Check scope drift against active/read-only/candidate/excluded scopes.
 7. Check wiki drift.
 8. Check artifact drift.
-9. Check dashboard drift.
+9. Check dashboard drift: existence, evidence support, task cards, risk visibility, verification claims, and language consistency.
 10. Check external bridge consistency.
 11. Check project root and wiki placement when init/recovery occurred.
 12. Check cross-session project continuity when prior context or previous chat state affects the work.

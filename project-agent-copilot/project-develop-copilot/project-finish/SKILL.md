@@ -49,6 +49,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/progress-dashboard.md`
+- `../references/progress-dashboard-template.html`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
@@ -64,8 +65,9 @@ Workflow:
 7. Mark related working-context as verified, done, blocked, or skipped.
 8. Record verification limitation and residual risk when verification was partial or blocked.
 9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
-10. Update progress dashboard only with evidence-backed facts when enabled or requested.
-11. Report implementation summary, verification, sync updates, residual risk, and next action.
+10. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
+11. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
+12. Report implementation summary, verification, sync updates, residual risk, and next action.
 
 ## Mode / Entry Selection
 
@@ -137,6 +139,7 @@ Return:
 - Do not write large implementation narratives into `.llm-wiki`.
 - Do not update unrelated modules or sources.
 - Do not update dashboard without evidence links.
+- Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.
 - Do not hide residual risk when tests could not run.
 
 ## Common Mistakes

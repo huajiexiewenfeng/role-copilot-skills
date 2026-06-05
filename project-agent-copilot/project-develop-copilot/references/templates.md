@@ -94,3 +94,26 @@
 
 ## Related
 ```
+
+## Progress Dashboard Starter
+
+Use `progress-dashboard-template.html` when creating:
+
+```text
+.llm-wiki/dashboard/progress.html
+```
+
+Minimum facts to fill during init:
+
+```text
+projectName:
+stage: init | refresh
+lastUpdated:
+activeScope: project
+progress: 0
+summary:
+nextAction:
+evidence:
+```
+
+Keep visible labels in the detected project/user language. Preserve paths, lifecycle ids, status ids, and command names in their original form.

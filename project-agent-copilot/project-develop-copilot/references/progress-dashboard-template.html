@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Progress Dashboard</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #202124;
+      --muted: #666b72;
+      --line: #d8ddd2;
+      --accent: #1d6f8f;
+      --ok: #1f7a4d;
+      --warn: #9a6a00;
+      --bad: #a93b3b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    aside { border-right: 1px solid var(--line); padding: 24px 18px; background: #eef2ec; }
+    main { padding: 28px; }
+    h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: 0; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    h3 { font-size: 15px; }
+    p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .nav { display: grid; gap: 10px; margin-top: 24px; font-size: 14px; }
+    .nav a { color: var(--ink); text-decoration: none; }
+    .note { margin-top: 28px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .hero { display: grid; gap: 18px; margin-bottom: 22px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; background: var(--panel); font-size: 13px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .metric { font-size: 26px; font-weight: 700; margin-top: 6px; }
+    .summary { display: grid; grid-template-columns: 1.3fr .7fr; gap: 14px; margin-bottom: 18px; }
+    .board { display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 6px; }
+    .column { min-width: 180px; display: grid; gap: 10px; align-content: start; }
+    .card { background: #fbfcfa; border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 8px; }
+    .status { font-size: 12px; font-weight: 650; color: var(--accent); }
+    .risk-high { color: var(--bad); }
+    .risk-medium { color: var(--warn); }
+    .risk-low { color: var(--ok); }
+    .list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+    .list li { border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: 14px; }
+    @media (max-width: 860px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); }
+      main { padding: 18px; }
+      .grid, .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <h2 id="nav-project-name">项目开发看板</h2>
+      <nav class="nav">
+        <a href="#cockpit">项目驾驶舱</a>
+        <a href="#board">开发流程</a>
+        <a href="#evidence">文档证据</a>
+        <a href="#maintenance">Skills 更新</a>
+      </nav>
+      <p class="note">这是 LLM / skills 维护的静态状态页，不是事实源。状态必须能回溯到源码、测试、.llm-wiki、Artifact Registry 或验证记录。</p>
+    </aside>
+    <main>
+      <section class="hero" id="cockpit">
+        <h1 id="project-name">项目名称</h1>
+        <div class="meta">
+          <span class="pill" id="current-stage">阶段：init</span>
+          <span class="pill" id="last-updated">更新：未记录</span>
+          <span class="pill" id="active-scope">范围：project</span>
+        </div>
+      </section>
+
+      <section class="grid" aria-label="Project metrics">
+        <div class="panel"><p>整体进度</p><div class="metric" id="progress">0%</div></div>
+        <div class="panel"><p>当前任务</p><div class="metric" id="active-count">0</div></div>
+        <div class="panel"><p>风险</p><div class="metric risk-medium" id="risk-count">0</div></div>
+        <div class="panel"><p>证据</p><div class="metric" id="evidence-count">0</div></div>
+      </section>
+
+      <section class="summary">
+        <div class="panel">
+          <h2>LLM 最新总结</h2>
+          <!-- LLM_SUMMARY_START -->
+          <p id="llm-summary">项目已初始化。等待 ingest 需求或选择 scoped context。</p>
+          <!-- LLM_SUMMARY_END -->
+        </div>
+        <div class="panel">
+          <h2>下一步建议</h2>
+          <!-- NEXT_ACTION_START -->
+          <p id="next-action">执行 project-ingest 或 project-init refresh。</p>
+          <!-- NEXT_ACTION_END -->
+        </div>
+      </section>
+
+      <section class="panel" id="board">
+        <h2>开发流程看板</h2>
+        <!-- BOARD_START -->
+        <div class="board" id="flow-board">
+          <div class="column"><h3>需求</h3></div>
+          <div class="column"><h3>设计</h3></div>
+          <div class="column"><h3>实现</h3></div>
+          <div class="column"><h3>验证</h3></div>
+          <div class="column"><h3>完成</h3></div>
+        </div>
+        <!-- BOARD_END -->
+      </section>
+
+      <section class="summary" id="evidence" style="margin-top:18px;">
+        <div class="panel">
+          <h2>文档证据</h2>
+          <!-- EVIDENCE_START -->
+          <ul class="list" id="evidence-list">
+            <li>.llm-wiki/README.md</li>
+          </ul>
+          <!-- EVIDENCE_END -->
+        </div>
+        <div class="panel" id="maintenance">
+          <h2>Skills 更新</h2>
+          <!-- MAINTENANCE_START -->
+          <ul class="list" id="maintenance-list">
+            <li>init 创建 dashboard；finish 更新状态；review 检查 drift。</li>
+          </ul>
+          <!-- MAINTENANCE_END -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.dashboardData = {
+      projectName: "项目名称",
+      stage: "init",
+      lastUpdated: "",
+      activeScope: "project",
+      progress: 0,
+      activeCount: 0,
+      riskCount: 0,
+      evidenceCount: 1,
+      summary: "项目已初始化。等待 ingest 需求或选择 scoped context。",
+      nextAction: "执行 project-ingest 或 project-init refresh。",
+      cards: [],
+      evidence: [".llm-wiki/README.md"],
+      maintenance: ["init 创建 dashboard；finish 更新状态；review 检查 drift。"]
+    };
+  </script>
+</body>
+</html>

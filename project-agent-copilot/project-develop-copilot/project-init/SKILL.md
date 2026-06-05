@@ -36,6 +36,7 @@ Use when the router or user needs to:
 - Context Discovery Gate
 - Knowledge Sync Gate
 - Artifact Sync Gate when init produces important context artifacts
+- Progress Dashboard Sync Gate when init creates or refreshes the static dashboard
 
 ## Required First Check
 
@@ -69,6 +70,8 @@ Read as needed:
 - `../references/domain-skill-contract.md`
 - `../references/tool-bridge.md`
 - `../references/legacy-ai-coding-migration.md`
+- `../references/progress-dashboard.md`
+- `../references/progress-dashboard-template.html`
 
 Workflow:
 
@@ -82,11 +85,13 @@ Workflow:
 8. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
 9. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
 10. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
-11. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
-12. Preserve existing statuses unless evidence or user instruction changes them.
-13. Write a `.llm-wiki/log.md` entry.
-14. Return a concise handoff with the current init completion level.
-15. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
+11. Create `.llm-wiki/dashboard/progress.html` from `../references/progress-dashboard-template.html` when missing, using the detected project language for visible labels when practical.
+12. Register the dashboard in `.llm-wiki/artifacts/index.md` when the artifact registry exists; if the registry does not exist yet, create the standard artifact registry starter.
+13. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
+14. Preserve existing statuses unless evidence or user instruction changes them.
+15. Write a `.llm-wiki/log.md` entry.
+16. Return a concise handoff with the current init completion level.
+17. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
 
 ## Language Policy
 
@@ -111,6 +116,8 @@ A project init must create or preserve this standard structure. Some directories
   ingest/
   modules/
   sources/
+  artifacts/
+  dashboard/
   migration/
   working-context/
   decisions/
@@ -127,6 +134,8 @@ Minimum starter files:
 - `.llm-wiki/modules/index.md`: module inventory table.
 - `.llm-wiki/modules/<scope>/README.md`: scoped-context landing area only for selected or clearly active scopes.
 - `.llm-wiki/sources/registry.md`: source and supporting-context registry.
+- `.llm-wiki/artifacts/index.md`: specs, plans, reports, verification notes, generated pages, and dashboard registry.
+- `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
 - `.llm-wiki/working-context/README.md`: active task scratch area.
 - `.llm-wiki/decisions/README.md`: durable project decisions landing area.
@@ -139,6 +148,7 @@ Refresh rules:
 - Preserve existing directories and richer files even if they are not listed above.
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
 - If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
+- If `.llm-wiki/dashboard/progress.html` already exists, preserve its layout and update only the structured data/status sections needed by `progress-dashboard.md`.
 
 ## Mode / Entry Selection
 

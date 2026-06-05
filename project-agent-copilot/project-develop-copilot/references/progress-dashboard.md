@@ -22,6 +22,14 @@ Recommended path inside a target project:
 
 A project may choose another static HTML path, but it must be registered in `.llm-wiki/artifacts/index.md`.
 
+The skill template is:
+
+```text
+../references/progress-dashboard-template.html
+```
+
+`project-init` should create the dashboard when missing. `project-finish` should update it after verified lifecycle progress. `project-review` should check dashboard drift. Users should not need to manually edit this file during normal development.
+
 ## Layout Contract
 
 The first implementation should keep one static HTML page with these regions:
@@ -120,6 +128,66 @@ Update dashboard only when one of these happens:
 - evaluator/Dolores creates a lifecycle quality artifact worth surfacing
 
 Do not update dashboard during ordinary lightweight discussion.
+
+## Init Rules
+
+During `project-init` or `project-init refresh`:
+
+- create `.llm-wiki/dashboard/` when missing
+- create `.llm-wiki/dashboard/progress.html` from `progress-dashboard-template.html` when missing
+- use the detected project/user language for visible labels when practical
+- create or preserve `.llm-wiki/artifacts/index.md`
+- register the dashboard as `dashboard-progress`
+- do not overwrite an existing dashboard layout during refresh
+- do not mark a project feature-ready only because dashboard exists
+
+Starter dashboard values should be conservative:
+
+```text
+stage: init or refresh
+progress: 0-10%
+active_scope: project
+risk: context incomplete until scoped context exists
+next_action: ingest a requirement or complete a scoped context
+```
+
+## Finish Update Rules
+
+During `project-finish`, update only evidence-backed sections:
+
+- current lifecycle session
+- active requirement or bug
+- current stage/status
+- progress percentage when justified by completed gates
+- active task cards
+- risk and evidence gap cards
+- evidence list
+- last update timestamp
+- next suggested action
+
+Prefer editing `window.dashboardData` or clearly delimited sections such as:
+
+```html
+<!-- LLM_SUMMARY_START -->
+<!-- LLM_SUMMARY_END -->
+<!-- BOARD_START -->
+<!-- BOARD_END -->
+<!-- EVIDENCE_START -->
+<!-- EVIDENCE_END -->
+```
+
+Do not rewrite the full page for small status updates.
+
+## Review Rules
+
+During `project-review`, check:
+
+- dashboard file exists when registered as an artifact
+- dashboard stage/status is supported by Change Brief, Bug Brief, working-context, verification, or `.llm-wiki/log.md`
+- dashboard task cards reference existing evidence
+- dashboard does not hide blocked or high-risk active work
+- dashboard does not claim verification success without verification evidence
+- dashboard language matches the project/user-facing language
 
 ## Artifact Registry Row
 
