@@ -1,39 +1,64 @@
 ---
 name: project-session-extract
-description: Use when extracting, summarizing, distilling, reviewing, or importing historical chat/session context into a project .llm-wiki, including pasted conversations, transcript files, exported AI sessions, colleague chats, old agent handoffs, or conversation summaries.
+description: Use when extracting, summarizing, distilling, reviewing, or importing historical chat/session context into a project .llm-wiki as recallable Context Digests first, including pasted conversations, transcript files, exported AI sessions, colleague chats, old agent handoffs, or conversation summaries; promote selected digest items into requirements, bugs, Flow Records, or dashboard only after explicit user confirmation.
 ---
 
 # Project Session Extract
 
 ## Purpose
 
-Extract durable project knowledge from historical AI or team chat sessions, then let the user confirm what should be imported into `.llm-wiki`.
+Extract recallable project context from historical AI or team chat sessions, then let the user decide what should be saved as a Context Digest and what, if anything, should later be promoted into the project lifecycle.
 
-This skill does not import raw chat by default. It creates a candidate Session Digest first, filters noise and sensitive content, maps useful context to project wiki targets, and writes only confirmed knowledge.
+This skill does not import raw chat by default. It creates a concise candidate Context Digest first, filters noise and sensitive content, and writes only the user-confirmed digest. Requirements, bugs, Flow Records, dashboard state, scope, and project truth are not updated by default.
+
+## Core Model
+
+Use a two-layer model:
+
+```text
+historical chat/session
+-> Context Digest
+-> user restores context
+-> selected digest items
+-> Lifecycle Promotion when explicitly confirmed
+```
+
+Layer 1, Context Digest:
+
+- restores context for later conversations
+- may contain mixed requirements, bugs, design notes, risks, tooling notes, and ordinary discussion
+- does not update project truth, scope, Flow Records, or dashboard
+- is the default output of this skill
+
+Layer 2, Lifecycle Promotion:
+
+- turns selected digest items into requirement, bug, design, working-context, execution plan, verification, handoff, Flow Record, or dashboard evidence
+- requires explicit user confirmation
+- should route to `project-develop`, `project-fix`, `project-finish`, or `project-review` as appropriate
 
 ## When to Use
 
 Use when the user asks to:
 
 - extract, summarize, distill, or import a historical session, old chat, transcript, conversation, AI session, colleague AI discussion, or agent handoff
-- turn previous session context into project `.llm-wiki` knowledge
+- save previous session context into project `.llm-wiki` for later recall
 - recover prior requirement discussion, design decisions, execution plans, bug analysis, verification notes, risks, or open questions from chat history
-- decide whether historical conversation content should link to an existing requirement, bug, module, working-context page, or Flow Record
-- preview useful project knowledge from a pasted session before importing it
+- preview useful context from a pasted session before importing it
+- decide whether selected historical conversation content should later be promoted into a requirement, bug, module, working-context page, or Flow Record
 
 Example triggers:
 
 - "把之前的 session 总结一下导入 wiki"
-- "从这段历史聊天里提取有用的项目上下文"
+- "从这段历史聊天里提取后续可召回的上下文"
 - "同事之前和 AI 聊了很多，帮我沉淀到 llm-wiki"
-- "我不想开新 session，但想把旧会话的好内容内化"
-- "把这个 conversation / transcript / chat history 提纯成项目知识"
+- "我不想重新开 session，想把旧会话的好内容内化"
+- "把这个 conversation / transcript / chat history 提纯成上下文摘要"
 
 ## When Not to Use
 
 - Do not use for ordinary PRDs, design docs, Markdown, PDF, Word, URLs, logs, meeting notes, or customer feedback; route those to `project-ingest`.
 - Do not use for read-only project wiki questions unless the user wants to import or extract historical session context; route those to `project-query`.
-- Do not start implementation from this skill. After confirmed import, route feature work to `project-develop` and bug work to `project-fix`.
+- Do not start implementation from this skill. After confirmed lifecycle promotion, route feature work to `project-develop` and bug work to `project-fix`.
 - Do not archive full raw transcripts unless the user explicitly asks and sensitivity has been checked.
 
 ## Owned Gates
@@ -43,12 +68,14 @@ Example triggers:
 - Sensitivity Gate
 - Candidate Digest Gate
 - Import Confirmation Gate
+- Context Digest Gate
+- Lifecycle Promotion Gate only when the user explicitly asks to promote digest items into project lifecycle objects
 - Knowledge Sync Gate after user confirmation
-- Flow Record Mapping Gate when a digest may link to a requirement or bug
+- Flow Record Mapping Gate only when promotion may link to a requirement or bug
 
 ## Required Shared References
 
-Read these role-level references:
+Read these role-level references as needed:
 
 - `../references/session-digest.md`
 - `../references/north-star.md`
@@ -65,9 +92,10 @@ If installed in a flattened environment, locate equivalent `references/` paths n
 2. If `.llm-wiki` does not exist and the user wants to import, route to `project-init` first.
 3. Identify the input source: pasted chat, transcript file, exported JSON, handoff, summary, or unknown.
 4. Classify sensitivity: `normal`, `cautious`, or `sensitive`.
-5. Decide whether the user asked for `preview-only`, `save-candidate`, or `import-after-confirmation`.
-6. Read the smallest relevant wiki context before matching existing requirements, bugs, modules, or Flow Records.
-7. Never write project truth from historical session memory without user confirmation.
+5. Decide whether the user asked for `brief-candidates`, `draft-context-digest`, `save-context-digest`, or `promote-to-lifecycle`.
+6. Read only the smallest relevant wiki context needed for recall and duplicate avoidance.
+7. Do not force matching to existing requirements, bugs, modules, or Flow Records unless promotion is requested.
+8. Never write project truth from historical session memory without user confirmation.
 
 ## Core Process
 
@@ -76,43 +104,37 @@ Read as needed:
 - `../references/session-digest.md`
 - `../references/flow-record.md`
 - `.llm-wiki/README.md`
-- `.llm-wiki/requirements/`
-- `.llm-wiki/bugs/`
-- `.llm-wiki/modules/index.md`
-- `.llm-wiki/artifacts/index.md`
-- `.llm-wiki/log.md`
 - `.llm-wiki/session-digests/`
+- `.llm-wiki/log.md`
+- `.llm-wiki/requirements/`, `.llm-wiki/bugs/`, `.llm-wiki/modules/index.md`, and `.llm-wiki/artifacts/index.md` only when promotion or duplicate detection needs them
 
 Workflow:
 
 1. Resolve project root and `.llm-wiki`.
 2. Identify session source and normalize source metadata without storing personal absolute paths in durable wiki pages.
 3. Classify sensitivity and ask before deep-reading large, binary, remote, or sensitive-looking input.
-4. Read minimal wiki indexes to find related requirements, bugs, modules, working-context pages, artifacts, and Flow Records.
-5. Extract candidate project knowledge:
-   - requirements and acceptance criteria
-   - design decisions and tradeoffs
-   - implementation constraints and plan candidates
-   - bug symptoms, root-cause evidence, failed attempts, and fix candidates
-   - module, service, API, topic, DTO, or code-path context
-   - verification evidence
-   - risks, open questions, and source candidates
-6. Classify extracted items as `confirmed`, `candidate`, `conflict`, `stale`, or `do-not-import`.
-7. Match existing requirement, bug, module, working-context, and Flow Record evidence.
-8. Produce a candidate Session Digest preview before writing `.llm-wiki`.
-9. Ask one concise confirmation question before importing.
-10. After confirmation, write `.llm-wiki/session-digests/<session_digest_id>.md`.
-11. Update related requirement, bug, module, working-context, artifact registry, log, or dashboard only when the user confirmed the relationship and the evidence supports it.
-12. Report imported items, skipped items, conflicts, updated files, and next route.
+4. Read minimal wiki indexes only to avoid duplicates and recover broad project context.
+5. Produce a brief candidate list first:
+   - `recommended`: likely useful for future context recovery
+   - `optional`: possibly useful but noisy or indirect
+   - `do-not-import`: raw noise, secrets, outdated attempts, or unrelated content
+6. Let the user choose candidate items.
+7. Draft a Context Digest Markdown preview from the selected items.
+8. Ask for confirmation on the Markdown preview before writing.
+9. After confirmation, write `.llm-wiki/session-digests/<session_digest_id>.md`.
+10. Do not update requirement, bug, module, working-context, Flow Record, artifact registry, log, or dashboard unless the user explicitly asks for Lifecycle Promotion.
+11. If promotion is requested, map selected digest items to lifecycle targets and ask for confirmation before writing those target pages.
+12. Report imported digest, skipped items, unresolved context, and possible next promotion routes.
 
 ## Import Rules
 
-- Store confirmed distilled summaries under `.llm-wiki/session-digests/`.
+- Store confirmed Context Digests under `.llm-wiki/session-digests/`.
 - Do not store full raw transcripts by default.
-- Candidate items may be saved in the digest, but must not update requirement or bug truth without confirmation.
+- Digest items may be mixed and messy; use light headings to aid reading, not rigid maintenance types.
+- Candidate items may be saved in the digest, but must not update requirement, bug, module, Flow Record, dashboard, or scope without a separate promotion confirmation.
 - Conflict items must be marked and reported; do not silently overwrite newer wiki or code evidence.
 - If the session mentions a real PRD, document, URL, log, or meeting note, record it as a source candidate and recommend `project-ingest` when needed.
-- Refresh dashboard only when confirmed imported evidence changes visible Flow Record state, document evidence, risk, blocker, or next action.
+- Refresh dashboard only when the user explicitly confirms Lifecycle Promotion that changes visible Flow Record state, document evidence, risk, blocker, or next action.
 
 ## Authority Order
 
@@ -126,65 +148,106 @@ current source code and runtime evidence
 -> agent inference
 ```
 
-## Session Digest Template
+## Context Digest Template
 
-Use the template from `references/session-digest.md`. The written digest must include:
+The written digest must include:
 
 - digest id
 - source type and source label
 - session date when known
 - extracted date
 - import status
-- related `flow_id` or candidate relation
-- related scope
+- import type: `recall-context`
+- project truth update: `no` by default
+- scope update: `no` by default
+- Flow Record update: `no` by default
 - sensitivity
 - one-sentence summary
-- importable content
+- what this context is about
+- key points for later context recovery
+- useful requirement/design/bug/risk/tooling clues when present
+- involved files, modules, APIs, commands, or artifacts when useful
+- uncertain or needs reconfirmation
 - not-imported content
-- requirement/design candidates
-- bug/fix candidates
-- scope context
-- design decisions
-- source candidates
-- verification evidence
-- risks and open questions
-- import plan and import record
+- promotion candidates
+- import record
+
+Default template:
+
+```markdown
+# Context Digest: <title>
+
+- digest_id:
+- source_type:
+- source_label:
+- session_date:
+- extracted_date:
+- import_status: candidate | imported
+- import_type: recall-context
+- project_truth_update: no
+- scope_update: no
+- flow_record_update: no
+- sensitivity:
+
+## What This Context Is About
+
+## Start Here Next Time
+
+## Key Points
+
+## Useful Clues
+
+## Involved Files / Modules / Commands
+
+## Uncertain Or Needs Reconfirmation
+
+## Not Imported
+
+## Promotion Candidates
+
+## Import Record
+```
 
 ## Output Format
 
-For preview:
+For the first preview, keep it brief:
 
 ```text
-我从这段历史 session 中提取到以下候选项目知识：
+我从这段历史 session 中提取到这些候选上下文：
 
-可以导入：
+建议导入:
 1. ...
 2. ...
 
-建议关联：
-- flow_id:
-- requirement:
-- module:
-
-不建议导入：
-- ...
-
-需要确认：
+可选导入:
 1. ...
 
-是否确认写入 .llm-wiki/session-digests/？
+不建议导入:
+- ...
+
+下一步:
+请告诉我要保留哪些条目。你选定后，我会先整理成 Context Digest Markdown 草稿，不会直接写入 `.llm-wiki`。
+```
+
+For Markdown draft preview:
+
+```text
+下面是拟写入的 Context Digest 草稿。请确认是否写入 `.llm-wiki/session-digests/<id>.md`。
+
+<markdown draft>
 ```
 
 For completed import:
 
 ```text
-已导入历史 session 提纯结果。
-
 Digest:
-Linked flow_id:
+Import type: recall-context
+Project truth updated: no
+Scope updated: no
+Flow Record updated: no
 Updated files:
-Dashboard:
 Not imported:
+Promotion candidates:
 Next:
 ```
 
@@ -207,7 +270,7 @@ When called by the root router, accept:
 - constraints:
 ```
 
-For this skill, `lifecycle_session` may be `none` until the user confirms importing content into a requirement, bug, or Flow Record.
+For this skill, `lifecycle_session` may be `none` until the user confirms promoting digest content into a requirement, bug, or Flow Record.
 
 ## Return Handoff
 
@@ -218,10 +281,11 @@ Return:
 
 - stage_or_bridge_used: project-session-extract
 - result_summary:
-- session_digest:
-- imported_items:
-- candidate_items:
+- context_digest:
+- imported_digest_items:
+- optional_digest_items:
 - conflicts:
+- promotion_candidates:
 - linked_flow_records:
 - updated_files:
 - verification_notes:
@@ -234,5 +298,7 @@ Return:
 - Do not modify production code.
 - Do not create requirements, bugs, or Flow Records from ambiguous session content without confirmation.
 - Do not promote candidate digest items to project truth.
+- Do not treat Context Digest import as a scope update, requirement update, bug update, Flow Record update, dashboard update, or verification update.
+- Do not force mixed historical context into rigid types before the user has recovered context and selected what matters.
 - Do not expose or store sensitive raw content.
 - Do not claim work is planned, implemented, tested, or archived only because an old session discussed it.
