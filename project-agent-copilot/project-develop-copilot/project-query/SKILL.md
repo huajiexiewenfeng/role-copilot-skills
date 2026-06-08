@@ -66,7 +66,7 @@ Example triggers:
 2. Verify `../references/` exists and contains `lifecycle-router.md`, `flow-record.md`, and `progress-dashboard.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing project wiki work.
 3. Confirm `.llm-wiki` exists.
 4. Decide whether this is read-only project query or full lifecycle work.
-5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
+5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, session-digests, log.
 6. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
 7. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
 
@@ -84,6 +84,7 @@ Read as needed:
 - `.llm-wiki/ingest/index.md`
 - `.llm-wiki/artifacts/index.md`
 - `.llm-wiki/log.md`
+- `.llm-wiki/session-digests/`
 - relevant `.llm-wiki/requirements/*.md`
 - relevant `.llm-wiki/bugs/*.md`
 - relevant `.llm-wiki/sources/*.md`
@@ -137,6 +138,7 @@ Answer format:
 - related_requirements:
 - related_bugs:
 - related_modules:
+- related_session_digests:
 - open_questions:
 - confidence:
 
@@ -153,6 +155,7 @@ Rules:
 - State when evidence is insufficient.
 - Do not expose sensitive raw content.
 - Do not present inference as sourced fact.
+- Treat Session Digests as supporting evidence. `candidate` items are possible context, not confirmed project truth. Prefer current code, current user confirmation, and current requirement/bug pages when conflicts exist.
 - Keep the context pack small enough to feed into later discussion or lifecycle work.
 
 Dashboard-refresh completion rules:

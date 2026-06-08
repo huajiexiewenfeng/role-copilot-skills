@@ -21,6 +21,7 @@ Use this skill when the user asks for project development help from natural lang
 - Developing a feature, requirement, PRD, design change, implementation plan, or scoped project change.
 - Diagnosing or fixing a bug, failed test, runtime error, log symptom, regression, incident, or unexpected behavior.
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
+- Extracting, distilling, reviewing, or importing historical AI/team chat sessions, transcript files, old conversation summaries, colleague AI discussions, or previous agent handoffs into project `.llm-wiki`.
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
@@ -48,6 +49,7 @@ The router owns lifecycle coherence across gates:
 - Review/Evolution Routing Gate
 - Progress Dashboard Sync Gate when the user explicitly asks to refresh the dashboard
 - Project Wiki Maintenance Routing Gate when the user reports missing, stale, hard-to-find, or inconsistent `.llm-wiki` state
+- Session Context Import Routing Gate when the user wants to turn historical chat/session context into project-local `.llm-wiki` knowledge
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 
@@ -71,6 +73,7 @@ Before doing project work:
    - lightweight-answer
    - project wiki query / discussion context
    - init / ingest
+   - historical session extraction / session digest import
    - requirement or feature development
    - bug or incident fixing
    - finish or progress sync
@@ -91,6 +94,7 @@ Before doing project work:
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
 | User says to discuss design and not implement | lightweight-answer | none |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
+| User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
 | User asks to initialize/adopt/refresh project context | full-lifecycle | `project-init` |
 | User asks for a feature, requirement, plan, or implementation | full-lifecycle | `project-develop` |
 | User reports a bug, log, error, failed test, or incident | full-lifecycle | `project-fix` |
@@ -149,6 +153,14 @@ For dashboard-refresh:
 - recover project dashboard evidence from `.llm-wiki`
 - update only `.llm-wiki/dashboard/progress.html` and related dashboard artifact metadata/log when needed
 - do not mark work done unless finish/verification evidence already exists
+
+For session-context-import:
+
+- candidate Session Digest preview
+- import recommendation
+- related Flow Record / requirement / bug / module candidates
+- confirmation question before `.llm-wiki` writes
+- imported digest path and updated wiki files after approval
 
 For full lifecycle:
 

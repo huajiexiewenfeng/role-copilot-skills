@@ -11,6 +11,12 @@ Capture project source material so future development flows can discover it.
 
 This skill creates `.llm-wiki/ingest/index.md` entries, batch-organized `.llm-wiki/sources/proxies/` pages, and when safe/appropriate, `.llm-wiki/sources/originals/` full source copies. It indexes and summarizes source material while keeping traceable links to the original source and the wiki-local copy used by the team.
 
+## Relationship to Project Session Extract
+
+Use `project-session-extract` instead of `project-ingest` when the input is a historical AI/team chat, transcript, exported session, colleague conversation, or old agent handoff.
+
+If a session contains real PRD, design document, URL, log, or meeting note links, `project-session-extract` should identify them as source candidates. Confirmed source documents may then be ingested through `project-ingest`.
+
 ## Required Shared References
 
 Read these role-level references:
@@ -146,6 +152,8 @@ docs/ingest/
 ```
 
 Those files are reconciled by `project-init refresh`. `project-ingest` remains the explicit one-off intake path when the user names a specific source.
+
+Manual copied transcript files may be routed to `project-session-extract` when their content is primarily conversation rather than source documentation.
 
 ## Final Report
 

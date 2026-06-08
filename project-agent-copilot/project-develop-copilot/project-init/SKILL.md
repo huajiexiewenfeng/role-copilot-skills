@@ -119,6 +119,7 @@ A project init must create or preserve this standard structure. Some directories
   sources/
   artifacts/
   dashboard/
+  session-digests/
   migration/
   working-context/
   decisions/
@@ -137,6 +138,7 @@ Minimum starter files:
 - `.llm-wiki/sources/registry.md`: source and supporting-context registry.
 - `.llm-wiki/artifacts/index.md`: specs, plans, reports, verification notes, generated pages, and dashboard registry.
 - `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
+- `.llm-wiki/session-digests/README.md`: confirmed historical session digest landing area.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
 - `.llm-wiki/working-context/README.md`: active task scratch area.
 - `.llm-wiki/decisions/README.md`: durable project decisions landing area.
@@ -148,6 +150,8 @@ Refresh rules:
 
 - Preserve existing directories and richer files even if they are not listed above.
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
+- Create or preserve `.llm-wiki/session-digests/` for confirmed historical session digests. Do not scan it as raw source material; treat it as distilled project evidence.
+- When `.llm-wiki/session-digests/` exists, include it in evidence discovery for project context, but do not promote candidate digest items to project truth without explicit confirmation.
 - If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
 - If `.llm-wiki/dashboard/progress.html` already exists, preserve its layout and update only the structured data/status sections needed by `progress-dashboard.md`.
 

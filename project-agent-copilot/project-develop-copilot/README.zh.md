@@ -34,6 +34,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
+| `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 提纯成候选 Session Digest，经用户确认后导入 `.llm-wiki`。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
 | `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
@@ -75,6 +76,18 @@ project-develop-copilot
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
 其他顶级工具也遵循同样的 context-first 桥接规则。见 `references/tool-bridge.md`。
+
+## 历史 session 提纯
+
+如果同事已经和 AI 聊过很久，不需要重新开一个 session 从头讲。
+
+可以直接说：
+
+```text
+把这段历史 session 提取成项目上下文，先给我看候选导入内容。
+```
+
+Project Develop Copilot 会先生成候选 Session Digest，标出可以导入、不建议导入、可能关联的需求/Bug/Flow Record。只有你确认后，才会写入 `.llm-wiki/session-digests/` 并更新相关项目上下文。
 
 ## 只读项目查询
 

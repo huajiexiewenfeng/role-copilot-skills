@@ -68,6 +68,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/flow-record.md`
+- `../references/session-digest.md`
 - `../references/progress-dashboard.md`
 - `../references/continuous-evolution.md`
 - `../references/tool-bridge.md`
@@ -85,13 +86,14 @@ Workflow:
 8. Check artifact drift.
 9. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, and language consistency.
 10. Check Flow Record drift.
-11. Check external bridge consistency.
-12. Check project root and wiki placement when init/recovery occurred.
-13. Check cross-session project continuity when prior context or previous chat state affects the work.
-14. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
-15. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
-16. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
-17. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
+11. Check Session Digest integrity when historical session context affected the work.
+12. Check external bridge consistency.
+13. Check project root and wiki placement when init/recovery occurred.
+14. Check cross-session project continuity when prior context or previous chat state affects the work.
+15. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
+16. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
+17. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
+18. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
 ## Mode / Entry Selection
 
@@ -151,6 +153,17 @@ Flow Record drift checklist:
 - same source/design document has duplicate active flow_id values
 ```
 
+Session Digest integrity checklist:
+
+```text
+- candidate digest item was written as confirmed project truth
+- conflict digest item silently overwrote newer code or wiki evidence
+- dashboard card claims progress from unconfirmed historical session memory
+- linked flow_id does not match actual requirement or bug evidence
+- raw sensitive session content was copied into `.llm-wiki`
+- digest import created a requirement, bug, or Flow Record without user confirmation
+```
+
 If no issues are found:
 
 ```text
@@ -159,6 +172,7 @@ Findings:
 
 Verification gaps:
 Context/wiki gaps:
+Session Digest gaps:
 Artifact/dashboard gaps:
 Lifecycle quality:
 Project skill improvement:

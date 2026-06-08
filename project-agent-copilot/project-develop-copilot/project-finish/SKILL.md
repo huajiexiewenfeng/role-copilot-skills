@@ -50,6 +50,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/flow-record.md`
+- `../references/session-digest.md`
 - `../references/progress-dashboard.md`
 - `../references/progress-dashboard-template.html`
 - `../references/tool-bridge.md`
@@ -65,12 +66,13 @@ Workflow:
 5. Map changed files to affected wiki pages.
 6. Update only affected `.llm-wiki` pages.
 7. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules.
-8. Record verification limitation and residual risk when verification was partial or blocked.
-9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
-10. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
-11. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
-12. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
-13. Report implementation summary, verification, sync updates, residual risk, and next action.
+8. When finishing work linked to a Session Digest, update the related requirement, bug, or Flow Record first. If digest `candidate` items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful.
+9. Record verification limitation and residual risk when verification was partial or blocked.
+10. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
+11. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
+12. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
+13. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
+14. Report implementation summary, verification, sync updates, residual risk, and next action.
 
 ## Mode / Entry Selection
 
@@ -86,6 +88,7 @@ Workflow:
 - active Change Brief, Bug Brief, or working-context
 - changed files or git diff
 - verification command output or manual verification notes
+- related Session Digest when historical session context influenced the work
 - artifact paths
 - dashboard path when enabled
 
@@ -99,6 +102,7 @@ Verification:
 Wiki updates:
 Artifact updates:
 Dashboard updates:
+Session Digest updates:
 Residual risk:
 Next action:
 ```
