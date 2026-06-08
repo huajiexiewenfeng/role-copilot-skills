@@ -17,6 +17,8 @@ For the complete lifecycle implementation plan, use `references/full-lifecycle-i
 
 For lifecycle validation scenarios, use `references/acceptance-cases.md`.
 
+For the Chinese internal trial user guide, see `USER-GUIDE.zh.md`.
+
 English | [Simplified Chinese](./README.zh.md)
 
 ## Skills

@@ -19,6 +19,8 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 
 生命周期验收场景见 `references/acceptance-cases.md`。
 
+团队内部试用手册见 `USER-GUIDE.zh.md`，其中区分“最小使用集”和“全量使用”。
+
 面向领导层的简版设计说明见 `LEADERSHIP-DESIGN.zh.md`。
 
 [English](./README.md) | 简体中文
