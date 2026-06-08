@@ -37,10 +37,11 @@ Use when the user says:
 ## Required First Check
 
 1. Resolve project root.
-2. Identify active Change Brief, Bug Brief, or working-context.
-3. Check verification evidence or accepted limitation.
-4. Inspect changed files.
-5. Decide affected wiki pages, artifacts, and dashboard sections.
+2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `templates.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
+3. Identify active Change Brief, Bug Brief, or working-context.
+4. Check verification evidence or accepted limitation.
+5. Inspect changed files.
+6. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
 
 ## Core Process
 
@@ -68,7 +69,8 @@ Workflow:
 9. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
 10. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
 11. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
-12. Report implementation summary, verification, sync updates, residual risk, and next action.
+12. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
+13. Report implementation summary, verification, sync updates, residual risk, and next action.
 
 ## Mode / Entry Selection
 
@@ -133,8 +135,24 @@ Rules:
 
 - `development` can be `done` only when changed files or implementation evidence are recorded.
 - `testing` can be `done` only when verification passed or an explicit accepted limitation is recorded.
-- `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists.
+- `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists. Project handoffs belong under `.llm-wiki/handoff/`, not `.llm-wiki/working-context/`.
 - Partial verification should mark `testing` as `blocked`, `active`, or `done with limitation` in notes, not silently complete.
+
+## Handoff Path Rule
+
+Default handoff path:
+
+```text
+.llm-wiki/handoff/<flow-id>-handoff.md
+```
+
+Use a descriptive suffix only when it preserves the same `flow_id`, for example:
+
+```text
+.llm-wiki/handoff/<flow-id>-implementation-handoff.md
+```
+
+Do not store final handoff artifacts in `.llm-wiki/working-context/`. Working context is for scoped planning and execution notes; handoff is the archive/continuation entry point. After moving or creating handoff, update Flow Record `archive` evidence, artifact registry, and dashboard links to the `.llm-wiki/handoff/` path.
 
 ## Context Handoff
 
@@ -164,6 +182,7 @@ Return:
 - Do not update unrelated modules or sources.
 - Do not update dashboard without evidence links.
 - Do not mark Flow Record `testing` or `archive` done without verification or handoff evidence.
+- Do not leave dashboard or artifact registry links pointing at old handoff paths after moving a handoff.
 - Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.
 - Do not hide residual risk when tests could not run.
 
@@ -171,6 +190,8 @@ Return:
 
 - Marking done when verification is partial.
 - Updating every wiki page instead of affected pages.
+- Writing final handoff into `.llm-wiki/working-context/` instead of `.llm-wiki/handoff/`.
+- Updating Flow Record without updating artifact registry and dashboard links to the same evidence path.
 - Forgetting artifact registry entries for plans/reports/dashboards.
 - Letting dashboard become the only status record.
 - Skipping review when the user asked for merge readiness.

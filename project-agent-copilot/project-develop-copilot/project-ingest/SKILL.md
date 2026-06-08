@@ -19,15 +19,14 @@ Read these role-level references:
 - `../references/ingest-mvp.md`
 - `../references/tool-bridge.md`
 - `../references/llm-wiki-mvp.md`
-- `../references/project-llm-wiki-integration.md`
 - `../references/templates.md`
 
-If installed in a flattened environment, locate equivalent `references/` paths near the skill root.
+If installed in a flattened environment, locate equivalent `references/` paths near the skill root. If no shared `references/` directory is available, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before writing project wiki source records.
 
 ## Workflow
 
 1. Resolve `project_root`.
-2. Resolve output language using `project-llm-wiki-integration.md`; preserve existing `.llm-wiki` page language on refresh/update.
+2. Resolve output language using `llm-wiki-mvp.md` and `north-star.md`; preserve existing `.llm-wiki` page language on refresh/update.
 3. Resolve the source path, URL, or pasted material.
 4. Normalize the source identity before writing wiki metadata: use repository-relative paths for in-project files, stable labels such as `external/<source-set>/<filename>` for external local folders, and URLs for remote sources. Do not write workstation-specific absolute paths into long-lived wiki indexes or source proxy metadata.
 5. Classify source type and sensitivity.

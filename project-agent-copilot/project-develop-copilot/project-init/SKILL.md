@@ -41,7 +41,8 @@ Use when the router or user needs to:
 ## Required First Check
 
 1. Resolve `project_root`.
-2. Report root evidence before writing:
+2. Verify `../references/` exists and contains `domain-skill-contract.md`, `progress-dashboard.md`, and `progress-dashboard-template.html`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before initializing project lifecycle context.
+3. Report root evidence before writing:
    - user-provided path
    - current working directory
    - `.git`
@@ -49,13 +50,13 @@ Use when the router or user needs to:
    - `docs/ai-coding`
    - existing `.llm-wiki`
    - confidence: `high`, `medium`, or `low`
-3. If root confidence is `medium` or `low`, ask the user to confirm before writing `.llm-wiki`.
-4. Check whether `.llm-wiki` exists.
-5. Decide `init` vs `refresh`.
-6. Check for legacy `docs/ai-coding/`.
-7. Treat graph outputs as optional supporting context only when explicitly active or requested.
-8. Preserve useful existing `.llm-wiki` content before writing updates.
-9. Detect the project language before writing generated prose:
+4. If root confidence is `medium` or `low`, ask the user to confirm before writing `.llm-wiki`.
+5. Check whether `.llm-wiki` exists.
+6. Decide `init` vs `refresh`.
+7. Check for legacy `docs/ai-coding/`.
+8. Treat graph outputs as optional supporting context only when explicitly active or requested.
+9. Preserve useful existing `.llm-wiki` content before writing updates.
+10. Detect the project language before writing generated prose:
    - prefer the user conversation language when clear;
    - otherwise prefer the dominant language of existing project docs and legacy context;
    - keep code identifiers, paths, command names, status ids, and protocol terms unchanged;

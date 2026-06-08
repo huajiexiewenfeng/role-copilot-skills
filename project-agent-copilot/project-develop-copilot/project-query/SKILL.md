@@ -61,11 +61,12 @@ Example triggers:
 ## Required First Check
 
 1. Resolve project root.
-2. Confirm `.llm-wiki` exists.
-3. Decide whether this is read-only project query or full lifecycle work.
-4. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
-5. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
-6. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
+2. Verify `../references/` exists and contains `lifecycle-router.md`, `flow-record.md`, and `progress-dashboard.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing project wiki work.
+3. Confirm `.llm-wiki` exists.
+4. Decide whether this is read-only project query or full lifecycle work.
+5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
+6. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
+7. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
 
 ## Core Process
 

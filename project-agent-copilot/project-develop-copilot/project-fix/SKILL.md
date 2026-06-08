@@ -37,10 +37,11 @@ Use when the user reports or wants to fix:
 ## Required First Check
 
 1. Resolve project root.
-2. Create or resume Bug Brief.
-3. Capture or ingest external bug source.
-4. Identify active, read-only, candidate, and excluded scopes.
-5. Run Bug Evidence Gate before broad diagnosis or edits.
+2. Verify `../references/` exists and contains `bug-brief.md`, `flow-record.md`, and `scoped-working-context.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing bug lifecycle work.
+3. Create or resume Bug Brief.
+4. Capture or ingest external bug source.
+5. Identify active, read-only, candidate, and excluded scopes.
+6. Run Bug Evidence Gate before broad diagnosis or edits.
 
 ## Core Process
 
