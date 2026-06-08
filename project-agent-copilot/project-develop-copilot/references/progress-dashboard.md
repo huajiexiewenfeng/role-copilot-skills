@@ -52,6 +52,7 @@ Shows overall project state:
 - current status
 - current gate
 - verification status
+- verification trust level
 - main risk
 - next action
 
@@ -118,6 +119,21 @@ Status: Verified
 Evidence: .llm-wiki/bugs/2026-06-04-payment-callback.md#Verification
 ```
 
+## Verification Trust Level Rule
+
+Dashboard state must preserve verification trust. A green-looking status must not hide that verification is only agent-local, partially blocked, or accepted with limitation.
+
+Trust levels:
+
+- `agent-local`: tests/checks were run or summarized by the agent only.
+- `ci-backed`: CI or another deterministic external runner passed and raw output/URL is recorded.
+- `reviewed`: a human or external reviewer checked the verification or test integrity.
+- `user-accepted-limitation`: verification is partial/blocked, and the user/project owner explicitly accepted the limitation.
+- `blocked`: verification failed, could not run, lacks required provenance, or limitation was only proposed by the agent.
+- `unknown`: existing evidence does not expose provenance yet.
+
+Do not promote `agent-local` or `unknown` testing evidence to final done without explicit limitation acceptance, CI, or review evidence.
+
 ## Flow Record Rule
 
 The dashboard's flow board should be generated from Flow Records stored in Change Briefs, Bug Briefs, or working-context pages.
@@ -129,6 +145,7 @@ flow_id:
 title:
 step: source | design | plan | development | testing | archive
 status: pending | active | done | blocked | skipped
+trust_level: agent-local | ci-backed | reviewed | user-accepted-limitation | blocked | unknown
 source:
 evidence:
 updated:
@@ -254,6 +271,7 @@ window.dashboardData = {
       status: "pending",
       source: "",
       evidence: "",
+      trustLevel: "unknown",
       updated: ""
     }
   ]

@@ -33,6 +33,8 @@ Use when the user asks for:
 
 - Review Gate
 - Verification Gate check
+- Verification Provenance Gate check
+- Test Integrity Gate check
 - Artifact Sync Gate check
 - Progress Dashboard Sync Gate check
 - Evolution Gate
@@ -57,9 +59,10 @@ It must not become a general-purpose Dolores or `skill-evaluator` replacement. F
 2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `continuous-evolution.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle review.
 3. Inspect git status and diff.
 4. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
-5. Check verification evidence.
-6. Check artifact registry and dashboard evidence when present.
-7. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
+5. Check verification evidence, raw output, exit code, executor, authority, trust level, and limitation acceptor.
+6. Check whether production code and tests/mocks/fixtures/expected values changed together.
+7. Check artifact registry and dashboard evidence when present.
+8. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
 
 ## Core Process
 
@@ -81,19 +84,21 @@ Workflow:
 3. Identify active requirement, bug, working context, source, artifact, or dashboard context.
 4. Check code risk and behavior correctness.
 5. Check verification gaps.
-6. Check scope drift against active/read-only/candidate/excluded scopes.
-7. Check wiki drift.
-8. Check artifact drift.
-9. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, and language consistency.
-10. Check Flow Record drift.
-11. Check Session Digest integrity when historical session context affected the work.
-12. Check external bridge consistency.
-13. Check project root and wiki placement when init/recovery occurred.
-14. Check cross-session project continuity when prior context or previous chat state affects the work.
-15. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
-16. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
-17. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
-18. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
+6. Check verification provenance: raw output reference, exit code, executor, authority, trust level, and limitation acceptor.
+7. If tests/mocks/fixtures/expected values changed, check test integrity: real behavior coverage, assertion strength, over-mocking, deleted coverage, and changed expected behavior.
+8. Check scope drift against active/read-only/candidate/excluded scopes.
+9. Check wiki drift.
+10. Check artifact drift.
+11. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, trust level, and language consistency.
+12. Check Flow Record drift.
+13. Check Session Digest integrity when historical session context affected the work.
+14. Check external bridge consistency.
+15. Check project root and wiki placement when init/recovery occurred.
+16. Check cross-session project continuity when prior context or previous chat state affects the work.
+17. Use requesting-code-review as an additional quality pass when available, but keep this skill's findings-first output.
+18. Include Lifecycle Quality and evaluator/Dolores trigger decision when process risk appears.
+19. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
+20. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
 ## Mode / Entry Selection
 
@@ -129,6 +134,8 @@ Findings:
 Open questions:
 
 Verification gaps:
+Verification provenance:
+Test integrity:
 
 Context/wiki gaps:
 
@@ -149,6 +156,11 @@ Flow Record drift checklist:
 - Flow Record `done` step has no evidence
 - `development` done but no changed files or implementation evidence
 - `testing` done but no verification evidence or accepted limitation
+- `testing` done with only agent-local evidence but no trust-level label
+- accepted limitation has no non-agent acceptor
+- verification record has no raw output, exit code, executor, authority, or scope
+- production code and tests/mocks changed together but no Test Integrity Gate result exists
+- tests were weakened, over-mocked, or expected values changed without requirement evidence
 - `archive` done but no handoff/release/done evidence
 - same source/design document has duplicate active flow_id values
 ```
@@ -230,6 +242,9 @@ Project skill improvement output when a project workflow failed:
 - Do not rewrite code during review unless the user asks for fixes.
 - Do not bury blocking findings under summaries.
 - Do not report no findings without checking verification and lifecycle drift.
+- Do not treat agent-local verification as independent external audit.
+- Do not accept `accepted limitation` unless the acceptor is a user, project owner, CI policy, or external reviewer.
+- Do not ignore test integrity when production code and tests/mocks/fixtures/expected values changed together.
 - Do not run evaluator or Dolores for every ordinary review.
 - Do not treat dashboard as a source of truth.
 - Do not turn project-review into a general-purpose Dolores or skill-evaluator replacement.
@@ -240,6 +255,8 @@ Project skill improvement output when a project workflow failed:
 - Performing only code review and ignoring lifecycle state.
 - Missing changed files outside active scope.
 - Ignoring missing wiki/artifact/dashboard updates.
+- Missing self-referential verification risk: the same agent wrote the tests, verification record, limitation, and dashboard status.
+- Missing over-mocking or weakened assertions after a previously failing test.
 - Treating external bridge output as authoritative without scope checks.
 - Turning Dolores into a generic summary.
 - Missing wrong-root `.llm-wiki` writes or foreign project facts after project-init recovery.

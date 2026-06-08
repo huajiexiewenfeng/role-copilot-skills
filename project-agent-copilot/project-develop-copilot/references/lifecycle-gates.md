@@ -24,6 +24,8 @@ Lifecycle Gates are the executable checkpoints that keep Project Develop Copilot
 | Context Lock Gate | executing a plan or editing code | locked scope, accepted assumptions, escalation rule | `project-develop`, `project-fix` |
 | External Skill Bridge Gate | calling external skills/tools | Context Handoff and expected Return Handoff | router, stage skill |
 | Verification Gate | finish, done claim, review readiness | command/result/limitation/manual evidence/residual risk | `project-finish`, `project-review` |
+| Verification Provenance Gate | promoting verification to done/verified, accepting limitations, pre-merge readiness | executor/raw output/exit code/authority/trust level | `project-finish`, `project-review` |
+| Test Integrity Gate | production-code changes with test changes, mocks, or changed expectations | test diff risk, mock scope, assertion strength, coverage loss, independent check need | `project-review`, `project-finish` |
 | Knowledge Sync Gate | finish or accepted state update | updated requirement/bug/module/source summaries | `project-finish` |
 | Artifact Sync Gate | finish/review/dashboard update | artifact registry entries for important plans/reports/specs/dashboards | `project-finish`, `project-review` |
 | Progress Dashboard Sync Gate | progress page update or review | dashboard facts linked to evidence | `project-finish`, `project-review` |
@@ -204,6 +206,59 @@ Minimum output:
 
 Do not claim full completion when verification is partial, blocked, or not run.
 
+Verification records are evidence, not authority. Do not treat an agent-written verification note as independently trustworthy unless the provenance is recorded by the Verification Provenance Gate.
+
+### Verification Provenance Gate
+
+Use this gate whenever verification affects lifecycle status, dashboard status, handoff readiness, commit/PR readiness, or a done/verified claim.
+
+Minimum output:
+
+```markdown
+- verification_status: passed | failed | partial | blocked | not-run
+- executor: agent-local | ci | human | external-reviewer | unknown
+- command_or_check:
+- raw_output_ref:
+- exit_code:
+- scope:
+- authority: agent-local | ci-backed | human-accepted | reviewer-accepted | none
+- trust_level: agent-local | ci-backed | reviewed | user-accepted-limitation | blocked
+- limitation_acceptor:
+- residual_risk:
+```
+
+Rules:
+
+- Agent-authored summaries alone are not sufficient verification evidence. Prefer raw command output, test report files, CI URLs, review notes, or captured manual-check evidence.
+- `accepted limitation` requires a non-agent acceptor: user, project owner, CI policy, or external reviewer. An agent may propose a limitation, but must not self-accept it.
+- If the acceptor is missing, treat the state as `partial`, `blocked`, or `limitation proposed`, not `done`.
+- Local agent-run tests may support `passed-agent-local`, but should not be promoted to final pre-merge confidence without CI, external review, or explicit user acceptance.
+
+### Test Integrity Gate
+
+Use this gate when implementation changes include tests, mocks, fixtures, expected values, assertions, snapshots, or verification helpers.
+
+Minimum output:
+
+```markdown
+- production_changes:
+- test_changes:
+- mocks_or_fixtures_changed:
+- assertions_added_or_removed:
+- expected_behavior_changed:
+- coverage_or_scope_reduced:
+- over_mocking_risk: low | medium | high | unknown
+- independent_verification_needed: yes | no
+- conclusion:
+```
+
+Rules:
+
+- If production code and tests changed in the same work, inspect whether tests still exercise real behavior.
+- Flag tests that only assert mocks, remove meaningful assertions, loosen expectations, delete coverage, or encode changed behavior without requirement evidence.
+- Passing tests with high over-mocking risk are not enough for `verified`; mark the trust level as `agent-local` or `needs-review`.
+- Do not use new mocks or rewritten expectations to explain away a failing verification command without recording the risk and independent check needed.
+
 ### Knowledge Sync Gate
 
 Minimum output:
@@ -282,5 +337,8 @@ Default blocking is `no`. Enter improvement mode only when the user asks or when
 - Running external skills before scoped context exists.
 - Updating dashboard without evidence.
 - Marking work done with partial verification but no limitation.
+- Letting the same agent create weak verification evidence and then self-accept it as final.
+- Treating an `accepted limitation` as valid when no user, CI policy, owner, or external reviewer accepted it.
+- Marking tests as verified after changing mocks or expectations without a Test Integrity Gate check.
 - Saving raw sensitive content instead of summaries and source proxies.
 - Creating new lifecycle sessions instead of resuming existing ones.

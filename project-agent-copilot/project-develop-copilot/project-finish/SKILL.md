@@ -30,6 +30,8 @@ Use when the user says:
 ## Owned Gates
 
 - Verification Gate
+- Verification Provenance Gate
+- Test Integrity Gate
 - Knowledge Sync Gate
 - Artifact Sync Gate
 - Progress Dashboard Sync Gate
@@ -39,9 +41,10 @@ Use when the user says:
 1. Resolve project root.
 2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `templates.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
 3. Identify active Change Brief, Bug Brief, or working-context.
-4. Check verification evidence or accepted limitation.
-5. Inspect changed files.
-6. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
+4. Check verification evidence, provenance, raw output, and whether any accepted limitation has a non-agent acceptor.
+5. Inspect changed files, including whether production code and tests/mocks changed together.
+6. Decide whether Test Integrity Gate is required before updating testing status.
+7. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
 
 ## Core Process
 
@@ -61,25 +64,29 @@ Workflow:
 
 1. Resolve project root and lifecycle session.
 2. Confirm verification evidence: tests, compile, lint, manual verification, or explicit accepted limitation.
+   - Record verification provenance: executor, command/check, raw output reference, exit code, scope, authority, trust level, limitation acceptor, and residual risk.
+   - Treat agent-written summaries as supporting notes, not as independent authority.
+   - An agent may propose a limitation, but must not self-accept it. `accepted limitation` requires user, project owner, CI policy, or external reviewer acceptance.
 3. Use verification-before-completion when available before claiming completion.
 4. Summarize actual code and behavior changes.
 5. Map changed files to affected wiki pages.
-6. Update only affected `.llm-wiki` pages.
-7. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules.
-8. When finishing work linked to a Session Digest, update the related requirement, bug, or Flow Record first. If digest `candidate` items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful.
-9. Record verification limitation and residual risk when verification was partial or blocked.
-10. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
-11. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
-12. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
-13. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
-14. Report implementation summary, verification, sync updates, residual risk, and next action.
+6. If production code and tests/mocks/fixtures/expected values changed together, run the Test Integrity Gate before marking testing done.
+7. Update only affected `.llm-wiki` pages.
+8. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules and trust level.
+9. When finishing work linked to a Session Digest, update the related requirement, bug, or Flow Record first. If digest `candidate` items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful.
+10. Record verification limitation and residual risk when verification was partial or blocked.
+11. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
+12. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
+13. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
+14. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
+15. Report implementation summary, verification, sync updates, residual risk, and next action.
 
 ## Mode / Entry Selection
 
 | Mode | Use when |
 |---|---|
-| `verified-finish` | verification passed and sync can mark work verified/done |
-| `partial-finish` | verification is partial or blocked but user accepts limitation |
+| `verified-finish` | verification passed with usable provenance and sync can mark work verified/done |
+| `partial-finish` | verification is partial or blocked and the user/project owner/reviewer accepts limitation |
 | `status-sync` | user wants wiki/artifact/dashboard state updated from known evidence |
 | `handoff-only` | user wants summary without changing files |
 
@@ -88,6 +95,7 @@ Workflow:
 - active Change Brief, Bug Brief, or working-context
 - changed files or git diff
 - verification command output or manual verification notes
+- verification provenance: executor, raw output reference, exit code, scope, authority, trust level, limitation acceptor
 - related Session Digest when historical session context influenced the work
 - artifact paths
 - dashboard path when enabled
@@ -129,6 +137,8 @@ development:
 testing:
   status:
   evidence:
+  trust_level:
+  limitation_acceptor:
 archive:
   status:
   evidence:
@@ -138,9 +148,11 @@ unsupported_done_claims_downgraded:
 Rules:
 
 - `development` can be `done` only when changed files or implementation evidence are recorded.
-- `testing` can be `done` only when verification passed or an explicit accepted limitation is recorded.
+- `testing` can be `done` only when verification passed with provenance or an explicit accepted limitation is recorded with a non-agent acceptor.
+- `testing` should use a conservative note such as `passed-agent-local`, `needs-review`, `blocked`, or `done with user-accepted limitation` when verification authority is not CI-backed/reviewer-backed.
 - `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists. Project handoffs belong under `.llm-wiki/handoff/`, not `.llm-wiki/working-context/`.
 - Partial verification should mark `testing` as `blocked`, `active`, or `done with limitation` in notes, not silently complete.
+- If tests, mocks, fixtures, snapshots, or expected values changed with production code, do not mark testing done until Test Integrity Gate records assertion strength and over-mocking risk.
 
 ## Handoff Path Rule
 
@@ -182,6 +194,8 @@ Return:
 ## Boundaries
 
 - Do not claim work is complete without verification evidence or an explicit limitation.
+- Do not self-accept a limitation. Agent-proposed limitations stay proposed until accepted by the user, project owner, CI policy, or external reviewer.
+- Do not promote agent-local verification to final verified/pre-merge confidence without raw output provenance plus CI, reviewer, or explicit user acceptance.
 - Do not write large implementation narratives into `.llm-wiki`.
 - Do not update unrelated modules or sources.
 - Do not update dashboard without evidence links.
@@ -189,10 +203,14 @@ Return:
 - Do not leave dashboard or artifact registry links pointing at old handoff paths after moving a handoff.
 - Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.
 - Do not hide residual risk when tests could not run.
+- Do not weaken tests, mocks, fixtures, snapshots, or expected values to bypass a failing verification command without recording the Test Integrity Gate risk.
 
 ## Common Mistakes
 
 - Marking done when verification is partial.
+- Treating an agent-written verification note as an external audit.
+- Writing `accepted limitation` without recording who accepted it.
+- Marking tests done after changing mocks or expectations without checking test integrity.
 - Updating every wiki page instead of affected pages.
 - Writing final handoff into `.llm-wiki/working-context/` instead of `.llm-wiki/handoff/`.
 - Updating Flow Record without updating artifact registry and dashboard links to the same evidence path.
