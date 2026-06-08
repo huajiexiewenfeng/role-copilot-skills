@@ -216,6 +216,29 @@ When refreshing the dashboard, build the flow board in this order:
 
 Candidate source/design documents without Flow Records may be shown in the 需求/来源 lane, but they must be clearly labeled `candidate` and must not appear in plan/development/testing/archive lanes.
 
+### Parent / Child Flow Projection
+
+When a Change Brief or Bug Brief contains `parent_flow_id`, `child_flow_id`, or any linked child Flow Record, the dashboard must treat the child as a separate `flow_id`.
+
+Rules:
+
+- Do not collapse a child Flow Record into the parent card text only.
+- For every Flow Record page with its own `flow_id`, create lane cards for every evidence-backed row in that Flow Record.
+- Preserve `parent_flow_id` in structured data as `parentFlowId` when present.
+- In the visible board, child cards may use a compact style or child marker, but they must still be visible in the same lifecycle lanes as parent cards.
+- Parent cards may mention child scope in summary text, but that does not replace child cards.
+
+Regression check after refresh:
+
+```text
+for each distinct flow_id discovered in Flow Records:
+  visible board card count for flow_id == count of eligible Flow Record rows
+  dashboardData.flowRecords count for flow_id == count of eligible Flow Record rows
+  each lane count == number of visible cards in that lane
+```
+
+If any check fails, the dashboard refresh is incomplete. Fix the board and `dashboardData` before reporting completion.
+
 ## Dashboard Data Contract
 
 The template should keep a structured data section that is easy for LLMs to update:
