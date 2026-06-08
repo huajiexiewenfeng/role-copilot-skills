@@ -20,7 +20,7 @@ Project Agent Copilot 是 Role Copilot Skills 中的项目研发角色容器。
 
 | 集合 | 包含 |
 |---|---|
-| [`project-develop-copilot`](./project-develop-copilot/README.zh.md) | `project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish`、`project-review` |
+| [`project-develop-copilot`](./project-develop-copilot/README.zh.md) | `project-develop-copilot`、`project-query`、`project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish`、`project-review` |
 
 计划中的集合：
 
@@ -31,10 +31,10 @@ Project Agent Copilot 是 Role Copilot Skills 中的项目研发角色容器。
 
 ## 安装
 
-安装一个项目开发 skill：
+安装项目开发 router skill：
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
 本地开发时，在仓库根目录执行：
@@ -50,11 +50,24 @@ project-agent-copilot/
   project-develop-copilot/
     project-init/
     project-ingest/
+    project-query/
     project-develop/
     project-fix/
     project-finish/
     project-review/
 ```
+
+## 只读项目问答
+
+当用户问“这个项目里有什么”、“某个模块或 API 怎么调用”、“之前的需求或设计文档怎么说”，或者询问某个主题关联哪些 `.llm-wiki` 证据时，使用 `project-query`。它应该先恢复项目 wiki 上下文，再按需回到源码核对当前接口、MQTT topic、服务行为或示例。
+
+例如：
+
+```text
+这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用
+```
+
+这类问题应保持只读并路由到 `project-query`，不要直接进入实现、调试或评审。
 
 ## 边界
 

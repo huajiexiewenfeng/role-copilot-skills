@@ -24,7 +24,7 @@ English | [Simplified Chinese](./README.zh.md)
 | Skill | Use When |
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
-| `project-query` | Query project `.llm-wiki` to find related requirements, bugs, source proxies, artifacts, and discussion context without starting implementation. |
+| `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
@@ -85,7 +85,11 @@ Use `project-query` when the user wants to discuss the project from its `.llm-wi
 Based on this project's llm wiki, find the requirements and development notes related to payment callback. Do not develop yet; let's discuss first.
 Find the related requirement docs, bug notes, and previous decisions for notification retries.
 What does the project wiki say about this module and its current risks?
+What APIs or integration points exist for this feature, and how should they be called?
+这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用
 ```
+
+For "what exists here" or "how do I call this API" questions, `project-query` should recover `.llm-wiki` evidence first, then inspect source code only to verify current endpoints, topics, service behavior, or examples. Do not route these questions directly to implementation, debugging, or review unless the user explicitly asks to change, fix, or assess code.
 
 The expected response is a Project Context Pack:
 

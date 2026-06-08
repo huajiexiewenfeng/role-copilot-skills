@@ -28,7 +28,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | Skill | 使用场景 |
 |---|---|
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
-| `project-query` | 查询项目 `.llm-wiki`，查找相关需求、bug、source proxy、artifact 和讨论上下文，不默认进入实现。 |
+| `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
@@ -81,7 +81,11 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 基于这个项目的 llm wiki，帮我找一下支付回调相关的需求、开发文档和之前的讨论上下文。先不要开发，我们先讨论。
 找一下通知重试相关的需求文档、bug 记录和之前的决策。
 这个模块在项目 wiki 里有哪些风险和历史背景？
+这个功能有哪些 API 或集成点，应该如何调用？
+这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用
 ```
+
+对于“这个项目里有什么”或“这个 API 怎么调用”这类问题，`project-query` 应先恢复 `.llm-wiki` 证据，再只在需要时检查源码，以核对当前 endpoint、topic、服务行为或示例。除非用户明确要求修改、修复或评审代码，否则不要把这类问题直接路由到实现、调试或 review。
 
 预期输出是 Project Context Pack：
 
