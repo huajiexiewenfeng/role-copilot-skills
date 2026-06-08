@@ -23,6 +23,7 @@ Use this skill when the user asks for project development help from natural lang
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
+- Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -46,6 +47,7 @@ The router owns lifecycle coherence across gates:
 - External Skill Bridge Gate
 - Review/Evolution Routing Gate
 - Progress Dashboard Sync Gate when the user explicitly asks to refresh the dashboard
+- Project Wiki Maintenance Routing Gate when the user reports missing, stale, hard-to-find, or inconsistent `.llm-wiki` state
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 
@@ -93,6 +95,7 @@ Before doing project work:
 | User asks for a feature, requirement, plan, or implementation | full-lifecycle | `project-develop` |
 | User reports a bug, log, error, failed test, or incident | full-lifecycle | `project-fix` |
 | User asks to update, refresh, or sync the static dashboard/progress page only | dashboard-refresh | `project-query` |
+| User asks why wiki pages cannot be found, or asks to check, audit, lint, repair, or maintain `.llm-wiki` structure, links, Flow Records, module backlinks, artifacts, logs, dashboard consistency, or safety | wiki-maintenance | `project-maintain` |
 | User asks finish, done, sync, update status, or handoff | full-lifecycle | `project-finish` |
 | User asks review, risk check, before commit/PR/merge | full-lifecycle | `project-review` |
 | User says continue or resume previous work | full-lifecycle | resume then choose stage |
@@ -212,5 +215,6 @@ If the returned result suggests new scope, new sources, changed acceptance crite
 - Jumping into `systematic-debugging`, planning, TDD, or execution before scoped project context exists.
 - Creating duplicate Change Briefs or Bug Briefs instead of resuming existing sessions.
 - Treating dashboard state as a source of truth instead of evidence-backed summary.
+- Answering "why can I not see this wiki document" as a plain query when the underlying issue is missing artifact, module, dashboard, or log visibility.
 - Declaring project work done from the router without finish/review gates.
 - Running evaluator or Dolores on every normal task and making the workflow feel heavy.

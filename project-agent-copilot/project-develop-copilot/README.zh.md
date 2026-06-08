@@ -31,6 +31,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 |---|---|
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
+| `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
@@ -63,13 +64,13 @@ project-develop-copilot
 或
 
 project-develop-copilot
--> project-query / project-init / project-ingest
+-> project-query / project-maintain / project-init / project-ingest
 -> project-develop 或 project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询和讨论上下文组装。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 

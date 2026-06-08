@@ -27,6 +27,7 @@ English | [Simplified Chinese](./README.zh.md)
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
+| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
@@ -67,13 +68,13 @@ project-develop-copilot
 or
 
 project-develop-copilot
--> project-query / project-init / project-ingest
+-> project-query / project-maintain / project-init / project-ingest
 -> project-develop or project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup and discussion context. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
