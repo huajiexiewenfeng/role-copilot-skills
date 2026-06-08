@@ -7,6 +7,7 @@
 普通开发默认使用“最小使用集”即可：
 
 - 查项目上下文：`project-query`
+- 首次接入或资料缺失时摄入原有文档：`project-ingest`
 - 做需求/功能：`project-develop`
 - 修 bug：`project-fix`
 - 收尾同步：`project-finish`
@@ -15,6 +16,8 @@
 
 - `project-init` 通常由项目负责人、试点维护者或仓库首次接入者执行，用于初始化或刷新 `.llm-wiki`。
 - `project-review` 通常由负责人、合并前检查人或质量把关人执行，用于检查代码风险、测试缺口、范围漂移、wiki 漂移和 dashboard 漂移。
+
+`project-ingest` 日常不一定高频，但开发初次接入某个项目、模块或需求域时很重要：应把自己原有的相关 PRD、设计文档、接口说明、排障记录、会议纪要、历史方案等资料摄入项目 `.llm-wiki`，否则后续 `project-query`、`project-develop` 和 `project-fix` 都会缺少项目背景。
 
 ## 安装
 
@@ -33,6 +36,40 @@ npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/projec
 - 日常功能开发同学
 - bug 修复同学
 - 刚开始试用、不想引入完整流程负担的团队
+
+### 0. 初次接入资料：`project-ingest`
+
+用于把开发同学手头原有的项目资料沉淀到 `.llm-wiki`，让后续问答、开发和修 bug 有共同上下文。
+
+适合在这些时机使用：
+
+- 第一次在某个项目中使用 `project-develop-copilot`
+- 第一次接手某个模块、接口或需求域
+- 发现 `.llm-wiki` 里没有已有 PRD、设计文档、接口说明或历史排障资料
+- 准备让团队多人围绕同一个需求持续协作
+
+适合说：
+
+```text
+Use project ingest。把我手头这些支付回调相关 PRD、设计文档、接口说明和历史排障记录摄入项目 .llm-wiki，作为后续开发上下文。
+```
+
+```text
+用 project-ingest 处理 docs/dji-adapter 下和大疆直播适配相关的设计文档，保留 source proxy，后续 project-query 和 project-develop 要能引用。
+```
+
+输出重点：
+
+- 新增或更新的 ingest index
+- source proxy 或原始资料位置
+- 资料关联的模块、需求、bug 或 working-context
+- 缺失信息和后续建议
+
+使用边界：
+
+- 不把敏感原文大段复制进 `.llm-wiki`
+- 不把资料摄入等同于已经开发或验证完成
+- 不替代 `project-init` 的项目级初始化；它主要处理资料进入项目上下文
 
 ### 1. 查上下文：`project-query`
 
@@ -159,10 +196,9 @@ Use project finish。这个需求代码和测试已经完成，请同步 wiki、
 ```text
 project-init
 project-review
-project-ingest
 ```
 
-但当资料缺失、项目首次接入、或合并前需要把关时，可以由负责人补充使用。
+但当资料缺失、开发者首次接入某个项目/模块/需求域时，应主动使用 `project-ingest` 把已有相关文档摄入 `.llm-wiki`。合并前需要把关时，再由负责人或 reviewer 使用 `project-review`。
 
 ## 版本二：全量使用
 
@@ -315,6 +351,7 @@ bug 修复
 第一阶段建议只推广最小使用集：
 
 ```text
+project-ingest（首次接入或资料缺失时）
 project-query
 project-develop
 project-fix
@@ -325,7 +362,6 @@ project-finish
 
 ```text
 project-init
-project-ingest
 project-review
 ```
 
@@ -333,8 +369,8 @@ project-review
 
 | 角色 | 推荐使用 |
 |---|---|
-| 普通开发 | `project-query`, `project-develop`, `project-fix`, `project-finish` |
-| 需求/技术负责人 | 加上 `project-ingest`, `project-review` |
+| 普通开发 | `project-ingest`（首次接入/资料缺失时）, `project-query`, `project-develop`, `project-fix`, `project-finish` |
+| 需求/技术负责人 | 高频使用 `project-ingest` 维护资料入口，并加上 `project-review` |
 | 试点维护者 | 加上 `project-init`, dashboard 和 `.llm-wiki` 维护 |
 
 ## 常见误用
@@ -351,10 +387,11 @@ project-review
 普通开发记住四个入口就够了：
 
 ```text
+首次接入资料用 project-ingest
 查上下文用 project-query
 做需求用 project-develop
 修 bug 用 project-fix
 完成后用 project-finish
 ```
 
-`project-init`、`project-ingest`、`project-review` 由负责人或流程维护者在需要时补充使用。
+`project-init` 和 `project-review` 通常由负责人或流程维护者在需要时补充使用；`project-ingest` 虽然日常不高频，但开发初次接入或资料缺失时应主动使用。
