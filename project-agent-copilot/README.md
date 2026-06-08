@@ -20,7 +20,7 @@ For `project-develop-copilot`, use `project-develop-copilot/references/north-sta
 
 | Collection | Contains |
 |---|---|
-| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, `project-review` |
+| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-develop-copilot`, `project-query`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, `project-review` |
 
 Planned collections:
 
@@ -31,10 +31,10 @@ Planned collections:
 
 ## Install
 
-Install one project development skill:
+Install the project development router skill:
 
 ```bash
-npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot
 ```
 
 For local development from the repository root:
@@ -50,11 +50,24 @@ project-agent-copilot/
   project-develop-copilot/
     project-init/
     project-ingest/
+    project-query/
     project-develop/
     project-fix/
     project-finish/
     project-review/
 ```
+
+## Read-Only Project Questions
+
+Use `project-query` when the user asks what exists in a project, how a module or API is called, what prior requirements or design notes say, or which `.llm-wiki` evidence relates to a topic. It should recover project wiki context first, then verify key facts against source code when needed.
+
+Example:
+
+```text
+这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用
+```
+
+That kind of question should stay read-only and route to `project-query`, not directly to implementation, debugging, or review.
 
 ## Role Boundary
 
