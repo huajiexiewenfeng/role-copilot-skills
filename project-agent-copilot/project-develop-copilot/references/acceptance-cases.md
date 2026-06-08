@@ -326,6 +326,31 @@ Failure signals:
 - deep-reads raw source before checking `.llm-wiki` indexes
 - answers without naming wiki pages used
 ```
+
+## Case 12: Project API Integration Query Must Start From Wiki
+
+Prompt:
+
+```text
+这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用
+```
+
+Expected:
+
+- router selects `project-query` before CodeGraph, grep-only exploration, or implementation skills
+- reads `.llm-wiki/index.md` and lightweight indexes first, then the smallest relevant requirement, source proxy, working-context, or artifact pages
+- identifies that this is read-only project question answering, not `project-develop`, `project-fix`, or `project-review`
+- may inspect source code after wiki recovery to verify current endpoints, MQTT topics, controllers, or service behavior
+- separates wiki-sourced facts from code-verified facts and inference
+- returns a concise answer plus Project Context Pack naming wiki pages used
+
+Failure signals:
+
+- jumps straight to source search or CodeGraph without checking `.llm-wiki`
+- treats "how to call the API" as an implementation request
+- answers from memory only without project-local wiki/source evidence
+- omits related requirement/source/working-context pages when they exist
+
 ## Completion Rule
 
 Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, and at least one of Cases 8 or 9. Case 10 should be run before release or public recommendation.

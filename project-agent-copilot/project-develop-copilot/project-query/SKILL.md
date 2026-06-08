@@ -21,6 +21,7 @@ Use when the user asks to:
 - find the requirement, bug, design doc, source proxy, or artifact related to a topic
 - discuss project architecture, decisions, progress, or tradeoffs using existing project context
 - summarize what the project wiki says about a feature, module, bug, or decision
+- answer "what exists in this project / how is it called / how was it designed" questions about a module, integration, API, or feature; start from `.llm-wiki` context first, then verify key facts against source code when needed
 - assemble context for later development without starting development yet
 - compare related requirements, bugs, source materials, or working-context pages
 - locate evidence before deciding whether to create a requirement, fix a bug, or review a change
@@ -35,6 +36,7 @@ Example triggers:
 - "先把上下文找出来，我们讨论一下"
 - "what does the project wiki say about this module"
 - "find related project docs before we decide what to do"
+- "这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用"
 - "更新项目看板"
 - "刷新 dashboard"
 - "同步项目状态页"
@@ -221,6 +223,7 @@ For dashboard refresh:
 - Treating every project question as `project-develop`.
 - Creating Change Briefs for exploratory discussion.
 - Ignoring `.llm-wiki` indexes and jumping straight to raw source files.
+- Letting "real code first" override the query boundary. For project questions like "what exists here" or "how is this API called", use `project-query` first to recover requirement/source/working-context evidence, then inspect code only to verify current behavior.
 - Returning a broad essay instead of a small context pack.
 - Failing to name the wiki pages used.
 - Hiding uncertainty when wiki evidence is stale or missing.
