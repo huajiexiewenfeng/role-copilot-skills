@@ -63,11 +63,12 @@ Example triggers:
 ## Required First Check
 
 1. Resolve project root.
-2. Confirm `.llm-wiki` exists.
-3. Decide whether this is read-only project query or full lifecycle work.
-4. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
-5. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
-6. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
+2. Verify `../references/` exists and contains `lifecycle-router.md`, `flow-record.md`, and `progress-dashboard.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing project wiki work.
+3. Confirm `.llm-wiki` exists.
+4. Decide whether this is read-only project query or full lifecycle work.
+5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, log.
+6. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
+7. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
 
 ## Core Process
 
@@ -98,7 +99,8 @@ Workflow:
 6. Separate sourced wiki facts from inference.
 7. Return a concise answer and a Project Context Pack.
 8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages using `progress-dashboard.md` projection rules.
-9. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
+9. Before reporting a dashboard refresh complete, run the Progress Dashboard consistency checks: every distinct `flow_id` and `parent_flow_id`/child Flow Record discovered from `.llm-wiki` must have visible board cards for each eligible Flow Record row, matching `dashboardData.flowRecords` entries, and correct lane counts. Fix drift before returning.
+10. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
 ## Mode / Entry Selection
 
@@ -152,6 +154,12 @@ Rules:
 - Do not expose sensitive raw content.
 - Do not present inference as sourced fact.
 - Keep the context pack small enough to feed into later discussion or lifecycle work.
+
+Dashboard-refresh completion rules:
+
+- Do not report completion if a child Flow Record appears only in evidence links or parent-card prose.
+- Do not report completion if visible board cards and `dashboardData.flowRecords` disagree for any `flow_id`.
+- Do not report completion if lane count badges do not match the visible cards in each lane.
 
 ## Context Handoff
 

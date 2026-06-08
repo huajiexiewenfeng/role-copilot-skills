@@ -39,10 +39,12 @@ Use when the user asks to:
 ## Required First Check
 
 1. Resolve project root.
-2. Confirm this is full lifecycle requirement work, not lightweight-answer.
-3. Create or resume Change Brief.
-4. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-5. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
+2. Verify `../references/` exists and contains `change-brief.md` and `flow-record.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
+3. Confirm this is full lifecycle requirement work, not lightweight-answer.
+4. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
+5. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
+6. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
+7. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
 ## Core Process
 
@@ -78,12 +80,14 @@ Workflow:
 9. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
 10. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
 11. If a candidate Flow Record match exists, ask one confirmation question before reusing it.
-12. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
-13. Provide Context Handoff before external planning/TDD/execution bridges.
-14. Run Context Lock Gate before implementation.
-15. Ask for implementation confirmation unless the user already explicitly asked to implement now.
-16. Update Change Brief and working-context after clarification, planning, or implementation.
-17. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
+12. Do not create `.llm-wiki/working-context/*execution-plan*.md` until the Change Brief exists and links to the same `flow_id`.
+13. If planning reveals a new implementation scope or child deliverable, create a child Change Brief with `parent_flow_id` before writing its execution plan.
+14. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
+15. Provide Context Handoff before external planning/TDD/execution bridges.
+16. Run Context Lock Gate before implementation.
+17. Ask for implementation confirmation unless the user already explicitly asked to implement now.
+18. Update Change Brief and working-context after clarification, planning, or implementation.
+19. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
 
 ## Mode / Entry Selection
 
@@ -188,6 +192,8 @@ When bridging to brainstorming, project-develop owns durable project outputs. Br
 - Do not pull all services in a monorepo into context by default.
 - Do not use candidate or excluded modules as write scopes.
 - Do not expand scope without evidence or user confirmation.
+- Do not let an execution plan be the first durable artifact for a requirement; the Change Brief comes first.
+- Do not create an execution plan for a candidate scope that has become active without first adding or updating its parent or child Change Brief.
 - Do not update legacy `docs/ai-coding` unless explicitly asked.
 - Do not copy secrets or long original content into `.llm-wiki`.
 - Do not modify production code during requirement discussion, context recovery, or planning unless the user explicitly asks to proceed.
@@ -198,6 +204,8 @@ When bridging to brainstorming, project-develop owns durable project outputs. Br
 
 - Starting implementation during clarification.
 - Creating plans without linking them to Change Brief.
+- Creating execution plans without first creating the requirement/Change Brief page.
+- Treating a newly added implementation scope as "just part of the plan" instead of giving it a parent-linked child Flow Record.
 - Letting brainstorming or writing-plans choose project scope from scratch.
 - Letting brainstorming write new durable docs under `docs/superpowers/` when the project target is `.llm-wiki`.
 - Persisting local workstation absolute paths in `.llm-wiki` requirement, source, module, or working-context pages.

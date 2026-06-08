@@ -54,11 +54,12 @@ It must not become a general-purpose Dolores or `skill-evaluator` replacement. F
 ## Required First Check
 
 1. Resolve project root.
-2. Inspect git status and diff.
-3. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
-4. Check verification evidence.
-5. Check artifact registry and dashboard evidence when present.
-6. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
+2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `continuous-evolution.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle review.
+3. Inspect git status and diff.
+4. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
+5. Check verification evidence.
+6. Check artifact registry and dashboard evidence when present.
+7. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
 
 ## Core Process
 

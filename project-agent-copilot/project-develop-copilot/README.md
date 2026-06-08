@@ -48,6 +48,14 @@ npx skills add . --list
 
 Child stage skills can still be installed directly for narrow testing, but the normal user-facing entry is project-develop-copilot.
 
+Install integrity check:
+
+```bash
+test -d ~/.codex/skills/project-develop/references || test -d ~/.agents/skills/project-develop/references
+```
+
+Every child stage skill expects the shared `references/` directory next to its skill folder. If a child skill is installed directly without `references/`, lifecycle work must stop until the top-level package is installed or the shared `references/` directory is restored.
+
 ## Lifecycle
 
 ```text
