@@ -1,6 +1,6 @@
 ---
 name: project-develop
-description: Use when developing a project requirement or feature with project-local context, scoped modules, active sources, LLM Wiki requirement summaries, implementation planning, or bridging Superpowers/OpenSpec-style planning inside scoped project context.
+description: Use when developing or changing a project requirement, feature, API/protocol behavior, or code path with project-local context; use before implementation whenever a change needs a requirement/doc anchor, scoped context, acceptance criteria, or `.llm-wiki` Flow Record.
 ---
 
 # Project Develop
@@ -33,6 +33,7 @@ Use when the user asks to:
 - Context Enrichment Gate
 - Clarification Gate
 - Lifecycle Session Gate for Change Brief creation/resume when routed here
+- Documentation Anchor Gate
 - Context Lock Gate
 - External Skill Bridge Gate
 
@@ -41,10 +42,59 @@ Use when the user asks to:
 1. Resolve project root.
 2. Verify `../references/` exists and contains `change-brief.md` and `flow-record.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
 3. Confirm this is full lifecycle requirement work, not lightweight-answer.
-4. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
-5. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-6. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
-7. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
+4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
+5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
+6. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
+7. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
+8. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
+
+
+## Documentation Anchor Gate
+
+Before modifying production code, tests, configuration, public APIs, protocol methods, DTOs, topics, database schema, or user-visible behavior, require a `.llm-wiki` documentation anchor.
+
+Even if the requirement is one sentence, create or update a Change Brief that states:
+
+- why the change exists
+- what changes
+- what does not change
+- acceptance criteria
+- active scope
+- verification plan
+- Flow Record
+
+Do not treat a small code diff as exempt from this gate. If the user asks to "just continue" or "just make the change", still perform the documentation-mode decision first unless they explicitly say the work is throwaway or exploratory.
+
+## Change Brief Selection
+
+Update an existing Change Brief when:
+
+- the original Flow is still active or not yet implemented
+- the change only clarifies scope, acceptance criteria, field meaning, or non-goals
+- no independent delivery or verification loop is needed
+
+Create a new Change Brief when:
+
+- the prior requirement is implemented, committed, verified, or waiting deployment
+- the change adds an API, protocol method, topic, DTO, field, endpoint, behavior, or compatibility surface
+- external callers, tests, deployment notes, or acceptance criteria change
+- the change is small but creates a new observable contract
+
+Create a child Change Brief when:
+
+- the work belongs to a larger parent requirement
+- it can be developed, tested, or deployed independently
+- adding it to the parent would make the parent vague or oversized
+
+Create or update a working-context document before implementation when:
+
+- the change touches multiple files
+- TDD steps are needed
+- the change affects protocol/API compatibility
+- the change has important non-goals
+- verification may be blocked or staged
+
+For truly tiny changes, the Change Brief may contain the implementation plan inline, but it still needs a Flow Record.
 
 ## Core Process
 
@@ -203,6 +253,7 @@ When bridging to brainstorming, project-develop owns durable project outputs. Br
 ## Common Mistakes
 
 - Starting implementation during clarification.
+- Starting code changes for a small API/protocol gap without first choosing whether to update an existing Change Brief, create a new Change Brief, or create a child Change Brief.
 - Creating plans without linking them to Change Brief.
 - Creating execution plans without first creating the requirement/Change Brief page.
 - Treating a newly added implementation scope as "just part of the plan" instead of giving it a parent-linked child Flow Record.
