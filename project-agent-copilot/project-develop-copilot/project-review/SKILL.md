@@ -91,7 +91,7 @@ Workflow:
 10. Check artifact drift.
 11. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, trust level, and language consistency.
 12. Check Flow Record drift.
-13. Check Session Digest integrity when historical session context affected the work.
+13. Check Context Digest / Session Digest integrity when historical session context affected the work.
 14. Check external bridge consistency.
 15. Check project root and wiki placement when init/recovery occurred.
 16. Check cross-session project continuity when prior context or previous chat state affects the work.
@@ -165,15 +165,15 @@ Flow Record drift checklist:
 - same source/design document has duplicate active flow_id values
 ```
 
-Session Digest integrity checklist:
+Context Digest / Session Digest integrity checklist:
 
 ```text
-- candidate digest item was written as confirmed project truth
+- recall-context digest item was written as confirmed project truth without Lifecycle Promotion
 - conflict digest item silently overwrote newer code or wiki evidence
 - dashboard card claims progress from unconfirmed historical session memory
 - linked flow_id does not match actual requirement or bug evidence
 - raw sensitive session content was copied into `.llm-wiki`
-- digest import created a requirement, bug, or Flow Record without user confirmation
+- digest import created a requirement, bug, Flow Record, scope update, dashboard update, or verification claim without explicit promotion confirmation
 ```
 
 If no issues are found:
@@ -184,7 +184,7 @@ Findings:
 
 Verification gaps:
 Context/wiki gaps:
-Session Digest gaps:
+Context Digest / Session Digest gaps:
 Artifact/dashboard gaps:
 Lifecycle quality:
 Project skill improvement:

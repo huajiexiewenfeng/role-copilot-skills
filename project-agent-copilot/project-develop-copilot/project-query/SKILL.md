@@ -155,7 +155,7 @@ Rules:
 - State when evidence is insufficient.
 - Do not expose sensitive raw content.
 - Do not present inference as sourced fact.
-- Treat Session Digests as supporting evidence. `candidate` items are possible context, not confirmed project truth. Prefer current code, current user confirmation, and current requirement/bug pages when conflicts exist.
+- Treat Context Digests / Session Digests as recall context by default. They help recover what was discussed, but they are not confirmed project truth, scope, Flow Record, dashboard, or verification evidence unless selected items were explicitly promoted through Lifecycle Promotion. Prefer current code, current user confirmation, and current requirement/bug pages when conflicts exist.
 - Keep the context pack small enough to feed into later discussion or lifecycle work.
 
 Dashboard-refresh completion rules:

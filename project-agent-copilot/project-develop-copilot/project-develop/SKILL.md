@@ -118,13 +118,13 @@ Authority order:
 4. `.llm-wiki` index and summaries.
 5. Legacy `docs/ai-coding` or generated AI docs.
 
-When confirmed Session Digests exist for the active requirement, treat them as supporting source evidence. Use them to recover prior requirement discussion, design choices, acceptance criteria, scope decisions, and plan candidates. Do not treat `candidate`, `conflict`, or `stale` digest items as confirmed without user confirmation.
+When Context Digests / Session Digests exist for the active discussion, treat them as recall context first. Use them to recover prior requirement discussion, design choices, acceptance criteria, scope decisions, and plan candidates, but do not treat them as source evidence or project truth unless selected items were explicitly promoted through Lifecycle Promotion.
 
 Workflow:
 
 1. Resolve project root and output language when relevant.
 2. Search existing Change Briefs, working-context pages, artifacts, and source indexes for a matching `flow_id`.
-3. Search confirmed `.llm-wiki/session-digests/` entries for related requirement discussion, design decisions, plan candidates, and possible Flow Record links.
+3. Search `.llm-wiki/session-digests/` entries for related recall context. Use promoted digest items as evidence only when promotion is explicitly recorded.
 4. Create or resume Change Brief.
 5. Run Context Enrichment Gate before brainstorming, planning, or implementation.
 6. Produce a concise context summary.

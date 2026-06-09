@@ -73,7 +73,7 @@ Before doing project work:
    - lightweight-answer
    - project wiki query / discussion context
    - init / ingest
-   - historical session extraction / session digest import
+   - historical session extraction / Context Digest import
    - requirement or feature development
    - bug or incident fixing
    - finish or progress sync
@@ -156,11 +156,13 @@ For dashboard-refresh:
 
 For session-context-import:
 
-- candidate Session Digest preview
-- import recommendation
-- related Flow Record / requirement / bug / module candidates
-- confirmation question before `.llm-wiki` writes
-- imported digest path and updated wiki files after approval
+- brief Context Digest candidate list first
+- user selection of items to keep
+- Context Digest Markdown draft before `.llm-wiki` writes
+- confirmation question before writing `.llm-wiki/session-digests/`
+- no requirement, bug, Flow Record, dashboard, scope, or project-truth update by default
+- optional Lifecycle Promotion candidates only when the user asks to promote selected digest items
+- imported digest path after approval
 
 For full lifecycle:
 

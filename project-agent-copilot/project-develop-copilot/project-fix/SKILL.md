@@ -61,7 +61,7 @@ Workflow:
 
 1. Resolve project root and Bug Brief.
 2. Capture source, symptom, expected behavior, evidence, and likely scope.
-3. Search confirmed `.llm-wiki/session-digests/` entries for related symptoms, failed attempts, suspected root causes, reproduction notes, and verification history.
+3. Search `.llm-wiki/session-digests/` entries for related recall context such as symptoms, failed attempts, suspected root causes, reproduction notes, and verification history. Use them as bug evidence only when selected digest items were explicitly promoted or reconfirmed.
 4. Mark stale or conflict digest items before relying on them.
 5. Create or update the Bug Brief Flow Record with source evidence.
 6. Run Context Enrichment Gate.
@@ -93,7 +93,7 @@ Workflow:
 - log, error, failed test, incident report, or user description
 - project root
 - active and candidate scopes
-- confirmed Session Digests when they contain related bug evidence
+- Context Digests / Session Digests when they contain related recall context; use as bug evidence only after explicit promotion or current confirmation
 - recent changes or git diff when relevant
 
 ## Outputs
