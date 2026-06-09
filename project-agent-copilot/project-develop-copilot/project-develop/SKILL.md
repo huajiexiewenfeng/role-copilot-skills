@@ -228,6 +228,8 @@ Risks:
 Verification:
 ```
 
+Map this summary into the Change Brief and Flow Record. Do not create a separate OpenSpec directory or OpenSpec change unless the repository already uses OpenSpec and the user explicitly asks to operate that toolchain. If this work later needs continuation or archive evidence, prepare the final project handoff under `.llm-wiki/handoff/` through `project-finish`.
+
 ## Team-Shared Wiki Rules
 
 `.llm-wiki` is a team-shared project knowledge base, not a workstation scratchpad. When writing requirement, design, working-context, source, index, manifest, or module pages under `.llm-wiki`:

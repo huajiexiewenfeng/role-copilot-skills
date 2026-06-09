@@ -21,6 +21,7 @@ Every meaningful requirement or design document that enters development should m
 It is not a full OpenSpec clone.
 It is not a separate tool.
 It is not a form users must manually fill.
+It is the destination for OpenSpec-style summaries produced during requirement discussion or planning.
 
 The agent maintains Change Brief pages inside `.llm-wiki`.
 Users provide source material, intent, and key confirmations through normal conversation.
@@ -257,6 +258,7 @@ Do not add these in MVP:
 - complex requirement entity model
 - separate OpenSpec directory
 - mandatory OpenSpec CLI or tooling
+- treating OpenSpec-style handoff as an independent lifecycle outside Change Brief / Flow Record
 - user-maintained forms
 
 ## Completion Rule

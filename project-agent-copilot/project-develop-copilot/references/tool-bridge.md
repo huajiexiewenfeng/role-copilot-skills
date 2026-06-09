@@ -50,6 +50,22 @@ When a project still has `docs/ai-coding/`, migrate useful summaries into `.llm-
 
 For the internalized MVP mechanism, use `change-brief.md`.
 
+OpenSpec-style handoff is a field mapping into the project lifecycle, not a separate OpenSpec lifecycle. Do not create `openspec/changes/` unless the repository already uses OpenSpec and the user asks to operate that toolchain.
+
+Map the fields as follows:
+
+| OpenSpec-style field | Project lifecycle target |
+|---|---|
+| `Change` | Change Brief title, `change_id` / `flow_id`, and requirement summary |
+| `Why` | Change Brief background / problem statement |
+| `Acceptance criteria` | Change Brief acceptance criteria and Flow Record design evidence |
+| `Active sources` | Change Brief source links and artifact registry entries |
+| `Active scopes` | active scope in Change Brief and working-context |
+| `Out of scope` | excluded scope / non-goals |
+| `Plan` | execution plan or working-context plan linked to the same `flow_id` |
+| `Risks` | risk notes for review and handoff |
+| `Verification` | verification evidence and Flow Record testing step |
+
 When using an OpenSpec-style mechanism, keep the handoff small:
 
 ```text
@@ -63,6 +79,8 @@ Plan:
 Risks:
 Verification:
 ```
+
+Final continuation or archive notes still belong under `.llm-wiki/handoff/`; the OpenSpec-style handoff above is the requirement/change summary that feeds Change Brief, Flow Record, and working-context.
 
 ## codegraph Rule
 
