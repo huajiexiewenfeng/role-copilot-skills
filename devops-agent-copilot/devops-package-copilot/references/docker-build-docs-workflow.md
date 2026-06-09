@@ -35,8 +35,11 @@ Extract these facts from the docs:
 | artifact directory | `release\<project>-<version>-<timestamp>\` |
 | image archive | `images-<version>-<timestamp>.tar` |
 | manifest | `build-manifest.json` |
+| local prerequisites | sibling/framework install commands documented by the project |
 
 If the docs are garbled because of encoding but command examples are readable, rely on command blocks, parameter names, module lists, and paths.
+
+If project docs declare local prerequisites, such as installing sibling framework artifacts before packaging, treat them as project-owned build rules. Show the prerequisite command and reason before running it. Do not hard-code project names, sibling directories, or artifact coordinates in this skill.
 
 ## Module Config
 
@@ -58,6 +61,8 @@ Expected shape:
 ```
 
 When both Markdown and module config exist, treat the module config as the stricter source for supported module names.
+
+Use `modulePath`, `jarPath`, and `dockerContext` for fallback decisions. Do not hard-code module names.
 
 ## Planning Rules
 
@@ -119,6 +124,74 @@ Use the exact script entry from docs. On Windows, prefer the documented `.cmd` e
 
 Do not run until the user explicitly confirms the displayed command.
 
+On Windows, quote every Maven `-D...=...` argument:
+
+```powershell
+mvn ... "-Dmaven.test.skip=true"
+mvn ... "-Dmaven.repo.local=D:\path\to\repo"
+```
+
+Unquoted `-D` arguments can be split by PowerShell and surface as errors such as `Unknown lifecycle phase ".test.skip=true"`.
+
+## Maven Reactor Fallback
+
+Use this fallback only when all are true:
+
+- The documented build script failed during Maven project reading or early reactor setup.
+- The key error is about unresolved parent POMs, unresolved import POMs/BOMs, missing sibling module POMs, or `The build could not read ... projects`.
+- The requested packaging scope is a single documented module, not `ALL`.
+- The module config gives a `modulePath` and `jarPath`.
+- The failure happened before a module-specific compile/test error for the requested module.
+
+Do not use this fallback for real source compilation failures, test failures, Docker build failures, image export failures, unknown module names, or release/publish/deploy requests.
+
+Fallback process:
+
+1. Resolve requested module `modulePath`.
+2. Find nearest ancestor at or above `modulePath` that has a `pom.xml` and lists the module or child path in `<modules>`.
+3. Build from that narrower aggregator:
+
+```powershell
+mvn -f <nearest-aggregator>\pom.xml -pl <leaf-module-artifact-or-directory> -am clean package "-Dmaven.test.skip=true"
+```
+
+4. If this succeeds, confirm configured `jarPath` exists and `LastWriteTime` is newer than fallback build start time.
+5. Run the documented script with documented `-SkipMaven` only if docs support it and the jar freshness check passed:
+
+```bat
+scripts\build.cmd -Modules <module> -Version <version> -SkipMaven
+```
+
+6. Final report must state the normal script Maven phase failed, list the fallback Maven command, and state `-SkipMaven` reused the newly built jar.
+
+If the narrower Maven build fails, stop and report it. Do not continue to `-SkipMaven` with an old jar.
+
+## Local Prerequisites
+
+Some enterprise multi-repo workspaces require sibling framework or BOM projects to be installed into the local Maven repository before the target project can build. This is a project prerequisite, not a skill-specific rule.
+
+Prefer project docs or module config to discover prerequisites. Acceptable forms include:
+
+- `docs/docker-build-prerequisites.md`
+- `docs/docker-build-guide.md`
+- `scripts/modules.json`
+
+Example module config shape:
+
+```json
+{
+  "localPrerequisites": [
+    {
+      "reason": "Install shared BOM artifacts required by Maven dependency resolution",
+      "cwd": "../shared-framework",
+      "command": "mvn install -DskipTests"
+    }
+  ]
+}
+```
+
+Before running a prerequisite command, show it unless it was already confirmed in the current session. After running it, retry only the original build or the Maven reactor fallback. Never invent prerequisites from memory; if source evidence suggests one, explain the evidence and suggest adding it to project docs/config.
+
 ## Failure Handling
 
 When a build fails, report:
@@ -126,6 +199,7 @@ When a build fails, report:
 - failed phase if visible: Maven, Docker build, image export, manifest generation, or unknown
 - exact command
 - key error lines
+- fallback commands attempted, if any
 - likely next checks
 
-Do not retry with different parameters unless the user asks.
+Do not retry with different parameters unless the user asks or Maven reactor fallback criteria are satisfied.

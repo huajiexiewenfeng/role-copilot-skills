@@ -71,7 +71,8 @@ Re-read branch and commit before every execution plan.
 9. Show the execution plan and exact command.
 10. Decide whether confirmation is required.
 11. Run the command when allowed by the confirmation policy.
-12. Summarize success, artifact locations, manifest/log hints, or failure diagnosis.
+12. If Maven fails before compiling the requested module because the root reactor cannot resolve unrelated parent POMs, imported BOMs, or sibling modules, use the Maven reactor fallback rules in `references/docker-build-docs-workflow.md` before giving up.
+13. Summarize success, artifact locations, manifest/log hints, fallback commands used, or failure diagnosis.
 
 For detailed parsing and reporting rules, read:
 
@@ -88,6 +89,7 @@ Use these defaults unless project docs override them or the user explicitly says
 - `version`: reuse the last confirmed session version unless the user provides a new version or switches project root.
 - `modules`: if the user says "打包 <name> 项目" and `<name>` appears in supported modules, use `<name>` as the module.
 - Multi-module or `ALL`: use only when the user explicitly asks for multiple modules or all modules.
+- On Windows, quote Maven `-D...=...` arguments, for example `"-Dmaven.test.skip=true"` and `"-Dmaven.repo.local=..."`, so PowerShell does not split them into invalid lifecycle phases.
 
 Never guess:
 
@@ -157,7 +159,8 @@ Do not execute from a guessed command.
 - Do not delete artifacts, Docker images, remote tags, or release files.
 - Do not push images unless the user explicitly asks and the project docs support it.
 - Do not run destructive cleanup commands as part of this skill.
-- If the command fails, preserve the command and key error output. Do not retry blindly.
+- If the command fails, preserve the command and key error output. Do not retry blindly; only use documented fallback rules when the error matches the failure class.
+- Do not use `-SkipMaven` after a failed Maven build unless a jar at the configured `jarPath` was created or refreshed during the current packaging attempt.
 
 ## Common User Requests
 

@@ -21,6 +21,7 @@ Execution plan:
 - Package type: `<temporary test | release>`
 - Defaults: full Maven + Docker build, no dry run
 - Command: `<command>`
+- Fallback: `<none | command and reason>`
 
 Confirm execution?
 ```
@@ -52,6 +53,7 @@ Build succeeded.
 - Modules: `<modules>`
 - Version: `<version>`
 - Command: `<command>`
+- Fallback used: `<none | narrow Maven build then documented -SkipMaven>`
 - Artifact directory: `<release/...>` if found or inferred
 - Image archive: `<images-...tar>` if found
 - Manifest: `<build-manifest.json>` if found
@@ -72,6 +74,7 @@ Build failed.
 - Version: `<version>`
 - Command: `<command>`
 - Failed phase: `<phase or unknown>`
+- Fallback attempted: `<none | command and result>`
 - Key error: `<short error excerpt>`
 - Suggested checks:
   1. ...
