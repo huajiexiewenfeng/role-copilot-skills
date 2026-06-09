@@ -18,6 +18,8 @@ Every full entry returns to finish, review, sync, or an explicit stop.
 
 Use `lightweight-answer` when the user only wants a tiny direct answer. Use `read-only-query` / `project-query` when the user wants to query project `.llm-wiki`, find related requirements, bugs, source proxies, artifacts, or assemble discussion context without starting implementation.
 
+`No skills`, `no child skill`, and `no lifecycle` are aliases for `lightweight-answer` with `primary_stage: none`. This is a deliberate route, not a fallback failure. It means answer directly without invoking a child project skill, without invoking an external bridge, and without writing lifecycle state.
+
 Examples:
 
 - “这个设计文档在哪？”
@@ -25,7 +27,7 @@ Examples:
 - “解释一下 Gate Stack 是什么。”
 - “现在这个 README 大概说了什么？”
 
-Lightweight-answer must not create Change Brief, Bug Brief, working-context, artifact registry rows, dashboard updates, or code changes by default.
+Lightweight-answer must not create Change Brief, Bug Brief, working-context, Flow Record, handoff, artifact registry rows, dashboard updates, `.llm-wiki` writes, external bridge calls, child skill calls, or code changes by default.
 
 Use `full-lifecycle` when the user asks to develop, fix, ingest, finish, review, continue, update status, execute a plan, commit, or handle project evidence such as PRDs, logs, diffs, failed tests, or verification results.
 

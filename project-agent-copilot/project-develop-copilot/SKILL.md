@@ -107,6 +107,22 @@ Before doing project work:
 
 If confidence is low, ask one minimal routing question. Do not start a long intake form.
 
+## No Child Skill Mode
+
+`no skills`, `no child skill`, and `no lifecycle` requests are aliases for `lightweight-answer` with `primary_stage: none`.
+
+Use this mode when the user wants a quick answer, a tiny lookup, a lightweight explanation, or a design discussion that should not be saved or executed yet.
+
+In this mode:
+
+- Do not call a child project skill.
+- Do not call an external bridge skill.
+- Do not create or modify `.llm-wiki` files.
+- Do not create Change Brief, Bug Brief, Flow Record, handoff, artifact registry rows, dashboard updates, or code changes.
+- Cite evidence when useful, then answer directly.
+
+Upgrade out of this mode only when the user explicitly asks to save, ingest, plan, execute, fix, review, finish, refresh dashboard, or otherwise update project lifecycle state.
+
 
 ## Lifecycle Quality Trigger Phrases
 
