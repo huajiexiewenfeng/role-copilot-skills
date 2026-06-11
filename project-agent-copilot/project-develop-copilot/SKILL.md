@@ -1,6 +1,6 @@
 ---
 name: project-develop-copilot
-description: Use when the user wants project development help from natural intent, including requirements, bugs, logs, design discussion, file lookup, progress, finish, review, resume, or routing into project lifecycle skills.
+description: Use when the user wants project development help from natural intent, including requirements, bugs, logs, cross-service or cross-project evidence, design discussion, file lookup, progress, finish, review, resume, or routing into project lifecycle skills.
 ---
 
 # Project Develop Copilot
@@ -18,6 +18,7 @@ It does not replace `project-query`, `project-init`, `project-ingest`, `project-
 Use this skill when the user asks for project development help from natural language, including:
 
 - Finding, explaining, querying, or discussing project `.llm-wiki`, requirements, bugs, design docs, README files, skills, references, artifacts, or current project status.
+- Investigating cross-service or cross-project integration points such as Feign clients, MQTT topics, HTTP/RPC interfaces, shared DB tables, shared config, upstream/downstream services, or external contracts.
 - Developing a feature, requirement, PRD, design change, implementation plan, or scoped project change.
 - Diagnosing or fixing a bug, failed test, runtime error, log symptom, regression, incident, or unexpected behavior.
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
@@ -43,6 +44,7 @@ The router owns lifecycle coherence across gates:
 
 - Lightweight Boundary
 - Context Recovery Gate
+- Cross-Project Boundary Gate when cross-service evidence requires another project wiki
 - Lifecycle Anchor Gate
 - External Bridge Gate
 - Session Import Gate
@@ -70,6 +72,7 @@ Before doing project work:
 3. Classify the user request:
    - lightweight-answer
    - project wiki query / discussion context
+   - cross-project lookup / evidence gathering
    - init / ingest
    - historical session extraction / Session Digest import
    - requirement or feature development
@@ -90,6 +93,7 @@ Before doing project work:
 |---|---|---|
 | User asks a tiny file/doc lookup or simple concept explanation | lightweight-answer | none |
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
+| User asks which service owns an interface/topic/client, or asks for cross-service contract evidence without requesting a change | cross-project-lookup | `project-query` |
 | User says to discuss design and not implement | lightweight-answer | none |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
@@ -117,6 +121,7 @@ Use this quick decision order:
 
 1. No project evidence needed and no write requested -> `lightweight-answer`.
 2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
+   - If the evidence crosses another project through `.llm-wiki/cross-refs`, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
 4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
 5. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.

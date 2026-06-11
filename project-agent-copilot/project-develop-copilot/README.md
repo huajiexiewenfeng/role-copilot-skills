@@ -5,7 +5,7 @@ Project Develop Copilot is a skill collection for real project development work.
 1. Bridge top-level skills and tools into one project lifecycle.
 2. Internalize a project-level LLM Wiki as the shared context memory.
 
-It combines project LLM Wiki maintenance, scoped context recovery, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
+It combines project LLM Wiki maintenance, scoped context recovery, cross-project refs, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
 
 It does not replace Superpowers-style skills. It prepares project context, active scopes, and `.llm-wiki` state first, then bridges to brainstorming, planning, TDD, debugging, execution, verification, and review skills inside that controlled context.
 
@@ -26,13 +26,13 @@ English | [Simplified Chinese](./README.zh.md)
 | Skill | Use When |
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
-| `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
-| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
+| `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
+| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
-| `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
-| `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
+| `project-develop` | Develop a requirement or feature with scoped project context, requirement summaries, and source-verified external dependencies when cross-project contracts affect the change. |
+| `project-fix` | Diagnose and fix project bugs with scoped context, cross-project external findings when needed, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
@@ -75,7 +75,7 @@ project-develop-copilot
 -> project-review
 ```
 
-`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup, cross-project lookup, and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work and record external dependencies/findings when cross-project contracts matter. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
@@ -110,6 +110,12 @@ The expected response is a Project Context Pack:
 - Possible next routes, such as ingesting missing docs, creating a Change Brief, creating a Bug Brief, starting review, or running Lifecycle Quality Review
 
 `project-query` is different from `lightweight-answer`: it actively searches project `.llm-wiki` and assembles evidence. It is also different from full lifecycle work: it stays read-only unless the user explicitly asks to continue into development, fixing, ingest, review, or skill evolution.
+
+## Cross-Project Refs
+
+Cross-project refs are a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `.llm-wiki/cross-refs/index.md` and ignores local `registry.local.json`; `project-query` uses refs for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` audits stale verification, malformed anchors, and registry leakage.
+
+Refs store logical project ids and remote wiki anchors only. Local paths live in ignored registry files. Remote project wiki and source are read-only by default.
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:

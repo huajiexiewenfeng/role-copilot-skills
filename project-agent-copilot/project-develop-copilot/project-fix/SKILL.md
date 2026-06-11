@@ -42,7 +42,8 @@ Use when the user reports or wants to fix:
 3. Create or resume Bug Brief.
 4. Capture or ingest external bug source.
 5. Identify active, read-only, candidate, and excluded scopes.
-6. Run Work Definition Gate before broad diagnosis or edits.
+6. If the bug involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check `.llm-wiki/cross-refs/index.md` and run the Cross-Project Boundary Gate before relying on external contract behavior.
+7. Run Work Definition Gate before broad diagnosis or edits.
 
 ## Core Process
 
@@ -51,6 +52,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/bug-brief.md`
+- `../references/cross-project-refs.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
 - `../references/scoped-working-context.md`
@@ -73,17 +75,23 @@ Workflow:
 4. Mark stale or conflict digest items before relying on them.
 5. Create or update the Bug Brief Flow Record with source evidence.
 6. Run Context Recovery Gate.
-7. Reproduce the issue or state why reproduction is not currently possible.
-8. Bridge to systematic-debugging only after evidence and scoped context are captured.
-9. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.
-10. Use test-driven-development for regression coverage when feasible.
-11. Record or confirm the fix plan and update the Flow Record `plan` step before edits.
-12. Run Scope Lock Gate before edits.
-13. If the fix needs candidate or excluded scope, run scope escalation before editing.
-14. Fix only active scopes unless escalation is justified.
-15. Verify the fix or record limitation.
-16. Update Bug Brief, Flow Record, and working-context after verification.
-17. Return diagnosis, verification, Flow Record updates, residual risk, and next gate.
+7. If the bug crosses service/project boundaries, check `.llm-wiki/cross-refs/index.md`.
+   - If no xref exists, propose a concise xref row and ask for the remote project id and local path before reading remote wiki.
+   - If an xref exists but no registry mapping exists, ask for the local path and write only `.llm-wiki/cross-refs/registry.local.json` after confirmation.
+   - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
+   - If the fix decision depends on the remote contract, use `verification_required: source`.
+   - Record remote evidence in the Bug Brief `## External Findings` section with `verification_status` and derived staleness.
+8. Reproduce the issue or state why reproduction is not currently possible.
+9. Bridge to systematic-debugging only after evidence and scoped context are captured.
+10. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.
+11. Use test-driven-development for regression coverage when feasible.
+12. Record or confirm the fix plan and update the Flow Record `plan` step before edits.
+13. Run Scope Lock Gate before edits.
+14. If the fix needs candidate or excluded scope, run scope escalation before editing.
+15. Fix only active scopes unless escalation is justified.
+16. Verify the fix or record limitation.
+17. Update Bug Brief, Flow Record, and working-context after verification.
+18. Return diagnosis, verification, Flow Record updates, external findings, residual risk, and next gate.
 
 ## Mode / Entry Selection
 
@@ -113,6 +121,7 @@ Diagnosis:
 Fix:
 Files changed:
 Scope escalation:
+External findings:
 Regression coverage:
 Verification:
 Bug Brief updates:
@@ -154,6 +163,7 @@ After debugging, fixing, or verification, return:
 - recommended_scope_changes:
 - artifacts:
 - verification_notes:
+- external_findings:
 - lifecycle_updates_needed:
 - next_gate:
 ```
@@ -165,6 +175,7 @@ After debugging, fixing, or verification, return:
 - Do not let systematic-debugging own project scope.
 - Do not claim fixed without verification or explicit limitation.
 - Do not copy sensitive raw logs into `.llm-wiki`.
+- Do not edit remote project wiki, source, config, or registry during cross-project evidence gathering. Generate a context handoff if remote project changes are needed.
 
 ## Common Mistakes
 
@@ -173,3 +184,4 @@ After debugging, fixing, or verification, return:
 - Treating reproduction-blocked as reproduced.
 - Forgetting residual risk when verification cannot run.
 - Updating dashboard as fixed before verification evidence exists.
+- Making fix decisions from `wiki-checked` external evidence when the remote contract needs source verification.

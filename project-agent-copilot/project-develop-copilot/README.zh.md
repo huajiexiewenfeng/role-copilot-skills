@@ -7,7 +7,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 1. 桥接各个顶级 skills 和 tools，纳入统一项目生命周期。
 2. 内化项目级 LLM Wiki，作为共享上下文记忆层。
 
-它把项目 LLM Wiki 维护、受控上下文恢复、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
+它把项目 LLM Wiki 维护、受控上下文恢复、跨项目引用取证、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
 
 它不替代 Superpowers 类 skills，而是先准备项目上下文、active scopes 和 `.llm-wiki` 状态，再在这个受控上下文里桥接 brainstorming、planning、TDD、debugging、execution、verification 和 review。
 
@@ -30,13 +30,13 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | Skill | 使用场景 |
 |---|---|
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
-| `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
-| `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
+| `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
+| `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
-| `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
-| `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
+| `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能；当需求依赖跨项目契约时，在 Change Brief 中记录外部依赖和验证状态。 |
+| `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题；当 bug 涉及外部服务时，在 Bug Brief 中记录 External Findings。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
 | `project-review` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
 
@@ -71,7 +71,7 @@ project-develop-copilot
 -> project-review
 ```
 
-`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
@@ -112,6 +112,12 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 - 可能的下一步路由，例如补充 ingest、创建 Change Brief、创建 Bug Brief、进入 review，或触发 Lifecycle Quality Review
 
 `project-query` 不等同于 `lightweight-answer`：它会主动搜索项目 `.llm-wiki` 并组装证据。它也不等同于完整 lifecycle：除非用户明确要求继续开发、修复、摄入、评审或做 skill 进化，否则它保持只读。
+
+## 跨项目引用层
+
+Cross-project refs 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `.llm-wiki/cross-refs/index.md` 并忽略本地 `registry.local.json`；`project-query` 用它回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 巡检过期验证、错误 anchor 和 registry 泄漏。
+
+cross-refs 只存逻辑 project-id 和远端 wiki anchor，本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：

@@ -1,6 +1,6 @@
 ---
 name: project-query
-description: Use when answering, discussing, locating, or synthesizing project questions from a project-local `.llm-wiki`, including finding related requirements, bugs, source proxies, working-context pages, design docs, artifacts, dashboard state, and development notes without starting implementation.
+description: Use when answering, discussing, locating, or synthesizing project questions from a project-local `.llm-wiki`, including cross-project refs, related requirements, bugs, source proxies, working-context pages, design docs, artifacts, dashboard state, and development notes without starting implementation.
 ---
 
 # Project Query
@@ -22,6 +22,7 @@ Use when the user asks to:
 - discuss project architecture, decisions, progress, or tradeoffs using existing project context
 - summarize what the project wiki says about a feature, module, bug, or decision
 - answer "what exists in this project / how is it called / how was it designed" questions about a module, integration, API, or feature; start from `.llm-wiki` context first, then verify key facts against source code when needed
+- answer cross-service ownership and contract questions such as which remote project owns an interface, Feign client, MQTT topic, HTTP API, RPC endpoint, shared DB, or shared config
 - assemble context for later development without starting development yet
 - compare related requirements, bugs, source materials, or working-context pages
 - locate evidence before deciding whether to create a requirement, fix a bug, or review a change
@@ -75,12 +76,15 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-router.md`
 - `../references/lifecycle-gates.md`
+- `../references/cross-project-refs.md`
 - `../references/progress-dashboard.md`
 - `../references/flow-record.md`
 - `.llm-wiki/index.md`
 - `.llm-wiki/modules/index.md`
 - `.llm-wiki/ingest/index.md`
 - `.llm-wiki/artifacts/index.md`
+- `.llm-wiki/cross-refs/index.md`
+- `.llm-wiki/cross-refs/registry.local.json`
 - `.llm-wiki/log.md`
 - `.llm-wiki/session-digests/`
 - relevant `.llm-wiki/requirements/*.md`
@@ -101,17 +105,23 @@ Workflow:
 2. Read `.llm-wiki/index.md` first.
 3. Search lightweight indexes before deep-reading pages.
 4. Read the smallest relevant set of wiki pages.
-5. Fall back to original source files only when wiki summaries are insufficient or stale.
-6. Separate sourced wiki facts from inference.
-7. Return a concise answer and a Project Context Pack.
-8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages using `progress-dashboard.md` projection rules.
+5. For cross-service questions, read `.llm-wiki/cross-refs/index.md` before inferring remote ownership or contracts.
+   - If an xref exists, resolve the remote project through local registry only when remote evidence is needed.
+   - If no registry mapping exists, ask for the local path and write `.llm-wiki/cross-refs/registry.local.json` only after user confirmation.
+   - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
+   - Use `verification_required: wiki-only-allowed` for ownership or clue-finding answers; state when source verification was not performed.
+   - Do not write Change Brief, Bug Brief, Flow Record, dashboard, or remote project files during ordinary query.
+6. Fall back to original source files only when wiki summaries are insufficient or stale.
+7. Separate sourced wiki facts from inference.
+8. Return a concise answer and a Project Context Pack.
+9. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages using `progress-dashboard.md` projection rules.
    - Treat Flow Record as the lifecycle status authority.
    - Treat artifact registry as the artifact/path/discoverability authority.
    - Treat dashboard as a projection only.
    - Do not edit Change Briefs, Bug Briefs, working-context Flow Records, or verification status during dashboard-only refresh.
    - If a dashboard card disagrees with Flow Record evidence, downgrade/remove the card or report drift; do not rewrite Flow Record to match the card.
-9. Before reporting a dashboard refresh complete, run the Progress Dashboard consistency checks: every distinct `flow_id` and `parent_flow_id`/child Flow Record discovered from `.llm-wiki` must have visible board cards for each eligible Flow Record row, matching `dashboardData.flowRecords` entries, and correct lane counts. Fix drift before returning.
-10. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
+10. Before reporting a dashboard refresh complete, run the Progress Dashboard consistency checks: every distinct `flow_id` and `parent_flow_id`/child Flow Record discovered from `.llm-wiki` must have visible board cards for each eligible Flow Record row, matching `dashboardData.flowRecords` entries, and correct lane counts. Fix drift before returning.
+11. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
 ## Mode / Entry Selection
 
@@ -121,6 +131,7 @@ Workflow:
 | `wiki-answer` | user asks a question answerable from project wiki pages |
 | `discussion-context` | user wants context assembled before discussion |
 | `evidence-map` | user asks which docs, requirements, bugs, or artifacts relate to a topic |
+| `cross-project-lookup` | user asks which remote project owns an interface/topic/client or asks for a cross-service contract clue |
 | `dashboard-refresh` | user explicitly asks to refresh or update the static project dashboard/progress page |
 | `upgrade-candidate` | query reveals a likely requirement, bug, stale source, or review issue |
 
@@ -149,6 +160,7 @@ Answer format:
 - related_bugs:
 - related_modules:
 - related_session_digests:
+- cross_project_refs:
 - open_questions:
 - confidence:
 
@@ -233,6 +245,8 @@ For dashboard refresh:
 
 - Do not modify code.
 - Do not create or update `.llm-wiki` by default.
+- Ordinary cross-project lookup must not modify lifecycle state; writing a user-confirmed `.llm-wiki/cross-refs/registry.local.json` mapping is local resolver configuration and must remain gitignored.
+- Do not write remote project wiki, source, config, registry, or reverse cross-refs.
 - In `dashboard-refresh` mode, modify only `.llm-wiki/dashboard/progress.html`, `.llm-wiki/artifacts/index.md` dashboard metadata when needed, and `.llm-wiki/log.md`.
 - In `dashboard-refresh` mode, do not create Change Briefs or mark plan/development/testing/archive done; show unmatched source/design docs as candidate or pending.
 - In `dashboard-refresh` mode, do not repair Flow Record status. Route stale or contradictory Flow Record evidence to `project-finish`, `project-develop`, `project-fix`, or `project-review`.
@@ -248,6 +262,7 @@ For dashboard refresh:
 - Ignoring `.llm-wiki` indexes and jumping straight to raw source files.
 - Letting "real code first" override the query boundary. For project questions like "what exists here" or "how is this API called", use `project-query` first to recover requirement/source/working-context evidence, then inspect code only to verify current behavior.
 - Returning a broad essay instead of a small context pack.
+- Answering cross-service behavior from memory or inference instead of checking `cross-refs/index.md` and clearly labeling wiki-only evidence.
 - Failing to name the wiki pages used.
 - Hiding uncertainty when wiki evidence is stale or missing.
 - Treating dashboard refresh as project finish.

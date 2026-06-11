@@ -123,6 +123,7 @@ A project init must create or preserve this standard structure. Some directories
   modules/
   sources/
   artifacts/
+  cross-refs/
   dashboard/
   session-digests/
   migration/
@@ -142,6 +143,7 @@ Minimum starter files:
 - `.llm-wiki/modules/<scope>/README.md`: scoped-context landing area only for selected or clearly active scopes.
 - `.llm-wiki/sources/registry.md`: source and supporting-context registry.
 - `.llm-wiki/artifacts/index.md`: specs, plans, reports, verification notes, generated pages, and dashboard registry.
+- `.llm-wiki/cross-refs/index.md`: cross-project integration point registry; stores logical project ids, anchors, summaries, verification status, and last verified dates only.
 - `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
 - `.llm-wiki/session-digests/README.md`: recallable Session Digest landing area for historical chat/session summaries.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
@@ -155,6 +157,9 @@ Refresh rules:
 
 - Preserve existing directories and richer files even if they are not listed above.
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
+- Create or preserve `.llm-wiki/cross-refs/index.md` with the empty Cross-Project Integration Points template when missing.
+- Ensure `.gitignore` contains `.llm-wiki/cross-refs/registry.local.json` exactly once so local project-path mappings do not enter git.
+- Do not create `.llm-wiki/cross-refs/registry.local.json` during init unless the user provides a remote project path and confirms storing it as local-only configuration.
 - Create or preserve `.llm-wiki/session-digests/` for confirmed Session Digests. Do not scan it as raw source material; treat it as recall context by default, not project truth.
 - When `.llm-wiki/session-digests/` exists, include it in context discovery for recall and duplicate avoidance. Do not promote digest items to requirement, bug, module, Flow Record, dashboard, scope, or verification truth without explicit Lifecycle Promotion confirmation.
 - If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
@@ -201,6 +206,21 @@ Module index minimum:
 ```markdown
 | Module | Path | Type | Context | Status | Notes |
 |---|---|---|---|---|---|
+```
+
+Cross-project refs minimum:
+
+```markdown
+# Cross-Project Integration Points
+
+| id | type | local_anchor | remote_project | remote_anchor | contract_summary | verification_status | last_verified |
+|---|---|---|---|---|---|---|---|
+
+## Notes
+
+- Store only integration-point indexes and clues here. Do not store remote project paths or copied remote contract content.
+- `remote_project` is a logical project id. Local paths belong only in ignored `registry.local.json`.
+- `remote_anchor` is relative to the remote wiki root and must not start with `.llm-wiki/`.
 ```
 
 ## Context Handoff

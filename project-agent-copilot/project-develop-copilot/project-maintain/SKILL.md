@@ -1,6 +1,6 @@
 ---
 name: project-maintain
-description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki`, especially when requirements, working-context pages, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
+description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki`, especially when requirements, working-context pages, cross-project refs, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
 ---
 
 # Project Maintain
@@ -58,9 +58,12 @@ Read as needed:
 - `lifecycle-router.md`
 - `flow-record.md`
 - `progress-dashboard.md`
+- `cross-project-refs.md`
 - `.llm-wiki/README.md`
 - `.llm-wiki/log.md`
 - `.llm-wiki/artifacts/index.md`
+- `.llm-wiki/cross-refs/index.md`
+- `.llm-wiki/cross-refs/registry.local.json`
 - `.llm-wiki/modules/index.md`
 - `.llm-wiki/modules/*/README.md`
 - `.llm-wiki/requirements/*.md`
@@ -87,10 +90,11 @@ Workflow:
 6. Check dashboard visible cards, `dashboardData.flowRecords`, flow summaries, and lane counts for agreement.
 7. Check module entry points for active or recently changed module-related flows.
 8. Check broken relative links and stale references.
-9. Check for workstation-specific absolute paths and sensitive information patterns in generated wiki pages.
-10. Produce a health report with Errors, Warnings, Info, and suggested repairs.
-11. If the user requested repair, apply only the approved narrow repairs.
-12. Record maintenance repairs in `.llm-wiki/log.md` unless the repair is explicitly dry-run only.
+9. Check cross-project refs structure, registry ignore status, remote anchor shape, derived staleness, and resolvable remote anchors when registry mappings exist.
+10. Check for workstation-specific absolute paths and sensitive information patterns in generated wiki pages.
+11. Produce a health report with Errors, Warnings, Info, and suggested repairs.
+12. If the user requested repair, apply only the approved narrow repairs.
+13. Record maintenance repairs in `.llm-wiki/log.md` unless the repair is explicitly dry-run only.
 
 ## Visibility Chain
 
@@ -121,6 +125,31 @@ A missing link is not always an error. Classify it by impact:
 | `consistency-repair` | The user asks to fix missing indexes, backlinks, logs, artifacts, or dashboard references. |
 | `dashboard-audit` | The user asks why the progress dashboard is stale, inconsistent, or missing cards. |
 | `safety-audit` | The user asks to check secrets, absolute paths, sensitive content, copied raw material, or garbled pages. |
+| `cross-refs-audit` | The user asks to check cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
+
+## Cross-Project Refs Audit
+
+Audit `.llm-wiki/cross-refs/` when it exists, when cross-service work is active, or when the user asks about Feign, MQTT, HTTP, RPC, shared DB, shared config, upstream/downstream services, or external contracts.
+
+Check:
+
+- `.llm-wiki/cross-refs/index.md` exists when the project uses cross-service integration refs.
+- `.gitignore` contains `.llm-wiki/cross-refs/registry.local.json`.
+- `registry.local.json` is not tracked by git.
+- `remote_project` values are logical ids only, not local paths.
+- `remote_anchor` values are relative to the remote wiki root.
+- `remote_anchor` values do not start with `.llm-wiki/`, are not absolute paths, and do not escape with `../`.
+- `verification_status` is one of `draft`, `wiki-checked`, `source-verified`, or `blocked`; never `stale`.
+- `last_verified` is present and parseable when `verification_status` is `wiki-checked` or `source-verified`.
+- Derived staleness is `fresh`, `expired`, or `unknown` using the default 30 day threshold from `cross-project-refs.md`.
+- If a registry mapping exists, its `path` exists, `wiki` is relative, and resolved remote anchors remain inside the remote project root.
+- If a registry mapping exists and the resolved remote anchor is missing, report it; do not scan the whole remote project by keyword.
+
+Finding levels:
+
+- Error: local path leaked into `index.md`, `registry.local.json` appears tracked, `remote_anchor` is absolute or escapes the remote project, or `verification_status` uses unsupported values such as `stale`.
+- Warning: `last_verified` is expired or unknown, registry path is missing, remote anchor cannot be resolved, `.gitignore` is missing the registry ignore line, or `remote_anchor` starts with `.llm-wiki/`.
+- Info: no cross-refs exist yet, registry is absent while no active xref needs it, or an xref is intentionally `draft`.
 
 ## Repair Rules
 
@@ -134,6 +163,10 @@ Allowed narrow repairs:
 - Downgrade unsupported dashboard claims to evidence-backed status.
 - Rebuild dashboard projection from Flow Record plus artifact registry evidence when dashboard drift is the only issue.
 - Repair artifact registry path/status rows when current files prove the registry is stale.
+- Create a missing `.llm-wiki/cross-refs/index.md` empty template.
+- Add `.llm-wiki/cross-refs/registry.local.json` to `.gitignore` exactly once.
+- Rewrite malformed `remote_anchor` values only when the intended wiki-relative target is unambiguous.
+- Replace unsupported `verification_status: stale` with the prior verified level only when evidence in the row or notes makes that level clear; otherwise downgrade to `draft` and report the uncertainty.
 
 Disallowed repairs:
 
@@ -145,6 +178,8 @@ Disallowed repairs:
 - Do not promote candidate source material into an active requirement automatically.
 - Do not rewrite large groups of wiki pages without explicit confirmation.
 - Do not remove sensitive-looking content unless the user approves the exact redaction or replacement.
+- Do not write to external project wiki, source, config, registry, or reverse cross-refs.
+- Do not create or edit `registry.local.json` unless the user confirms the local path mapping.
 
 ## Finding Levels
 
@@ -174,6 +209,8 @@ For audits, return:
 ## Flow Record Consistency
 
 ## Dashboard Consistency
+
+## Cross-Project Refs
 
 ## Safety Findings
 
