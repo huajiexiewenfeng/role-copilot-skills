@@ -80,7 +80,7 @@ Workflow:
 6. If production code and tests/mocks/fixtures/expected values changed together, run the Test Integrity Gate before marking testing done.
 7. Update only affected `.llm-wiki` pages.
 8. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules and trust level.
-9. When finishing work linked to a Context Digest / Session Digest, update related requirement, bug, or Flow Record only if selected digest items were explicitly promoted into that lifecycle object. If recall-context items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful without silently changing project truth.
+9. When finishing work linked to a Session Digest, update related requirement, bug, or Flow Record only if selected digest items were explicitly promoted into that lifecycle object. If recall-context items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful without silently changing project truth.
 10. Record verification limitation and residual risk when verification was partial or blocked.
 11. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
 12. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
@@ -103,7 +103,7 @@ Workflow:
 - changed files or git diff
 - verification command output or manual verification notes
 - verification provenance: executor, raw output reference, exit code, scope, authority, trust level, limitation acceptor
-- related Context Digest / Session Digest when historical session context influenced the work
+- related Session Digest when historical session context influenced the work
 - artifact paths
 - dashboard path when enabled
 
@@ -117,7 +117,7 @@ Verification:
 Wiki updates:
 Artifact updates:
 Dashboard updates:
-Context Digest / Session Digest updates:
+Session Digest updates:
 Residual risk:
 Next action:
 ```

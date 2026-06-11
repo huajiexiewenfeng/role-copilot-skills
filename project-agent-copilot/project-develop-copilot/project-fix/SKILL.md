@@ -100,7 +100,7 @@ Workflow:
 - log, error, failed test, incident report, or user description
 - project root
 - active and candidate scopes
-- Context Digests / Session Digests when they contain related recall context; use as bug evidence only after explicit promotion or current confirmation
+- Session Digests when they contain related recall context; use as bug evidence only after explicit promotion or current confirmation
 - recent changes or git diff when relevant
 
 ## Outputs

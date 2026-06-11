@@ -1,15 +1,15 @@
 ---
 name: project-session-extract
-description: Use when extracting, summarizing, distilling, reviewing, or importing historical chat/session context into a project .llm-wiki as recallable Context Digests first, including pasted conversations, transcript files, exported AI sessions, colleague chats, old agent handoffs, or conversation summaries; promote selected digest items into requirements, bugs, Flow Records, or dashboard only after explicit user confirmation.
+description: Use when extracting, summarizing, distilling, reviewing, or importing historical chat/session context into a project .llm-wiki as recallable Session Digests first, including pasted conversations, transcript files, exported AI sessions, colleague chats, old agent handoffs, or conversation summaries; promote selected digest items into requirements, bugs, Flow Records, or dashboard only after explicit user confirmation.
 ---
 
 # Project Session Extract
 
 ## Purpose
 
-Extract recallable project context from historical AI or team chat sessions, then let the user decide what should be saved as a Context Digest and what, if anything, should later be promoted into the project lifecycle.
+Extract recallable project context from historical AI or team chat sessions, then let the user decide what should be saved as a Session Digest and what, if anything, should later be promoted into the project lifecycle.
 
-This skill does not import raw chat by default. It creates a concise candidate Context Digest first, filters noise and sensitive content, and writes only the user-confirmed digest. Requirements, bugs, Flow Records, dashboard state, scope, and project truth are not updated by default.
+This skill does not import raw chat by default. It creates a concise candidate Session Digest first, filters noise and sensitive content, and writes only the user-confirmed digest. Requirements, bugs, Flow Records, dashboard state, scope, and project truth are not updated by default.
 
 ## Core Model
 
@@ -17,13 +17,13 @@ Use a two-layer model:
 
 ```text
 historical chat/session
--> Context Digest
+-> Session Digest
 -> user restores context
 -> selected digest items
 -> Lifecycle Promotion when explicitly confirmed
 ```
 
-Layer 1, Context Digest:
+Layer 1, Session Digest:
 
 - restores context for later conversations
 - may contain mixed requirements, bugs, design notes, risks, tooling notes, and ordinary discussion
@@ -48,11 +48,11 @@ Use when the user asks to:
 
 Example triggers:
 
-- "把之前的 session 总结一下导入 wiki"
-- "从这段历史聊天里提取后续可召回的上下文"
-- "同事之前和 AI 聊了很多，帮我沉淀到 llm-wiki"
-- "我不想重新开 session，想把旧会话的好内容内化"
-- "把这个 conversation / transcript / chat history 提纯成上下文摘要"
+- "鎶婁箣鍓嶇殑 session 鎬荤粨涓€涓嬪鍏?wiki"
+- "浠庤繖娈靛巻鍙茶亰澶╅噷鎻愬彇鍚庣画鍙彫鍥炵殑涓婁笅鏂?
+- "鍚屼簨涔嬪墠鍜?AI 鑱婁簡寰堝锛屽府鎴戞矇娣€鍒?llm-wiki"
+- "鎴戜笉鎯抽噸鏂板紑 session锛屾兂鎶婃棫浼氳瘽鐨勫ソ鍐呭鍐呭寲"
+- "鎶婅繖涓?conversation / transcript / chat history 鎻愮函鎴愪笂涓嬫枃鎽樿"
 
 ## When Not to Use
 
@@ -68,7 +68,7 @@ Example triggers:
 - Sensitivity Gate
 - Candidate Digest Gate
 - Import Confirmation Gate
-- Context Digest Gate
+- Session Digest Gate
 - Lifecycle Promotion Gate only when the user explicitly asks to promote digest items into project lifecycle objects
 - Knowledge Sync Gate after user confirmation
 - Flow Record Mapping Gate only when promotion may link to a requirement or bug
@@ -126,7 +126,7 @@ Workflow:
    - `optional`: possibly useful but noisy or indirect
    - `do-not-import`: raw noise, secrets, outdated attempts, or unrelated content
 6. Let the user choose candidate items.
-7. Draft a Context Digest Markdown preview from the selected items.
+7. Draft a Session Digest Markdown preview from the selected items.
 8. Ask for confirmation on the Markdown preview before writing.
 9. After confirmation, write `.llm-wiki/session-digests/<session_digest_id>.md`.
 10. Do not update requirement, bug, module, working-context, Flow Record, artifact registry, log, or dashboard unless the user explicitly asks for Lifecycle Promotion.
@@ -135,7 +135,7 @@ Workflow:
 
 ## Import Rules
 
-- Store confirmed Context Digests under `.llm-wiki/session-digests/`.
+- Store confirmed Session Digests under `.llm-wiki/session-digests/`.
 - Do not store full raw transcripts by default.
 - Digest items may be mixed and messy; use light headings to aid reading, not rigid maintenance types.
 - Candidate items may be saved in the digest, but must not update requirement, bug, module, Flow Record, dashboard, or scope without a separate promotion confirmation.
@@ -155,7 +155,7 @@ current source code and runtime evidence
 -> agent inference
 ```
 
-## Context Digest Template
+## Session Digest Template
 
 The written digest must include:
 
@@ -182,7 +182,7 @@ The written digest must include:
 Default template:
 
 ```markdown
-# Context Digest: <title>
+# Session Digest: <title>
 
 - digest_id:
 - source_type:
@@ -220,27 +220,24 @@ Default template:
 For the first preview, keep it brief:
 
 ```text
-我从这段历史 session 中提取到这些候选上下文：
-
-建议导入:
+鎴戜粠杩欐鍘嗗彶 session 涓彁鍙栧埌杩欎簺鍊欓€変笂涓嬫枃锛?
+寤鸿瀵煎叆:
 1. ...
 2. ...
 
-可选导入:
+鍙€夊鍏?
 1. ...
 
-不建议导入:
+涓嶅缓璁鍏?
 - ...
 
-下一步:
-请告诉我要保留哪些条目。你选定后，我会先整理成 Context Digest Markdown 草稿，不会直接写入 `.llm-wiki`。
-```
+涓嬩竴姝?
+璇峰憡璇夋垜瑕佷繚鐣欏摢浜涙潯鐩€備綘閫夊畾鍚庯紝鎴戜細鍏堟暣鐞嗘垚 Session Digest Markdown 鑽夌锛屼笉浼氱洿鎺ュ啓鍏?`.llm-wiki`銆?```
 
 For Markdown draft preview:
 
 ```text
-下面是拟写入的 Context Digest 草稿。请确认是否写入 `.llm-wiki/session-digests/<id>.md`。
-
+涓嬮潰鏄嫙鍐欏叆鐨?Session Digest 鑽夌銆傝纭鏄惁鍐欏叆 `.llm-wiki/session-digests/<id>.md`銆?
 <markdown draft>
 ```
 
@@ -305,7 +302,7 @@ Return:
 - Do not modify production code.
 - Do not create requirements, bugs, or Flow Records from ambiguous session content without confirmation.
 - Do not promote candidate digest items to project truth.
-- Do not treat Context Digest import as a scope update, requirement update, bug update, Flow Record update, dashboard update, or verification update.
+- Do not treat Session Digest import as a scope update, requirement update, bug update, Flow Record update, dashboard update, or verification update.
 - Do not force mixed historical context into rigid types before the user has recovered context and selected what matters.
 - Do not expose or store sensitive raw content.
 - Do not claim work is planned, implemented, tested, or archived only because an old session discussed it.

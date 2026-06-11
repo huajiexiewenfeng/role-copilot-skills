@@ -73,7 +73,7 @@ Before doing project work:
    - lightweight-answer
    - project wiki query / discussion context
    - init / ingest
-   - historical session extraction / Context Digest import
+   - historical session extraction / Session Digest import
    - requirement or feature development
    - bug or incident fixing
    - finish or progress sync
@@ -130,10 +130,10 @@ Use `lifecycle-quality` mode when the user explicitly uses language such as:
 
 - skill-evaluator, evaluator, evaluate this skill, eval gap, failure case, golden case
 - self-review, conversation self-review, Dolores, lifecycle trace, routing trace, gate trace
-- "这个 skill 为什么跑偏", "这个流程是不是跑偏了", "先不要直接改，评估一下"
+- "杩欎釜 skill 涓轰粈涔堣窇鍋?, "杩欎釜娴佺▼鏄笉鏄窇鍋忎簡", "鍏堜笉瑕佺洿鎺ユ敼锛岃瘎浼颁竴涓?
 - "review the conversation trace", "did this lifecycle go wrong", "find the smallest patch"
 
-Do not trigger lifecycle-quality for ordinary delivery requests such as "继续", "修 bug", "review 代码", "完成了吗", or "总结一下" unless the user also asks to evaluate the process or review the conversation lifecycle.
+Do not trigger lifecycle-quality for ordinary delivery requests such as "缁х画", "淇?bug", "review 浠ｇ爜", "瀹屾垚浜嗗悧", or "鎬荤粨涓€涓? unless the user also asks to evaluate the process or review the conversation lifecycle.
 
 ## Inputs
 
@@ -172,9 +172,9 @@ For dashboard-refresh:
 
 For session-context-import:
 
-- brief Context Digest candidate list first
+- brief Session Digest candidate list first
 - user selection of items to keep
-- Context Digest Markdown draft before `.llm-wiki` writes
+- Session Digest Markdown draft before `.llm-wiki` writes
 - confirmation question before writing `.llm-wiki/session-digests/`
 - no requirement, bug, Flow Record, dashboard, scope, or project-truth update by default
 - optional Lifecycle Promotion candidates only when the user asks to promote selected digest items

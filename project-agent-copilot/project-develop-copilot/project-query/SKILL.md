@@ -29,17 +29,17 @@ Use when the user asks to:
 
 Example triggers:
 
-- "基于这个项目的 llm wiki 回答"
-- "从项目 wiki 里找一下这个需求"
-- "这个功能之前有什么开发文档"
-- "帮我找到相关 requirement / bug / working-context"
-- "先把上下文找出来，我们讨论一下"
+- "鍩轰簬杩欎釜椤圭洰鐨?llm wiki 鍥炵瓟"
+- "浠庨」鐩?wiki 閲屾壘涓€涓嬭繖涓渶姹?
+- "杩欎釜鍔熻兘涔嬪墠鏈変粈涔堝紑鍙戞枃妗?
+- "甯垜鎵惧埌鐩稿叧 requirement / bug / working-context"
+- "鍏堟妸涓婁笅鏂囨壘鍑烘潵锛屾垜浠璁轰竴涓?
 - "what does the project wiki say about this module"
 - "find related project docs before we decide what to do"
-- "这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用"
-- "更新项目看板"
-- "刷新 dashboard"
-- "同步项目状态页"
+- "杩欎釜椤圭洰閲岄潰锛屽ぇ鐤?API 閫傞厤锛岀洿鎾浉鍏崇殑鍐呭鏈夊摢浜涳紵濡備綍閫氳繃 API 璋冪敤"
+- "鏇存柊椤圭洰鐪嬫澘"
+- "鍒锋柊 dashboard"
+- "鍚屾椤圭洰鐘舵€侀〉"
 - "update progress dashboard"
 
 ## When Not to Use
@@ -162,7 +162,7 @@ Rules:
 - State when evidence is insufficient.
 - Do not expose sensitive raw content.
 - Do not present inference as sourced fact.
-- Treat Context Digests / Session Digests as recall context by default. They help recover what was discussed, but they are not confirmed project truth, scope, Flow Record, dashboard, or verification evidence unless selected items were explicitly promoted through Lifecycle Promotion. Prefer current code, current user confirmation, and current requirement/bug pages when conflicts exist.
+- Treat Session Digests as recall context by default. They help recover what was discussed, but they are not confirmed project truth, scope, Flow Record, dashboard, or verification evidence unless selected items were explicitly promoted through Lifecycle Promotion. Prefer current code, current user confirmation, and current requirement/bug pages when conflicts exist.
 - Keep the context pack small enough to feed into later discussion or lifecycle work.
 
 Dashboard-refresh completion rules:

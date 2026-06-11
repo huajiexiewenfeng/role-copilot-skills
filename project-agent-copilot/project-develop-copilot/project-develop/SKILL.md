@@ -125,7 +125,7 @@ Authority order:
 4. `.llm-wiki` index and summaries.
 5. Legacy `docs/ai-coding` or generated AI docs.
 
-When Context Digests / Session Digests exist for the active discussion, treat them as recall context first. Use them to recover prior requirement discussion, design choices, acceptance criteria, scope decisions, and plan candidates, but do not treat them as source evidence or project truth unless selected items were explicitly promoted through Lifecycle Promotion.
+When Session Digests exist for the active discussion, treat them as recall context first. Use them to recover prior requirement discussion, design choices, acceptance criteria, scope decisions, and plan candidates, but do not treat them as source evidence or project truth unless selected items were explicitly promoted through Lifecycle Promotion.
 
 Workflow:
 
