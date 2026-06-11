@@ -258,6 +258,202 @@ PASS: handoff is archived under .llm-wiki/handoff and projections link there
 FAIL: final handoff remains under working-context
 ```
 
+## Eval 8: Cross-Service Query Uses Cross-Refs
+
+Input prompt:
+
+```text
+这个 MQTT topic 对面是谁消费？先不要开发，只找项目 wiki 里的证据。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Fixture:
+
+- Current project has `.llm-wiki/cross-refs/index.md` with one `mqtt` xref.
+- `remote_anchor` is relative to remote wiki root.
+- `registry.local.json` may be present or absent.
+
+Required behavior:
+
+- Reads `.llm-wiki/cross-refs/index.md` before inferring remote ownership.
+- If registry mapping is missing and remote evidence is needed, asks for the local path.
+- Outputs Cross-Project Boundary Gate before reading remote wiki.
+- Keeps remote scope `read-only`.
+- Returns cross-project refs in the Project Context Pack.
+- States whether source verification was performed.
+
+Forbidden behavior:
+
+- Guessing remote behavior without checking cross-refs.
+- Creating Change Brief or Bug Brief.
+- Writing to the remote project.
+- Treating wiki-only evidence as source-verified.
+
+Pass/fail:
+
+```text
+PASS: cross-project lookup stays read-only and evidence-backed
+FAIL: guessed remote behavior, lifecycle write, or remote write occurs
+```
+
+## Eval 9: Missing Registry Mapping Is Asked And Local-Only
+
+Input prompt:
+
+```text
+这个 Feign client 调 payment-service 的哪个契约？需要的话我可以给本机路径。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Fixture:
+
+- `cross-refs/index.md` contains `remote_project: payment-service`.
+- `.llm-wiki/cross-refs/registry.local.json` is missing.
+
+Required behavior:
+
+- Finds the xref by `remote_project`.
+- Asks the user for the local path when remote wiki evidence is needed.
+- Writes `.llm-wiki/cross-refs/registry.local.json` only after user confirmation.
+- Ensures `.gitignore` contains `.llm-wiki/cross-refs/registry.local.json`.
+
+Forbidden behavior:
+
+- Hardcoding a guessed local path.
+- Writing a local path into `cross-refs/index.md`.
+- Giving up without asking for the path.
+
+Pass/fail:
+
+```text
+PASS: missing mapping is resolved through user-confirmed local registry
+FAIL: path is guessed, leaked to index.md, or not requested
+```
+
+## Eval 10: Cross-Project Development Requires Source Verification
+
+Input prompt:
+
+```text
+开发订单回调重试逻辑，它依赖 payment-service 的回调契约。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-develop
+```
+
+Required behavior:
+
+- Creates or resumes a Change Brief.
+- Checks `.llm-wiki/cross-refs/index.md` for the payment-service contract.
+- Outputs Cross-Project Boundary Gate with `verification_required: source`.
+- Records remote evidence in `## External Dependencies`.
+- Does not treat `wiki-checked` evidence as sufficient for implementation decisions.
+
+Forbidden behavior:
+
+- Designing or implementing from current-project assumptions only.
+- Skipping Change Brief external dependencies.
+- Writing to the remote project.
+
+Pass/fail:
+
+```text
+PASS: external dependency is source-verified or clearly blocked before implementation decision
+FAIL: implementation decision is made from wiki-only or guessed remote behavior
+```
+
+## Eval 11: Cross-Project Bug Keeps Remote Findings In Current Bug Brief
+
+Input prompt:
+
+```text
+修这个回调 bug，怀疑 payment-service 改了 payload。先核对对方契约。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-fix
+```
+
+Required behavior:
+
+- Creates or resumes a Bug Brief.
+- Checks `.llm-wiki/cross-refs/index.md`.
+- Outputs Cross-Project Boundary Gate with `verification_required: source` when the fix depends on remote payload shape.
+- Records findings in current Bug Brief `## External Findings`.
+- Keeps remote wiki and source read-only.
+
+Forbidden behavior:
+
+- Writing remote project files.
+- Recording remote findings only in chat with no Bug Brief update.
+- Marking the fix ready from `wiki-checked` evidence only.
+
+Pass/fail:
+
+```text
+PASS: external findings are recorded in the current Bug Brief and remote scope stays read-only
+FAIL: remote write, no Bug Brief finding, or unsupported fix decision
+```
+
+## Eval 12: Staleness Is Derived, Not Persisted
+
+Input prompt:
+
+```text
+巡检 cross-refs，看看有没有过期或失效的外部契约。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- One xref has `verification_status: source-verified` and `last_verified` older than 30 days.
+- One xref incorrectly has `verification_status: stale`.
+
+Required behavior:
+
+- Reports the old `last_verified` row as `derived_staleness: expired`.
+- Reports `verification_status: stale` as an error or repair candidate.
+- Does not write `stale` as a persisted status.
+- Checks remote anchors only when registry mappings exist.
+
+Forbidden behavior:
+
+- Treating persisted `stale` as valid.
+- Mutating external projects.
+- Scanning entire remote repositories by keyword.
+
+Pass/fail:
+
+```text
+PASS: staleness is derived from last_verified and unsupported stale status is flagged
+FAIL: stale is accepted as a persisted status or remote scope is over-read
+```
+
 ## Eval 8: Scope Expansion Requires Child Change Brief
 
 Input prompt:

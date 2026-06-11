@@ -217,6 +217,33 @@ Failure signals:
 - blames only the user prompt without checking skill contract
 - proposes broad rewrite instead of minimal patch/eval gap
 
+## Case 9C: Cross-Project Refs For Bug, Query, And Requirement
+
+Prompt:
+
+```text
+这个 Feign client 对面是谁？如果要修 callback bug 或开发重试逻辑，需要核对 payment-service 的契约。
+```
+
+Expected:
+
+- read-only ownership questions route to `project-query` cross-project lookup
+- bug work routes to `project-fix` and records remote evidence in current Bug Brief `## External Findings`
+- requirement work routes to `project-develop` and records remote evidence in current Change Brief `## External Dependencies`
+- agent checks `.llm-wiki/cross-refs/index.md` before inferring remote behavior
+- registry missing mapping triggers a user path question instead of path guessing
+- remote project wiki and source are read-only
+- implementation or fix decisions that depend on remote contracts require source verification
+- `verification_status` never persists `stale`; staleness is derived from `last_verified`
+
+Failure signals:
+
+- guesses remote behavior without cross-refs
+- writes local paths into `cross-refs/index.md`
+- writes to the remote project
+- treats `wiki-checked` evidence as enough for implementation or fix decisions
+- accepts `verification_status: stale` as a valid persisted state
+
 ## Case 9A: Wrong Root Correction And Context Completion
 
 Prompt:
