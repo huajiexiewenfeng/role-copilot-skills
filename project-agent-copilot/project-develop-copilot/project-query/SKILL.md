@@ -54,11 +54,9 @@ Example triggers:
 
 ## Owned Gates
 
-- Lightweight Answer Boundary
-- Context Discovery Gate
-- Project Wiki Query Gate
-- Optional Upgrade Gate
-- Progress Dashboard Sync Gate in explicit `dashboard-refresh` mode
+- Lightweight Boundary
+- Context Recovery Gate
+- Finish Sync Gate in explicit `dashboard-refresh` mode
 
 ## Required First Check
 

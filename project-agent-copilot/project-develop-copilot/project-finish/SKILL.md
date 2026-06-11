@@ -30,11 +30,7 @@ Use when the user says:
 ## Owned Gates
 
 - Verification Gate
-- Verification Provenance Gate
-- Test Integrity Gate
-- Knowledge Sync Gate
-- Artifact Sync Gate
-- Progress Dashboard Sync Gate
+- Finish Sync Gate
 
 ## Required First Check
 
@@ -43,7 +39,7 @@ Use when the user says:
 3. Identify active Change Brief, Bug Brief, or working-context.
 4. Check verification evidence, provenance, raw output, and whether any accepted limitation has a non-agent acceptor.
 5. Inspect changed files, including whether production code and tests/mocks changed together.
-6. Decide whether Test Integrity Gate is required before updating testing status.
+6. Decide whether the Verification Gate test-integrity sub-check is required before updating testing status.
 7. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
 
 ## Core Process
@@ -77,7 +73,7 @@ Workflow:
 3. Use verification-before-completion when available before claiming completion.
 4. Summarize actual code and behavior changes.
 5. Map changed files to affected wiki pages.
-6. If production code and tests/mocks/fixtures/expected values changed together, run the Test Integrity Gate before marking testing done.
+6. If production code and tests/mocks/fixtures/expected values changed together, run the Verification Gate test-integrity sub-check before marking testing done.
 7. Update only affected `.llm-wiki` pages.
 8. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules and trust level.
 9. When finishing work linked to a Session Digest, update related requirement, bug, or Flow Record only if selected digest items were explicitly promoted into that lifecycle object. If recall-context items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful without silently changing project truth.
@@ -159,7 +155,7 @@ Rules:
 - `testing` should use a conservative note such as `passed-agent-local`, `needs-review`, `blocked`, or `done with user-accepted limitation` when verification authority is not CI-backed/reviewer-backed.
 - `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists. Project handoffs belong under `.llm-wiki/handoff/`, not `.llm-wiki/working-context/`.
 - Partial verification should mark `testing` as `blocked`, `active`, or `done with limitation` in notes, not silently complete.
-- If tests, mocks, fixtures, snapshots, or expected values changed with production code, do not mark testing done until Test Integrity Gate records assertion strength and over-mocking risk.
+- If tests, mocks, fixtures, snapshots, or expected values changed with production code, do not mark testing done until the Verification Gate records assertion strength and over-mocking risk.
 
 ## Handoff Path Rule
 
@@ -210,7 +206,7 @@ Return:
 - Do not leave dashboard or artifact registry links pointing at old handoff paths after moving a handoff.
 - Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.
 - Do not hide residual risk when tests could not run.
-- Do not weaken tests, mocks, fixtures, snapshots, or expected values to bypass a failing verification command without recording the Test Integrity Gate risk.
+- Do not weaken tests, mocks, fixtures, snapshots, or expected values to bypass a failing verification command without recording the Verification Gate test-integrity risk.
 
 ## Common Mistakes
 

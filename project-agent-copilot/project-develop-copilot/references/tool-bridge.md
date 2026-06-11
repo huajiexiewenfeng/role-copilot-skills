@@ -28,7 +28,7 @@ External tools must not bypass scoped context or write long transcripts into `.l
 
 | Bridge | Use | Rule |
 |---|---|---|
-| Superpowers-style skills | brainstorming, planning, TDD, debugging, execution, verification, review | Use after Context Enrichment Gate. See `superpowers-bridge.md`. |
+| Superpowers-style skills | brainstorming, planning, TDD, debugging, execution, verification, review | Use after Context Recovery Gate and the relevant Work Definition or Scope Lock checks. See `superpowers-bridge.md`. |
 | OpenSpec-style mechanism | requirement discussion, change spec, acceptance criteria, implementation plan | Use the lightweight Change Brief mechanism in `change-brief.md`; do not require OpenSpec tooling. Store concise summaries in requirement or working-context pages. |
 | codegraph / codeGraphify | generated code graph, module dependency insight, impact navigation, or ambiguous cross-module scope | Optional enhancement. Detect existing graph context during init, use or suggest during develop/fix when scope is unclear, and verify graph-derived assumptions during review. Do not require generation. |
 | Obsidian LLM Wiki ideas | index, source proxy, summaries, links, gaps, maintenance log | Internalize the project subset as `.llm-wiki`; do not depend on a separate Obsidian workflow. |

@@ -41,15 +41,13 @@ Use this skill when the user asks for project development help from natural lang
 
 The router owns lifecycle coherence across gates:
 
-- Lightweight Answer Boundary
-- Context Discovery Gate
-- Lifecycle Session Gate
-- Routing Record Gate
-- External Skill Bridge Gate
-- Review/Evolution Routing Gate
-- Progress Dashboard Sync Gate when the user explicitly asks to refresh the dashboard
-- Project Wiki Maintenance Routing Gate when the user reports missing, stale, hard-to-find, or inconsistent `.llm-wiki` state
-- Session Context Import Routing Gate when the user wants to turn historical chat/session context into project-local `.llm-wiki` knowledge
+- Lightweight Boundary
+- Context Recovery Gate
+- Lifecycle Anchor Gate
+- External Bridge Gate
+- Session Import Gate
+- Finish Sync Gate when the user explicitly asks to refresh dashboard/progress state
+- Review & Wiki Integrity Gate when the user reports missing, stale, hard-to-find, inconsistent `.llm-wiki` state or lifecycle-quality risk
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 

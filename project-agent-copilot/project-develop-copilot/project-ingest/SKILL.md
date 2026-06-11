@@ -17,6 +17,11 @@ Use `project-session-extract` instead of `project-ingest` when the input is a hi
 
 If a session contains real PRD, design document, URL, log, or meeting note links, `project-session-extract` should identify them as source candidates. Confirmed source documents may then be ingested through `project-ingest`.
 
+## Owned Gates
+
+- Context Recovery Gate
+- Finish Sync Gate when ingest updates source indexes, source proxies, artifacts, or log entries
+
 ## Required Shared References
 
 Read these role-level references:

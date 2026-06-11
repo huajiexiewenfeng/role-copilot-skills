@@ -31,14 +31,9 @@ Use when the user asks for:
 
 ## Owned Gates
 
-- Review Gate
 - Verification Gate check
-- Verification Provenance Gate check
-- Test Integrity Gate check
-- Artifact Sync Gate check
-- Progress Dashboard Sync Gate check
-- Evolution Gate
-- Project Lifecycle Evaluation Gate
+- Finish Sync Gate check
+- Review & Wiki Integrity Gate
 
 ## Project Lifecycle Evaluation Lens
 
@@ -166,7 +161,7 @@ Flow Record drift checklist:
 - `testing` done with only agent-local evidence but no trust-level label
 - accepted limitation has no non-agent acceptor
 - verification record has no raw output, exit code, executor, authority, or scope
-- production code and tests/mocks changed together but no Test Integrity Gate result exists
+- production code and tests/mocks changed together but no Verification Gate test-integrity result exists
 - tests were weakened, over-mocked, or expected values changed without requirement evidence
 - `archive` done but no handoff/release/done evidence
 - same source/design document has duplicate active flow_id values

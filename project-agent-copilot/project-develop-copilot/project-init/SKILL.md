@@ -33,10 +33,8 @@ Use when the router or user needs to:
 
 ## Owned Gates
 
-- Context Discovery Gate
-- Knowledge Sync Gate
-- Artifact Sync Gate when init produces important context artifacts
-- Progress Dashboard Sync Gate when init creates or refreshes the static dashboard
+- Context Recovery Gate
+- Finish Sync Gate when init produces wiki starters, artifact entries, or dashboard starter/projection files
 
 ## Required First Check
 

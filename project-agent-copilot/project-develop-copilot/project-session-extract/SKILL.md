@@ -63,15 +63,9 @@ Example triggers:
 
 ## Owned Gates
 
-- Context Discovery Gate
-- Session Source Gate
-- Sensitivity Gate
-- Candidate Digest Gate
-- Import Confirmation Gate
-- Session Digest Gate
-- Lifecycle Promotion Gate only when the user explicitly asks to promote digest items into project lifecycle objects
-- Knowledge Sync Gate after user confirmation
-- Flow Record Mapping Gate only when promotion may link to a requirement or bug
+- Context Recovery Gate
+- Session Import Gate
+- Finish Sync Gate when writing a confirmed Session Digest
 
 ## Required Shared References
 

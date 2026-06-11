@@ -28,10 +28,11 @@ Use when the user reports or wants to fix:
 
 ## Owned Gates
 
-- Context Enrichment Gate
-- Bug Evidence Gate
-- Context Lock Gate
-- External Skill Bridge Gate
+- Context Recovery Gate
+- Lifecycle Anchor Gate
+- Work Definition Gate
+- Scope Lock Gate
+- External Bridge Gate
 - Verification Gate before fix completion claims
 
 ## Required First Check
@@ -41,7 +42,7 @@ Use when the user reports or wants to fix:
 3. Create or resume Bug Brief.
 4. Capture or ingest external bug source.
 5. Identify active, read-only, candidate, and excluded scopes.
-6. Run Bug Evidence Gate before broad diagnosis or edits.
+6. Run Work Definition Gate before broad diagnosis or edits.
 
 ## Core Process
 
@@ -71,13 +72,13 @@ Workflow:
 3. Search `.llm-wiki/session-digests/` entries for related recall context such as symptoms, failed attempts, suspected root causes, reproduction notes, and verification history. Use them as bug evidence only when selected digest items were explicitly promoted or reconfirmed.
 4. Mark stale or conflict digest items before relying on them.
 5. Create or update the Bug Brief Flow Record with source evidence.
-6. Run Context Enrichment Gate.
+6. Run Context Recovery Gate.
 7. Reproduce the issue or state why reproduction is not currently possible.
 8. Bridge to systematic-debugging only after evidence and scoped context are captured.
 9. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.
 10. Use test-driven-development for regression coverage when feasible.
 11. Record or confirm the fix plan and update the Flow Record `plan` step before edits.
-12. Run Context Lock Gate before edits.
+12. Run Scope Lock Gate before edits.
 13. If the fix needs candidate or excluded scope, run scope escalation before editing.
 14. Fix only active scopes unless escalation is justified.
 15. Verify the fix or record limitation.

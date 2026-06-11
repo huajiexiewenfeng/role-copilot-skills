@@ -103,17 +103,16 @@ Read-only project query is a separate router result. It is used when the user wa
 
 The complete version must implement the following gates as explicit behavior, not only as documentation labels:
 
-- Context Discovery Gate
-- Context Enrichment Gate
-- Clarification Gate
-- Bug Evidence Gate
-- Context Lock Gate
-- External Skill Bridge Gate
+- Lightweight Boundary
+- Context Recovery Gate
+- Lifecycle Anchor Gate
+- Work Definition Gate
+- Scope Lock Gate
+- External Bridge Gate
+- Session Import Gate
 - Verification Gate
-- Knowledge Sync Gate
-- Artifact Sync Gate
-- Progress Dashboard Sync Gate
-- Review Gate
+- Finish Sync Gate
+- Review & Wiki Integrity Gate
 
 A child skill may own a subset of gates, but the router owns the obligation to keep the gate sequence coherent.
 

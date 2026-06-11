@@ -30,12 +30,11 @@ Use when the user asks to:
 
 ## Owned Gates
 
-- Context Enrichment Gate
-- Clarification Gate
-- Lifecycle Session Gate for Change Brief creation/resume when routed here
-- Documentation Anchor Gate
-- Context Lock Gate
-- External Skill Bridge Gate
+- Context Recovery Gate
+- Lifecycle Anchor Gate for Change Brief creation/resume when routed here
+- Work Definition Gate
+- Scope Lock Gate
+- External Bridge Gate
 
 ## Required First Check
 
@@ -49,9 +48,9 @@ Use when the user asks to:
 8. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
 
-## Documentation Anchor Gate
+## Lifecycle Anchor Gate
 
-Before modifying production code, tests, configuration, public APIs, protocol methods, DTOs, topics, database schema, or user-visible behavior, require a `.llm-wiki` documentation anchor.
+Before modifying production code, tests, configuration, public APIs, protocol methods, DTOs, topics, database schema, or user-visible behavior, the Lifecycle Anchor Gate requires a `.llm-wiki` documentation anchor.
 
 Even if the requirement is one sentence, create or update a Change Brief that states:
 
@@ -133,9 +132,9 @@ Workflow:
 2. Search existing Change Briefs, working-context pages, artifacts, and source indexes for a matching `flow_id`.
 3. Search `.llm-wiki/session-digests/` entries for related recall context. Use promoted digest items as evidence only when promotion is explicitly recorded.
 4. Create or resume Change Brief.
-5. Run Context Enrichment Gate before brainstorming, planning, or implementation.
+5. Run Context Recovery Gate before brainstorming, planning, or implementation.
 6. Produce a concise context summary.
-7. Run Clarification Gate before implementation planning.
+7. Run Work Definition Gate before implementation planning.
 8. Guide the user conversationally through requirement discussion.
 9. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
 10. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
@@ -145,7 +144,7 @@ Workflow:
 14. If planning reveals a new implementation scope or child deliverable, create a child Change Brief with `parent_flow_id` before writing its execution plan.
 15. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
 16. Provide Context Handoff before external planning/TDD/execution bridges.
-17. Run Context Lock Gate before implementation.
+17. Run Scope Lock Gate before implementation.
 18. Ask for implementation confirmation unless the user already explicitly asked to implement now.
 19. Update Change Brief and working-context after clarification, planning, or implementation.
 20. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.

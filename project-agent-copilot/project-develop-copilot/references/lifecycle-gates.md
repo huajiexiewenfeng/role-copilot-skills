@@ -1,6 +1,8 @@
 # Lifecycle Gates
 
-Lifecycle Gates are the executable checkpoints that keep Project Develop Copilot from becoming a set of disconnected skills. A gate is not a ceremonial heading. It is a rule for what must be known, recorded, or explicitly limited before the lifecycle can move forward.
+Lifecycle Gates are the executable checkpoints that keep Project Develop Copilot from becoming a set of disconnected skills.
+
+A gate is not a ceremonial heading. It is a rule for what must be known, recorded, or explicitly limited before the lifecycle can move forward.
 
 ## Gate Principles
 
@@ -9,95 +11,50 @@ Lifecycle Gates are the executable checkpoints that keep Project Develop Copilot
 - If a gate cannot be completed, record the limitation and the next safest action.
 - Gate output should be short, structured, and recoverable.
 - Gates protect lifecycle state; they should not become long user forms.
+- Prefer fewer gates with explicit sub-checks over many overlapping gate names.
 
 ## Gate Table
 
-| Gate | Required before | Minimum output | Default owner |
-|---|---|---|---|
-| Lightweight Answer Boundary | any project-related response | lightweight vs full lifecycle decision | router |
-| Context Discovery Gate | any full lifecycle work | project root, new/stale context signals, relevant `.llm-wiki` availability | router, `project-init`, `project-ingest` |
-| Lifecycle Session Gate | feature/bug/finish/review work | Change Brief, Bug Brief, working-context, or explicit reason none exists | router |
-| Routing Record Gate | full lifecycle entry | short routing record in lifecycle session or `.llm-wiki/log.md` | router |
-| Context Enrichment Gate | planning, debugging, implementation, scoped review | active sources, relevant wiki pages, active/read-only/candidate/excluded scope | `project-develop`, `project-fix`, `project-review` |
-| Clarification Gate | requirement planning or implementation | goal, acceptance criteria, non-goals, scope, open questions | `project-develop` |
-| Bug Evidence Gate | bug diagnosis or fix | symptom, expected behavior, evidence, reproduction status, severity | `project-fix` |
-| Context Lock Gate | executing a plan or editing code | locked scope, accepted assumptions, escalation rule | `project-develop`, `project-fix` |
-| External Skill Bridge Gate | calling external skills/tools | Context Handoff and expected Return Handoff | router, stage skill |
-| Verification Gate | finish, done claim, review readiness | command/result/limitation/manual evidence/residual risk | `project-finish`, `project-review` |
-| Verification Provenance Gate | promoting verification to done/verified, accepting limitations, pre-merge readiness | executor/raw output/exit code/authority/trust level | `project-finish`, `project-review` |
-| Test Integrity Gate | production-code changes with test changes, mocks, or changed expectations | test diff risk, mock scope, assertion strength, coverage loss, independent check need | `project-review`, `project-finish` |
-| Knowledge Sync Gate | finish or accepted state update | updated requirement/bug/module/source summaries | `project-finish` |
-| Artifact Sync Gate | finish/review/dashboard update | artifact registry entries for important plans/reports/specs/dashboards | `project-finish`, `project-review` |
-| Progress Dashboard Sync Gate | progress page update or review | dashboard facts linked to evidence | `project-finish`, `project-review` |
-| Review Gate | before handoff, commit, PR, merge, broad testing | findings-first review or explicit no-finding statement | `project-review` |
-| Evolution Gate | lifecycle quality review | evaluator or Dolores trigger decision and artifact suggestion | router, `project-review` |
+| Gate | Consolidates | Required before | Minimum output | Default owner |
+|---|---|---|---|---|
+| Lightweight Boundary | Lightweight Answer Boundary | any project-related response | lightweight vs read-only vs full lifecycle decision | router |
+| Context Recovery Gate | Context Discovery, Context Enrichment | any full lifecycle, project query, init, ingest, maintenance, review, or scoped work | project root, wiki status, active sources, relevant pages, active/read-only/candidate/excluded scope | router, `project-init`, `project-query`, `project-ingest`, `project-develop`, `project-fix`, `project-maintain`, `project-review` |
+| Lifecycle Anchor Gate | Lifecycle Session, Routing Record, Documentation Anchor | feature, bug, finish, review, handoff, or executable lifecycle work | Change Brief, Bug Brief, working-context, routing record, or explicit no-anchor reason | router, `project-develop`, `project-fix` |
+| Work Definition Gate | Clarification, Bug Evidence | requirement planning, implementation planning, bug diagnosis, or fix | requirement goal/acceptance/non-goals or bug symptom/evidence/reproduction/severity | `project-develop`, `project-fix` |
+| Scope Lock Gate | Context Lock | executing a plan or editing code | locked scope, accepted assumptions, escalation rule | `project-develop`, `project-fix` |
+| External Bridge Gate | External Skill Bridge | calling external skills/tools | Context Handoff and expected Return Handoff | router, stage skills |
+| Session Import Gate | Session Source, Sensitivity, Candidate Digest, Import Confirmation, Session Digest, Lifecycle Promotion | extracting or importing historical chat/session context | source, sensitivity, candidate digest, confirmation, promotion decision | `project-session-extract`, router |
+| Verification Gate | Verification, Verification Provenance, Test Integrity | finish, done claim, review readiness, testing status, accepted limitation | command/manual result, raw evidence/provenance, test integrity risk, limitation acceptor, residual risk | `project-finish`, `project-review` |
+| Finish Sync Gate | Knowledge Sync, Artifact Sync, Progress Dashboard Sync | finish or accepted state update | Flow Record update, wiki sync, artifact registry update, dashboard projection from evidence | `project-finish`, `project-query`, `project-maintain`, `project-review` |
+| Review & Wiki Integrity Gate | Review, Evolution, Maintenance visibility/safety checks | before handoff/commit/PR/merge, lifecycle-quality review, wiki repair, dashboard/artifact drift checks | findings-first review, wiki visibility/safety findings, evaluator decision when needed | `project-review`, `project-maintain`, router |
 
 ## Gate Details
 
-### Lightweight Answer Boundary
+### Lightweight Boundary
 
-Use this gate before any project-related response. It decides whether the user wants a lightweight answer or a full lifecycle entry.
+Use this gate before any project-related response. It decides whether the user wants a lightweight answer, read-only project query, maintenance action, session import, or full lifecycle entry.
 
 Minimum decision:
 
 ```markdown
-- mode: lightweight-answer | full-lifecycle | lifecycle-quality
+- mode: lightweight-answer | read-only-query | wiki-maintenance | session-context-import | full-lifecycle | dashboard-refresh | lifecycle-quality
+- primary_stage:
 - reason:
 - upgrade_trigger:
 ```
 
-Do not write this record to disk for ordinary lightweight answers unless the user asks to save the discussion.
+Rules:
 
-### Context Discovery Gate
+- Do not write this record to disk for ordinary lightweight answers unless the user asks to save the discussion.
+- Lightweight answers and read-only queries must not create Change Briefs, Bug Briefs, Flow Records, dashboard updates, or code changes by default.
+
+### Context Recovery Gate
 
 Minimum output:
 
 ```markdown
 - project_root:
 - wiki_status: exists | missing | stale | unknown
-- new_or_stale_context:
-- likely_sources:
-- limitation:
-```
-
-If project root is unknown and cannot be inferred, ask one minimal question.
-
-### Lifecycle Session Gate
-
-Minimum output:
-
-```markdown
-- session_type: change-brief | bug-brief | working-context | none
-- session_path:
-- status:
-- reason:
-```
-
-A full feature or bug lifecycle should not proceed without a session unless there is an explicit reason and a safer temporary record in `.llm-wiki/log.md`.
-
-### Routing Record Gate
-
-Minimum format:
-
-```markdown
-## Routing
-
-- intent:
-- primary_stage:
-- secondary_bridges:
-- confidence:
-- reason:
-- next_gate:
-- routed_at:
-```
-
-Record conclusions, not long reasoning.
-
-### Context Enrichment Gate
-
-Minimum output:
-
-```markdown
 - active_sources:
 - relevant_wiki_pages:
 - active_scope:
@@ -105,14 +62,43 @@ Minimum output:
 - candidate_scope:
 - excluded_scope:
 - stale_context:
+- limitation:
 - next_gate:
 ```
 
-Do not deep-read every document or module by default.
+Rules:
 
-### Clarification Gate
+- If project root is unknown and cannot be inferred, ask one minimal question.
+- Do not deep-read every document or module by default.
+- In degraded mode without shared references, recover only the evidence needed for the current action and report the limitation.
+
+### Lifecycle Anchor Gate
 
 Minimum output:
+
+```markdown
+- anchor_type: change-brief | bug-brief | working-context | log-only | none
+- anchor_path:
+- flow_id:
+- routing:
+  - intent:
+  - primary_stage:
+  - secondary_bridges:
+  - confidence:
+  - reason:
+  - next_gate:
+- reason:
+```
+
+Rules:
+
+- Before production code, tests, configuration, public APIs, protocol methods, DTOs, topics, database schema, or user-visible behavior changes, require a documentation anchor unless the user explicitly requests throwaway/exploratory work.
+- A full feature or bug lifecycle should not proceed without a Change Brief, Bug Brief, working-context page, or explicit safer temporary record.
+- Do not write execution plans before the related Change Brief or Bug Brief exists and links to the same `flow_id`.
+
+### Work Definition Gate
+
+For requirement work, minimum output:
 
 ```markdown
 - requirement_summary:
@@ -123,11 +109,7 @@ Minimum output:
 - ready_to_plan: yes | no | with-assumptions
 ```
 
-If the user asks only to discuss, do not force a formal plan.
-
-### Bug Evidence Gate
-
-Minimum output:
+For bug work, minimum output:
 
 ```markdown
 - symptom:
@@ -139,9 +121,12 @@ Minimum output:
 - safe_next_action:
 ```
 
-Do not make broad code changes when evidence is missing unless the user explicitly accepts the risk.
+Rules:
 
-### Context Lock Gate
+- If the user asks only to discuss, do not force a formal plan.
+- Do not make broad code changes when requirement or bug evidence is missing unless the user explicitly accepts the risk.
+
+### Scope Lock Gate
 
 Minimum output:
 
@@ -154,9 +139,12 @@ Minimum output:
 - escalation_rule:
 ```
 
-Changing locked scope, accepted assumptions, or acceptance criteria requires scope escalation or plan deviation.
+Rules:
 
-### External Skill Bridge Gate
+- Changing locked scope, accepted assumptions, or acceptance criteria requires scope escalation or plan deviation.
+- Candidate and read-only scopes must not be edited without explicit escalation.
+
+### External Bridge Gate
 
 Context Handoff:
 
@@ -190,27 +178,36 @@ Return Handoff:
 - next_gate:
 ```
 
-External skills are bridges, not lifecycle owners.
+Rules:
 
-### Verification Gate
+- External skills are bridges, not lifecycle owners.
+- External tool output must return through the lifecycle session before finish or dashboard projection.
+
+### Session Import Gate
 
 Minimum output:
 
 ```markdown
-- verification_status: passed | failed | partial | blocked | not-run
-- commands_or_manual_checks:
-- result_summary:
-- limitation:
-- residual_risk:
+- session_source:
+- source_type:
+- sensitivity:
+- candidate_digest:
+- selected_items:
+- not_imported:
+- confirmation_status:
+- lifecycle_promotion: none | proposed | confirmed
+- written_digest:
+- next_route:
 ```
 
-Do not claim full completion when verification is partial, blocked, or not run.
+Rules:
 
-Verification records are evidence, not authority. Do not treat an agent-written verification note as independently trustworthy unless the provenance is recorded by the Verification Provenance Gate.
+- Historical chat/session context becomes a Session Digest first.
+- Do not copy raw transcripts by default.
+- Do not update requirements, bugs, Flow Records, dashboard, scope, or project truth unless selected digest items are explicitly promoted.
+- Sensitive content must be summarized or redacted.
 
-### Verification Provenance Gate
-
-Use this gate whenever verification affects lifecycle status, dashboard status, handoff readiness, commit/PR readiness, or a done/verified claim.
+### Verification Gate
 
 Minimum output:
 
@@ -221,124 +218,93 @@ Minimum output:
 - raw_output_ref:
 - exit_code:
 - scope:
+- test_integrity:
+  - production_changes:
+  - test_changes:
+  - mocks_or_fixtures_changed:
+  - assertions_added_or_removed:
+  - expected_behavior_changed:
+  - over_mocking_risk: low | medium | high | unknown
 - authority: agent-local | ci-backed | human-accepted | reviewer-accepted | none
-- trust_level: agent-local | ci-backed | reviewed | user-accepted-limitation | blocked
 - limitation_acceptor:
 - residual_risk:
 ```
 
 Rules:
 
+- Do not claim full completion when verification is partial, blocked, or not run.
 - Agent-authored summaries alone are not sufficient verification evidence. Prefer raw command output, test report files, CI URLs, review notes, or captured manual-check evidence.
-- `accepted limitation` requires a non-agent acceptor: user, project owner, CI policy, or external reviewer. An agent may propose a limitation, but must not self-accept it.
-- If the acceptor is missing, treat the state as `partial`, `blocked`, or `limitation proposed`, not `done`.
-- Local agent-run tests may support `passed-agent-local`, but should not be promoted to final pre-merge confidence without CI, external review, or explicit user acceptance.
+- `accepted limitation` requires a non-agent acceptor: user, project owner, CI policy, or external reviewer.
+- If production code and tests changed together, check whether tests still exercise real behavior and record over-mocking or weakened-assertion risk.
 
-### Test Integrity Gate
-
-Use this gate when implementation changes include tests, mocks, fixtures, expected values, assertions, snapshots, or verification helpers.
+### Finish Sync Gate
 
 Minimum output:
 
 ```markdown
-- production_changes:
-- test_changes:
-- mocks_or_fixtures_changed:
-- assertions_added_or_removed:
-- expected_behavior_changed:
-- coverage_or_scope_reduced:
-- over_mocking_risk: low | medium | high | unknown
-- independent_verification_needed: yes | no
-- conclusion:
+- flow_id:
+- flow_record_updates:
+- wiki_updates:
+- artifact_updates:
+- dashboard_projection:
+- handoff_path:
+- unsupported_done_claims_downgraded:
+- residual_risk:
 ```
 
 Rules:
 
-- If production code and tests changed in the same work, inspect whether tests still exercise real behavior.
-- Flag tests that only assert mocks, remove meaningful assertions, loosen expectations, delete coverage, or encode changed behavior without requirement evidence.
-- Passing tests with high over-mocking risk are not enough for `verified`; mark the trust level as `agent-local` or `needs-review`.
-- Do not use new mocks or rewritten expectations to explain away a failing verification command without recording the risk and independent check needed.
+- Flow Record is the lifecycle status source.
+- Artifact registry is the artifact index source.
+- Dashboard is a projection, not an independent fact source.
+- Log is an audit trail, not a status source.
+- Handoff is archive material, not a source that silently rewrites lifecycle status.
+- Dashboard refresh must rebuild visible cards from Flow Records and artifact evidence, not create status facts.
 
-### Knowledge Sync Gate
-
-Minimum output:
-
-```markdown
-- updated_pages:
-- status_changes:
-- decisions_recorded:
-- gaps_recorded:
-- limitation:
-```
-
-Do not copy long raw source content into `.llm-wiki`.
-
-### Artifact Sync Gate
-
-Minimum artifact row:
-
-```markdown
-| id | type | path | owner | related_session | status | last_checked | notes |
-|---|---|---|---|---|---|---|---|
-```
-
-Register important specs, plans, reports, dashboards, review notes, verification logs, generated diagrams, and external skill outputs.
-
-### Progress Dashboard Sync Gate
+### Review & Wiki Integrity Gate
 
 Minimum output:
 
 ```markdown
-- dashboard_path:
-- changed_sections:
-- evidence_links:
-- stale_or_missing_evidence:
-- limitation:
-```
-
-Dashboard state must trace back to `.llm-wiki`, artifact registry, verification records, or git diff evidence.
-
-### Review Gate
-
-Minimum checks:
-
-```markdown
-- code_risk:
-- test_gap:
-- requirement_or_bug_consistency:
-- scope_drift:
-- wiki_drift:
-- artifact_drift:
-- dashboard_drift:
-- bridge_consistency:
+- findings:
+- verification_gaps:
+- context_wiki_gaps:
+- artifact_dashboard_gaps:
+- session_digest_gaps:
 - lifecycle_quality:
+- project_skill_improvement:
+- residual_risk:
 ```
 
-Findings should lead. If no findings, say what was checked and what residual risk remains.
+Rules:
 
-### Evolution Gate
+- Review findings come first and are ordered by severity.
+- Maintenance checks must keep repairs narrow and evidence-backed.
+- Detect scope drift, wiki drift, artifact drift, dashboard drift, handoff path drift, and Session Digest promotion mistakes.
+- Lifecycle-quality review should identify routing/gate failures and suggest the smallest useful project-skill patch or eval case.
 
-Minimum output:
+## Owner Mapping
 
-```markdown
-- evaluator_needed: yes | no
-- dolores_review_needed: yes | no
-- reason:
-- suggested_case_or_eval:
-- blocking: yes | no
-```
+| Skill | Owned Gates |
+|---|---|
+| `project-develop-copilot` | Lightweight Boundary, Context Recovery Gate, Lifecycle Anchor Gate, External Bridge Gate, Session Import Gate, Finish Sync Gate, Review & Wiki Integrity Gate |
+| `project-init` | Context Recovery Gate, Finish Sync Gate |
+| `project-ingest` | Context Recovery Gate, Finish Sync Gate |
+| `project-query` | Lightweight Boundary, Context Recovery Gate, Finish Sync Gate |
+| `project-maintain` | Context Recovery Gate, Finish Sync Gate, Review & Wiki Integrity Gate |
+| `project-develop` | Context Recovery Gate, Lifecycle Anchor Gate, Work Definition Gate, Scope Lock Gate, External Bridge Gate |
+| `project-fix` | Context Recovery Gate, Lifecycle Anchor Gate, Work Definition Gate, Scope Lock Gate, External Bridge Gate, Verification Gate |
+| `project-session-extract` | Context Recovery Gate, Session Import Gate, Finish Sync Gate |
+| `project-finish` | Verification Gate, Finish Sync Gate |
+| `project-review` | Verification Gate, Finish Sync Gate, Review & Wiki Integrity Gate |
 
-Default blocking is `no`. Enter improvement mode only when the user asks or when a high-risk process failure must be handled before continuing.
+## Completion Standard
 
-## Common Gate Failures
+The consolidated Gate set is complete when:
 
-- Treating gates as decorative headings.
-- Asking long forms when one minimal question would resolve the gate.
-- Running external skills before scoped context exists.
-- Updating dashboard without evidence.
-- Marking work done with partial verification but no limitation.
-- Letting the same agent create weak verification evidence and then self-accept it as final.
-- Treating an `accepted limitation` as valid when no user, CI policy, owner, or external reviewer accepted it.
-- Marking tests as verified after changing mocks or expectations without a Test Integrity Gate check.
-- Saving raw sensitive content instead of summaries and source proxies.
-- Creating new lifecycle sessions instead of resuming existing ones.
+- the named Gate count is 10 or fewer
+- child skill `Owned Gates` use only names from the Gate Table
+- verification provenance and test integrity are sub-checks of Verification Gate
+- knowledge, artifact, and dashboard sync are sub-checks of Finish Sync Gate
+- dashboard is explicitly a projection, not a status source
+- P0 evals still pass after the consolidation

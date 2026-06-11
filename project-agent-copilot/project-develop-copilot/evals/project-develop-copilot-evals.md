@@ -88,10 +88,10 @@ primary_stage: project-develop
 
 Required gates:
 
-- Documentation Anchor Gate.
-- Context Enrichment Gate.
-- Clarification Gate.
-- Context Lock Gate before code edits.
+- Lifecycle Anchor Gate with documentation anchor sub-check.
+- Context Recovery Gate.
+- Work Definition Gate.
+- Scope Lock Gate before code edits.
 
 Required behavior:
 

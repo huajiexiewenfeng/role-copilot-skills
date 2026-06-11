@@ -31,7 +31,7 @@ Do not let Superpowers-style skills choose project scope from scratch. Run proje
 
 | Project entry | Superpowers bridge |
 |---|---|
-| `project-develop` | After Context Enrichment Gate and during Clarification Gate, naturally use brainstorming for requirement discussion before implementation planning. The user does not need to explicitly request brainstorming. Use writing-plans for implementation planning, test-driven-development before code-facing implementation, and executing-plans when a written plan exists. |
+| `project-develop` | After Context Recovery Gate and during Work Definition Gate, naturally use brainstorming for requirement discussion before implementation planning. The user does not need to explicitly request brainstorming. Use writing-plans for implementation planning, test-driven-development before code-facing implementation, and executing-plans when a written plan exists. |
 | `project-fix` | After bug evidence and scoped context are captured, use systematic-debugging. Use test-driven-development when creating regression coverage is feasible. |
 | `project-finish` | Before claiming completion, use verification-before-completion when available, then sync verified facts to `.llm-wiki`. |
 | `project-review` | Use code-review stance. When requesting-code-review is available, use it as an additional quality pass, then report findings in project-review format. |

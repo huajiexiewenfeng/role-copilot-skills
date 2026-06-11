@@ -37,13 +37,9 @@ Use when the user asks to:
 
 ## Owned Gates
 
-- Wiki Root Gate
-- Maintenance Scope Gate
-- Visibility Chain Gate
-- Flow Record Consistency Gate
-- Dashboard Consistency Gate
-- Safety and Local Path Gate
-- Narrow Repair Gate
+- Context Recovery Gate
+- Finish Sync Gate when maintenance repairs indexes, artifacts, logs, or dashboard projection data
+- Review & Wiki Integrity Gate
 
 ## Required First Check
 
