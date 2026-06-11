@@ -105,6 +105,25 @@ Before doing project work:
 
 If confidence is low, ask one minimal routing question. Do not start a long intake form.
 
+## Routing Tie-breakers
+
+When multiple routes seem plausible, choose the least state-changing route that still satisfies the user:
+
+```text
+lightweight-answer < read-only-query < dashboard-refresh < wiki-maintenance < full-lifecycle
+```
+
+Use this quick decision order:
+
+1. No project evidence needed and no write requested -> `lightweight-answer`.
+2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
+3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
+4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
+5. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+6. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+
+Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
+
 ## No Child Skill Mode
 
 `no skills`, `no child skill`, and `no lifecycle` requests are aliases for `lightweight-answer` with `primary_stage: none`.

@@ -49,6 +49,86 @@ Use `full-lifecycle` when the user asks to develop, fix, ingest, finish, review,
 | asks evaluator/skill failure/flow went wrong | lifecycle-quality | Usually route through `project-review` or evaluator bridge. |
 | asks Dolores/conversation self-review | lifecycle-quality | Review lifecycle trace, not ordinary implementation. |
 
+## Routing Decision Tree
+
+Use this order before relying on keyword matching:
+
+```text
+1. Is the user asking to change code, project state, .llm-wiki, dashboard, artifacts, verification status, or lifecycle records?
+   yes -> full lifecycle, dashboard-refresh, wiki-maintenance, session-context-import, or lifecycle-quality
+   no  -> continue
+
+2. Does the user need project evidence from .llm-wiki or linked project files?
+   no  -> lightweight-answer
+   yes -> continue
+
+3. Is the request read-only?
+   yes -> project-query
+   no  -> continue
+
+4. Is the requested write limited to refreshing visible dashboard/progress from existing evidence?
+   yes -> dashboard-refresh via project-query
+   no  -> continue
+
+5. Is the requested write about structure, visibility, broken links, stale indexes, missing cards, artifact registry drift, safety, or consistency?
+   yes -> project-maintain
+   no  -> continue
+
+6. Is the user asking to evaluate whether the project lifecycle, routing, gate behavior, skill behavior, or prior conversation flow went wrong?
+   yes -> lifecycle-quality via project-review or evaluator/conversation-review bridge
+   no  -> continue
+
+7. Is the user providing source material to add?
+   yes -> project-ingest
+   no  -> continue
+
+8. Is the user reporting a bug, failed test, runtime symptom, log, incident, or regression?
+   yes -> project-fix
+   no  -> continue
+
+9. Is the user asking to finish, sync implementation status, prepare handoff, or claim done?
+   yes -> project-finish
+   no  -> project-develop for requirement/feature/plan/implementation work
+```
+
+If a request matches more than one route, prefer the least state-changing route that still satisfies the user:
+
+```text
+lightweight-answer < project-query < dashboard-refresh < project-maintain < full lifecycle
+```
+
+Ask one minimal routing question only when this order still leaves two plausible routes with different write behavior.
+
+## Ambiguous Pair Rules
+
+| Ambiguous request | Route | Why |
+|---|---|---|
+| "What does the wiki say about login?" | `project-query` | Reads project evidence but does not change lifecycle state. |
+| "Discuss the login approach first, do not implement" | lightweight-answer or `project-query` | Respect the no-write/no-implementation boundary; use query only if wiki evidence is needed. |
+| "Start developing login" | `project-develop` | User asks to change requirement/implementation state. |
+| "Refresh dashboard" | dashboard-refresh via `project-query` | Visible projection update only; does not imply finish. |
+| "Finish this and update dashboard" | `project-finish` | Completion/status change requires verification and Flow Record update before projection. |
+| "Why is this requirement not visible on dashboard?" | `project-maintain` | Structural visibility or drift problem. |
+| "Find related docs for this requirement" | `project-query` | Read-only evidence map. |
+| "Review code risk before commit" | `project-review` | Delivery readiness review, not lifecycle-quality by default. |
+| "Review whether this workflow went off track" | lifecycle-quality | Process/routing/gate review, not ordinary code review. |
+| "Continue" | resume | Recover active session first; ask only if multiple sessions match. |
+
+## Natural Lifecycle Quality Intent
+
+Route to `lifecycle-quality` when the user describes the intent in natural language, even without saying a special alias:
+
+- "evaluate whether this flow went wrong"
+- "did the project develop process drift?"
+- "review the routing/gates/context recovery we used"
+- "find the smallest skill rule or eval gap"
+- "先评估流程有没有跑偏"
+- "这次 project develop 是不是选错阶段了"
+
+Aliases such as `Dolores`, `skill-evaluator`, `conversation self-review`, `eval gap`, and `golden case` are supported, but they are not required.
+
+Do not route to lifecycle-quality merely because the user says `review`, `continue`, `finish`, `bug`, `next step`, or `summary`. Those are normal delivery routes unless the user asks to evaluate the process itself or review finds high-risk process failure.
+
 
 ## Lifecycle Quality Routing
 

@@ -361,3 +361,104 @@ Pass/fail:
 PASS: lifecycle-quality route without file edits
 FAIL: wrong route or unauthorized edits
 ```
+
+## Eval 11: Missing Dashboard Card Routes To Maintain
+
+Input prompt:
+
+```text
+I copied a new requirement into .llm-wiki, but it does not appear on the project dashboard. Check why it is not visible and repair the wiki links if needed.
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Required behavior:
+
+- Treats the request as a visibility/consistency problem, not ordinary read-only query.
+- Checks Flow Record, artifact registry, dashboard projection, module/source indexes, and log visibility.
+- Applies only narrow structural repairs if evidence is present and repair is requested.
+
+Forbidden behavior:
+
+- Starting feature development.
+- Creating a new Change Brief just because a dashboard card is missing.
+- Marking progress done from dashboard state alone.
+
+Pass/fail:
+
+```text
+PASS: maintenance route checks visibility and projection drift
+FAIL: routed as plain query or full development without evidence
+```
+
+## Eval 12: Dashboard Refresh Is Not Finish
+
+Input prompt:
+
+```text
+Refresh the project dashboard from the current .llm-wiki evidence. Do not finish the work or change any Flow Record status.
+```
+
+Expected route:
+
+```text
+mode: dashboard-refresh
+primary_stage: project-query
+```
+
+Required behavior:
+
+- Reads Flow Records and artifact registry.
+- Updates only dashboard projection, dashboard metadata, and optional log audit entry.
+- Downgrades unsupported visible claims.
+- Does not edit Change Brief, Bug Brief, working-context Flow Record, or verification status.
+
+Forbidden behavior:
+
+- Routing to `project-finish`.
+- Marking work done, verified, archived, or reviewed.
+- Creating lifecycle status from dashboard cards.
+
+Pass/fail:
+
+```text
+PASS: dashboard-only projection refresh
+FAIL: finish route or Flow Record status mutation
+```
+
+## Eval 13: Code Review Is Not Lifecycle Quality
+
+Input prompt:
+
+```text
+Review this code change before commit and tell me if there are bugs or missing tests.
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-review
+```
+
+Required behavior:
+
+- Performs findings-first review for code risk, verification gaps, and lifecycle drift.
+- Does not enter evaluator/Dolores mode unless review finds high-risk process failure or the user asks for process evaluation.
+
+Forbidden behavior:
+
+- Treating ordinary code review as `lifecycle-quality`.
+- Running evaluator or conversation-review only because the word "review" appears.
+
+Pass/fail:
+
+```text
+PASS: normal project-review route
+FAIL: lifecycle-quality route without process-evaluation intent
+```
