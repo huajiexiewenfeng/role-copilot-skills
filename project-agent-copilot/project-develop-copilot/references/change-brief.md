@@ -111,6 +111,18 @@ Use this compact shape:
 - status: none | candidate | confirmed | stale
 - evidence:
 
+## External Dependencies
+
+- project-id:
+- xref-id:
+- dependency_type:
+- required_contract:
+- evidence:
+- verification_status:
+- derived_staleness:
+- impact_on_change:
+- fallback_or_handoff:
+
 ## Flow Record
 
 | Step | Status | Evidence | Updated |
@@ -133,6 +145,21 @@ Use this compact shape:
 
 The selected output language controls headings, prose, summaries, and notes.
 Keep paths, commands, code identifiers, and status values stable in English.
+
+## External Dependencies Rules
+
+Use `## External Dependencies` when a requirement depends on another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another cross-service contract.
+
+Rules:
+
+- Start from `.llm-wiki/cross-refs/index.md` when a cross-project integration point may be involved.
+- Use logical `project-id` and `xref-id`; do not persist local paths.
+- Store evidence from the remote project as wiki-relative or source-relative anchors, not copied remote content.
+- `verification_status` must be one of `draft`, `wiki-checked`, `source-verified`, or `blocked`.
+- Do not write `stale` as a status. Use `derived_staleness: fresh | expired | unknown`.
+- If implementation depends on the remote contract, require `source-verified` evidence before treating the dependency as ready.
+- If only `wiki-checked` evidence exists, keep the dependency as a planning risk and do not make implementation decisions from it alone.
+- If the remote project must change, create a context handoff for that project instead of editing it from the current lifecycle session.
 
 ## Flow Record Rules
 

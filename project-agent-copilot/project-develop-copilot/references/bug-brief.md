@@ -72,6 +72,17 @@ YYYY-MM-DD-short-symptom
 
 ## Diagnosis
 
+## External Findings
+
+- project-id:
+- xref-id:
+- evidence:
+- verification_status:
+- derived_staleness:
+- conclusion:
+- impact_on_current_project:
+- suggested_handoff:
+
 ## Fix Plan
 
 ## Verification
@@ -130,6 +141,21 @@ Before broad diagnosis or code edits, record:
 ```
 
 If reproduction is blocked, explain the limitation and choose the safest next action.
+
+## External Findings Rules
+
+Use `## External Findings` when a bug may cross into another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another integration point.
+
+Rules:
+
+- Start from `.llm-wiki/cross-refs/index.md` when a cross-project integration point may be involved.
+- Use logical `project-id` and `xref-id`; do not persist local paths.
+- Store evidence from the remote project as wiki-relative or source-relative anchors, not copied remote content.
+- `verification_status` must be one of `draft`, `wiki-checked`, `source-verified`, or `blocked`.
+- Do not write `stale` as a status. Use `derived_staleness: fresh | expired | unknown`.
+- If the fix decision depends on the remote contract, require `source-verified` evidence before editing active scope.
+- If only `wiki-checked` evidence exists, record the finding as a clue or risk and do not make fix decisions from it alone.
+- If the remote project must change, create a context handoff for that project instead of editing it from the current lifecycle session.
 
 ## Scope Rules
 
