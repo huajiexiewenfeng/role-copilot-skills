@@ -30,7 +30,7 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
-| `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Context Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
+| `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
 | `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
@@ -83,9 +83,9 @@ Other top-level tools follow the same context-first bridge rule. See `references
 
 ## Historical Session Extraction
 
-Use `project-session-extract` when a teammate already discussed useful project context with an AI assistant. The copilot first produces a brief candidate list, lets the user choose what to keep, drafts a Context Digest, and writes it only after confirmation.
+Use `project-session-extract` when a teammate already discussed useful project context with an AI assistant. The copilot first produces a brief candidate list, lets the user choose what to keep, drafts a Session Digest, and writes it only after confirmation.
 
-Context Digests are recall context by default. They do not update requirements, bugs, Flow Records, dashboard, scope, or project truth. Selected digest items enter the lifecycle only through explicit Lifecycle Promotion. Raw transcripts are not copied by default.
+Session Digests are recall context by default. They do not update requirements, bugs, Flow Records, dashboard, scope, or project truth. Selected digest items enter the lifecycle only through explicit Lifecycle Promotion. Raw transcripts are not copied by default.
 
 ## Read-Only Project Query
 
@@ -144,9 +144,9 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 
 ## Examples
 
-`	ext
+```text
 Based on this project's llm wiki, find the payment callback requirement docs and previous development context. Do not develop yet; let's discuss first.
-`
+```
 
 ```text
 Use project init for this repository and migrate legacy docs/ai-coding into .llm-wiki.

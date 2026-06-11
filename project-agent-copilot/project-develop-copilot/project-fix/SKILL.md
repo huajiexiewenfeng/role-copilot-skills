@@ -37,7 +37,7 @@ Use when the user reports or wants to fix:
 ## Required First Check
 
 1. Resolve project root.
-2. Verify `../references/` exists and contains `bug-brief.md`, `flow-record.md`, and `scoped-working-context.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing bug lifecycle work.
+2. Resolve optional shared references from `../references/` or local `references/`. If `bug-brief.md`, `flow-record.md`, or `scoped-working-context.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep bug evidence, scope, and Flow Record updates conservative.
 3. Create or resume Bug Brief.
 4. Capture or ingest external bug source.
 5. Identify active, read-only, candidate, and excluded scopes.
@@ -56,6 +56,13 @@ Read as needed:
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, require a minimal Bug Brief before edits: symptom, expected behavior, evidence, reproduction status, likely scope, fix plan, verification plan, and `bug_id` or `flow_id`.
+- Do not mark diagnosis, fix, or verification complete unless evidence exists.
 
 Workflow:
 

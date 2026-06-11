@@ -84,7 +84,14 @@ Read these role-level references as needed:
 - `../references/lifecycle-router.md`
 - `../references/scoped-working-context.md`
 
-If installed in a flattened environment, locate equivalent `references/` paths near the skill root. If no shared `references/` directory is available and the user wants to write `.llm-wiki`, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before writing project wiki state.
+If installed in a flattened environment, locate equivalent `references/` paths near the skill root. If no shared `references/` directory is available and the user wants to write `.llm-wiki`, continue in degraded mode using the minimum rules in this skill; report the missing deep references and write only confirmed, conservative Session Digest content.
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, still produce a candidate Session Digest preview and ask for confirmation before writes.
+- Do not create or update requirement, bug, module, Flow Record, or dashboard state from session content unless the relationship is clear and confirmed.
 
 ## Required First Check
 

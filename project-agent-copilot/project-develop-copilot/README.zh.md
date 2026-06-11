@@ -34,7 +34,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
-| `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Context Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
+| `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
 | `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
@@ -87,7 +87,7 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 把这段历史 session 提取成项目上下文，先给我看候选导入内容。
 ```
 
-Project Develop Copilot 会先输出简要候选清单，让用户选择要保留的条目，再整理成 Context Digest Markdown 草稿。用户确认后才写入 `.llm-wiki/session-digests/`。默认不会更新需求、Bug、Flow Record、dashboard、scope 或项目事实；只有用户明确要求 Lifecycle Promotion 时，才把选中内容升级到生命周期对象。
+Project Develop Copilot 会先输出简要候选清单，让用户选择要保留的条目，再整理成 Session Digest Markdown 草稿。用户确认后才写入 `.llm-wiki/session-digests/`。默认不会更新需求、Bug、Flow Record、dashboard、scope 或项目事实；只有用户明确要求 Lifecycle Promotion 时，才把选中内容升级到生命周期对象。
 
 ## 只读项目查询
 

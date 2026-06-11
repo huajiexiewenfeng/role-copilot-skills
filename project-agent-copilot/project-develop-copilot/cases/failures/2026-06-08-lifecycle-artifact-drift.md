@@ -27,7 +27,7 @@ A media-file compatibility task started in `dji-dock3-adapter` and later expande
 - `project-develop` must stop before writing an execution plan unless the Change Brief exists and contains `flow_id`, scope, acceptance criteria, non-goals, and `## Flow Record`.
 - If scope expansion creates a meaningful child deliverable, create a child Change Brief with `parent_flow_id` before writing the child execution plan.
 - `project-finish` must write final handoff artifacts under `.llm-wiki/handoff/` and update Flow Record, artifact registry, and dashboard links to that path.
-- Any child stage skill must verify the shared `references/` directory exists before lifecycle work. If missing, stop and instruct the user to install the top-level package or restore `references/`.
+- Any child stage skill must resolve optional shared references before lifecycle work. If missing, continue in degraded mode using the minimum embedded workflow, report the missing deep references, and avoid unsupported template-specific or projection-specific claims.
 - `project-query dashboard-refresh` must project every distinct parent and child `flow_id` into the visible board and `dashboardData.flowRecords`; child flows must not be collapsed into parent prose or evidence links only.
 
 ## Regression Checks
@@ -38,9 +38,10 @@ A media-file compatibility task started in `dji-dock3-adapter` and later expande
 - Search execution plans and verify each has a matching Change Brief:
   - `.llm-wiki/working-context/*execution-plan*.md`
   - `.llm-wiki/requirements/<flow-id>.md`
-- Check child skill installation:
-  - `project-develop/references/change-brief.md`
-  - `project-finish/references/flow-record.md`
+- Check child skill installation behavior:
+  - direct child-skill install without `../references/` does not hard fail
+  - degraded mode still requires documentation anchor, `flow_id`, scope, and evidence-backed updates
+  - missing deep references are reported in the result
 - After dashboard refresh, check child Flow Record projection:
   - every distinct `flow_id` from requirements/bugs/working-context appears in visible board cards
   - every child `flow_id` has matching `dashboardData.flowRecords`

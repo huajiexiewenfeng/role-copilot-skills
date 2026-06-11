@@ -39,7 +39,7 @@ Use when the user says:
 ## Required First Check
 
 1. Resolve project root.
-2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `templates.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
+2. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `templates.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and update only evidence-backed wiki state.
 3. Identify active Change Brief, Bug Brief, or working-context.
 4. Check verification evidence, provenance, raw output, and whether any accepted limitation has a non-agent acceptor.
 5. Inspect changed files, including whether production code and tests/mocks changed together.
@@ -59,6 +59,13 @@ Read as needed:
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, finish sync may update Change Brief, Bug Brief, Flow Record, log, and handoff with compact Markdown, but must not generate unsupported dashboard claims.
+- Dashboard updates require either the dashboard reference/template or a clear existing dashboard data contract.
 
 Workflow:
 

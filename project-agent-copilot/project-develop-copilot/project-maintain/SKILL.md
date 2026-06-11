@@ -48,7 +48,7 @@ Use when the user asks to:
 ## Required First Check
 
 1. Resolve the project root.
-2. Resolve shared references from either `../references/` in the bundled top-level install or `references/` in a direct child-skill install. Verify the resolved references contain `flow-record.md` and `progress-dashboard.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing project wiki maintenance.
+2. Resolve optional shared references from either `../references/` in the bundled top-level install or `references/` in a direct child-skill install. If `flow-record.md` or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep repairs narrow and evidence-backed.
 3. Confirm `.llm-wiki` exists in the project root.
 4. Decide whether the request is read-only maintenance audit or approved repair.
 5. Identify the target scope: whole wiki, one `flow_id`, one module, one dashboard, one page group, or one symptom.
@@ -73,6 +73,13 @@ Read as needed:
 - `.llm-wiki/handoff/*.md`
 - `.llm-wiki/dashboard/progress.html`
 - relevant `.llm-wiki/sources/` and `.llm-wiki/ingest/` indexes
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` or local `references/` is missing.
+- In degraded mode, maintenance can still audit visibility chains, links, absolute paths, log entries, Flow Record rows, and dashboard claims from available wiki files.
+- Repairs in degraded mode must stay narrow and must not invent dashboard projection rules that are not visible in existing files.
 
 Workflow:
 

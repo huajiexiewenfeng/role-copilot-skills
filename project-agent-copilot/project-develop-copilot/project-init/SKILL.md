@@ -41,7 +41,7 @@ Use when the router or user needs to:
 ## Required First Check
 
 1. Resolve `project_root`.
-2. Verify `../references/` exists and contains `domain-skill-contract.md`, `progress-dashboard.md`, and `progress-dashboard-template.html`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before initializing project lifecycle context.
+2. Resolve optional shared references from `../references/` or local `references/`. If `domain-skill-contract.md`, `progress-dashboard.md`, or `progress-dashboard-template.html` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and skip template-dependent dashboard generation unless a safe starter can be produced.
 3. Report root evidence before writing:
    - user-provided path
    - current working directory
@@ -73,6 +73,13 @@ Read as needed:
 - `../references/legacy-ai-coding-migration.md`
 - `../references/progress-dashboard.md`
 - `../references/progress-dashboard-template.html`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, still perform root evidence checks, create/preserve the standard `.llm-wiki` structure, and write conservative starter files.
+- If the dashboard template is unavailable, do not invent unsupported dashboard data; create only a minimal placeholder or report that dashboard generation was skipped.
 
 Workflow:
 

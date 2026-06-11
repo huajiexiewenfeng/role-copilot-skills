@@ -27,7 +27,14 @@ Read these role-level references:
 - `../references/llm-wiki-mvp.md`
 - `../references/templates.md`
 
-If installed in a flattened environment, locate equivalent `references/` paths near the skill root. If no shared `references/` directory is available, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before writing project wiki source records.
+If installed in a flattened environment, locate equivalent `references/` paths near the skill root. If no shared `references/` directory is available, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep source records conservative.
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, ingest can still create a batch entry, source proxy summary, optional full-source copy for safe Markdown, and `.llm-wiki/log.md` entry.
+- Do not deep-read large, binary, remote, or sensitive sources without confirmation.
 
 ## Workflow
 

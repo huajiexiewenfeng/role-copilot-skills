@@ -40,7 +40,7 @@ Use when the user asks to:
 ## Required First Check
 
 1. Resolve project root.
-2. Verify `../references/` exists and contains `change-brief.md` and `flow-record.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle work.
+2. Resolve optional shared references from `../references/` or local `references/`. If `change-brief.md` or `flow-record.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references, keep the Change Brief and Flow Record conservative, and do not invent unsupported lifecycle facts.
 3. Confirm this is full lifecycle requirement work, not lightweight-answer.
 4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
 5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
@@ -109,6 +109,13 @@ Read as needed:
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, require a minimal Change Brief anchor before code edits: why, what changes, non-goals, active scope, acceptance, verification plan, and `flow_id`.
+- If detailed templates are unavailable, write compact Markdown sections instead of blocking the work.
 
 Authority order:
 

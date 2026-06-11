@@ -63,7 +63,7 @@ Example triggers:
 ## Required First Check
 
 1. Resolve project root.
-2. Verify `../references/` exists and contains `lifecycle-router.md`, `flow-record.md`, and `progress-dashboard.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing project wiki work.
+2. Resolve optional shared references from `../references/` or local `references/`. If `lifecycle-router.md`, `flow-record.md`, or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep answers read-only unless the user explicitly asks to write dashboard state.
 3. Confirm `.llm-wiki` exists.
 4. Decide whether this is read-only project query or full lifecycle work.
 5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, session-digests, log.
@@ -89,6 +89,13 @@ Read as needed:
 - relevant `.llm-wiki/bugs/*.md`
 - relevant `.llm-wiki/sources/*.md`
 - relevant `.llm-wiki/working-context/*.md`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, query can still read `.llm-wiki` indexes and return evidence/inference separation.
+- Dashboard refresh in degraded mode must not claim done/verified/progress status unless existing Flow Record evidence is clear.
 
 Workflow:
 

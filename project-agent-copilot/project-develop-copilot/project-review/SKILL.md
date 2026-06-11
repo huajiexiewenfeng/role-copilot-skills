@@ -56,7 +56,7 @@ It must not become a general-purpose Dolores or `skill-evaluator` replacement. F
 ## Required First Check
 
 1. Resolve project root.
-2. Verify `../references/` exists and contains `flow-record.md`, `progress-dashboard.md`, and `continuous-evolution.md`. If missing, stop and tell the user the child skill install is incomplete; install the top-level `project-develop-copilot` package or restore the shared `references/` directory before continuing lifecycle review.
+2. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `continuous-evolution.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep findings grounded in available diff, wiki, and evidence.
 3. Inspect git status and diff.
 4. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
 5. Check verification evidence, raw output, exit code, executor, authority, trust level, and limitation acceptor.
@@ -76,6 +76,13 @@ Read as needed:
 - `../references/continuous-evolution.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
+
+Reference availability policy:
+
+- Shared references are deep references, not startup requirements.
+- Do not stop solely because `../references/` is missing.
+- In degraded mode, review must still check diff, verification evidence, scope drift, wiki drift, Flow Record evidence, and dashboard claims when files are available.
+- Do not propose project-skill evolution patches from missing deep references alone; only report the missing reference as a process gap.
 
 Workflow:
 
