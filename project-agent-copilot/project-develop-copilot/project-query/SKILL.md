@@ -105,6 +105,11 @@ Workflow:
 6. Separate sourced wiki facts from inference.
 7. Return a concise answer and a Project Context Pack.
 8. In `dashboard-refresh` mode, update only `.llm-wiki/dashboard/progress.html`, dashboard artifact metadata, and a short `.llm-wiki/log.md` entry when needed. Build flow board cards from Flow Records in Change Briefs, Bug Briefs, and working-context pages using `progress-dashboard.md` projection rules.
+   - Treat Flow Record as the lifecycle status authority.
+   - Treat artifact registry as the artifact/path/discoverability authority.
+   - Treat dashboard as a projection only.
+   - Do not edit Change Briefs, Bug Briefs, working-context Flow Records, or verification status during dashboard-only refresh.
+   - If a dashboard card disagrees with Flow Record evidence, downgrade/remove the card or report drift; do not rewrite Flow Record to match the card.
 9. Before reporting a dashboard refresh complete, run the Progress Dashboard consistency checks: every distinct `flow_id` and `parent_flow_id`/child Flow Record discovered from `.llm-wiki` must have visible board cards for each eligible Flow Record row, matching `dashboardData.flowRecords` entries, and correct lane counts. Fix drift before returning.
 10. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
@@ -168,6 +173,7 @@ Dashboard-refresh completion rules:
 - Do not report completion if a child Flow Record appears only in evidence links or parent-card prose.
 - Do not report completion if visible board cards and `dashboardData.flowRecords` disagree for any `flow_id`.
 - Do not report completion if lane count badges do not match the visible cards in each lane.
+- Do not report completion if dashboard-only changes would imply a stronger lifecycle status than the source Flow Record supports.
 
 ## Context Handoff
 
@@ -229,6 +235,7 @@ For dashboard refresh:
 - Do not create or update `.llm-wiki` by default.
 - In `dashboard-refresh` mode, modify only `.llm-wiki/dashboard/progress.html`, `.llm-wiki/artifacts/index.md` dashboard metadata when needed, and `.llm-wiki/log.md`.
 - In `dashboard-refresh` mode, do not create Change Briefs or mark plan/development/testing/archive done; show unmatched source/design docs as candidate or pending.
+- In `dashboard-refresh` mode, do not repair Flow Record status. Route stale or contradictory Flow Record evidence to `project-finish`, `project-develop`, `project-fix`, or `project-review`.
 - Do not create Change Brief, Bug Brief, or working-context unless the user explicitly asks to save or act.
 - Do not deep-read every source or module.
 - Do not treat stale wiki summaries as authoritative over source code, tests, or current user decisions.

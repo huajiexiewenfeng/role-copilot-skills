@@ -8,11 +8,21 @@ Source of truth remains:
 
 - source code and tests
 - user decisions
-- `.llm-wiki` lifecycle pages
-- artifact registry
+- Flow Records in Change Briefs, Bug Briefs, and working-context pages
+- artifact registry for artifact existence and discoverability
 - verification records
 - git diff
 - design docs and PRDs
+
+The dashboard is a projection:
+
+```text
+Flow Records + artifact registry + verification evidence + selected log notes
+-> dashboardData
+-> visible dashboard sections
+```
+
+Do not let dashboard edits create lifecycle truth. When a dashboard claim is unsupported, downgrade or remove the claim in the projection and route the missing lifecycle update to `project-finish`, `project-develop`, or `project-fix`.
 
 ## Default Path
 
@@ -199,6 +209,34 @@ Direct refresh is appropriate after `project-init`, `project-ingest`, requiremen
 
 Direct refresh should prefer existing Flow Records. If a new source/design document has no Flow Record yet, show it as a `candidate` or `pending` card and recommend creating or confirming the related Change Brief instead of silently inventing an execution plan.
 
+## Projection Rules
+
+Dashboard refresh is a one-way projection from lifecycle evidence to visible status.
+
+Projection inputs:
+
+- Flow Record rows from Change Briefs, Bug Briefs, and working-context pages.
+- Artifact registry rows for artifact path/status/last_checked.
+- Verification evidence and trust level.
+- Log entries only as audit hints or last-updated notes.
+- Candidate source/design documents only as clearly marked candidate cards.
+
+Projection outputs:
+
+- `.llm-wiki/dashboard/progress.html`
+- `window.dashboardData` and marked dashboard sections
+- dashboard artifact metadata when the dashboard file itself changes
+- short `.llm-wiki/log.md` audit entry when the refresh changes visible state
+
+Rules:
+
+- Never update Flow Record status from dashboard cards.
+- Never mark plan/development/testing/archive done during dashboard-only refresh.
+- If projection input is missing, use `candidate`, `pending`, `unknown`, `blocked`, or `not verified`.
+- If an existing dashboard card has no matching Flow Record or candidate source/design evidence, remove it or downgrade it during refresh.
+- If dashboard and Flow Record disagree, Flow Record wins unless current code/tests/user decision prove the Flow Record itself is stale.
+- If Flow Record appears stale, stop projection for that claim and route to `project-finish` or `project-review`.
+
 ## Flow Board Projection
 
 When refreshing the dashboard, build the flow board in this order:
@@ -207,7 +245,7 @@ When refreshing the dashboard, build the flow board in this order:
    - `.llm-wiki/requirements/*.md`
    - `.llm-wiki/bugs/*.md`
    - `.llm-wiki/working-context/*.md`
-2. Read supporting context from:
+2. Read supporting projection context from:
    - `.llm-wiki/artifacts/index.md`
    - `.llm-wiki/ingest/index.md`
    - `.llm-wiki/sources/registry.md`
@@ -377,7 +415,7 @@ Review should report dashboard drift as a lifecycle finding, not a visual nit.
 ## Common Mistakes
 
 - Treating dashboard as the source of truth.
-- Updating progress visually without updating `.llm-wiki` or artifact registry.
+- Updating progress visually without updating the matching Flow Record or artifact registry.
 - Marking work done without verification evidence.
 - Hiding blocked or risky work to make the page look clean.
 - Creating a complex app when a static evidence-backed page is enough.

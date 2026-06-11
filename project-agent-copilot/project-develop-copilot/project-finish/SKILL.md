@@ -75,14 +75,16 @@ Workflow:
 5. Map changed files to affected wiki pages.
 6. If production code and tests/mocks/fixtures/expected values changed together, run the Verification Gate test-integrity sub-check before marking testing done.
 7. Update only affected `.llm-wiki` pages.
-8. Mark related working-context, Change Brief, or Bug Brief Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules and trust level.
-9. When finishing work linked to a Session Digest, update related requirement, bug, or Flow Record only if selected digest items were explicitly promoted into that lifecycle object. If recall-context items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful without silently changing project truth.
-10. Record verification limitation and residual risk when verification was partial or blocked.
-11. Register important specs, plans, reports, verification notes, and dashboard as artifacts.
-12. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, update only evidence-backed dashboard data/sections.
-13. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
-14. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`.
-15. Report implementation summary, verification, sync updates, residual risk, and next action.
+8. Update the related working-context, Change Brief, or Bug Brief Flow Record first. Flow Record is the lifecycle status authority; dashboard, handoff, and log entries must be generated from it or linked back to it.
+9. Mark Flow Record steps as verified, done, blocked, or skipped using evidence-backed step rules and trust level.
+10. When finishing work linked to a Session Digest, update related requirement, bug, or Flow Record only if selected digest items were explicitly promoted into that lifecycle object. If recall-context items are now confirmed or rejected by implementation evidence, record that outcome in the digest or `.llm-wiki/log.md` when useful without silently changing project truth.
+11. Record verification limitation and residual risk when verification was partial or blocked.
+12. Register important specs, plans, reports, verification notes, handoffs, and dashboard as artifacts.
+13. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, rebuild or refresh only evidence-backed dashboard data/sections from Flow Record plus artifact registry evidence.
+14. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
+15. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`; treat handoff as archive/continuation summary, not as the status authority.
+16. Write a concise `.llm-wiki/log.md` audit entry when sync changes durable state.
+17. Report implementation summary, verification, sync updates, residual risk, and next action.
 
 ## Mode / Entry Selection
 
@@ -156,6 +158,7 @@ Rules:
 - `archive` can be `done` only when a handoff, done note, release/deploy note, or accepted closure exists. Project handoffs belong under `.llm-wiki/handoff/`, not `.llm-wiki/working-context/`.
 - Partial verification should mark `testing` as `blocked`, `active`, or `done with limitation` in notes, not silently complete.
 - If tests, mocks, fixtures, snapshots, or expected values changed with production code, do not mark testing done until the Verification Gate records assertion strength and over-mocking risk.
+- Dashboard, handoff, and log entries must not introduce stronger status than the Flow Record supports.
 
 ## Handoff Path Rule
 
@@ -202,6 +205,7 @@ Return:
 - Do not write large implementation narratives into `.llm-wiki`.
 - Do not update unrelated modules or sources.
 - Do not update dashboard without evidence links.
+- Do not update dashboard status before updating the matching Flow Record status.
 - Do not mark Flow Record `testing` or `archive` done without verification or handoff evidence.
 - Do not leave dashboard or artifact registry links pointing at old handoff paths after moving a handoff.
 - Do not rewrite dashboard layout when a small `dashboardData` or marked-section update is enough.

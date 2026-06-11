@@ -91,8 +91,8 @@ Workflow:
 8. Check scope drift against active/read-only/candidate/excluded scopes.
 9. Check wiki drift.
 10. Check artifact drift.
-11. Check dashboard drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, trust level, and language consistency.
-12. Check Flow Record drift.
+11. Check dashboard drift as projection drift: existence, evidence support, Flow Record cards, risk visibility, verification claims, trust level, and language consistency. Dashboard must not be treated as status authority.
+12. Check Flow Record drift against current user decision, code, tests, verification output, and artifact registry evidence.
 13. Check Session Digest integrity when historical session context affected the work.
 14. Check external bridge consistency.
 15. Check project root and wiki placement when init/recovery occurred.
@@ -155,6 +155,8 @@ Flow Record drift checklist:
 ```text
 - dashboard card has no matching Flow Record
 - dashboard card step/status differs from Flow Record
+- dashboard, handoff, or log claims stronger progress than Flow Record supports
+- Flow Record appears stale compared with current code, tests, verification output, or user decision
 - Flow Record `done` step has no evidence
 - `development` done but no changed files or implementation evidence
 - `testing` done but no verification evidence or accepted limitation
@@ -249,6 +251,7 @@ Project skill improvement output when a project workflow failed:
 - Do not ignore test integrity when production code and tests/mocks/fixtures/expected values changed together.
 - Do not run evaluator or Dolores for every ordinary review.
 - Do not treat dashboard as a source of truth.
+- Do not treat handoff or log text as lifecycle status authority when Flow Record and verification evidence disagree.
 - Do not turn project-review into a general-purpose Dolores or skill-evaluator replacement.
 - Do not rely on unrecorded chat memory as project source of truth; prefer `.llm-wiki/log.md`, working-context, artifacts, Change Briefs, and Bug Briefs.
 

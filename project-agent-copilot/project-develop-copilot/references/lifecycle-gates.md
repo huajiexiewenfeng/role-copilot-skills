@@ -254,12 +254,14 @@ Minimum output:
 
 Rules:
 
-- Flow Record is the lifecycle status source.
-- Artifact registry is the artifact index source.
-- Dashboard is a projection, not an independent fact source.
-- Log is an audit trail, not a status source.
-- Handoff is archive material, not a source that silently rewrites lifecycle status.
+- Flow Record is the lifecycle status authority for a concrete requirement, bug, or working context.
+- Artifact registry is the authority for artifact existence, path, owner, status, and discoverability.
+- Dashboard is a projection generated from Flow Record, artifact registry, verification evidence, and selected log notes.
+- Log is an audit trail, not a lifecycle status authority.
+- Handoff is archive/continuation material, not a source that silently rewrites lifecycle status.
 - Dashboard refresh must rebuild visible cards from Flow Records and artifact evidence, not create status facts.
+- When dashboard or handoff disagrees with Flow Record, repair the projection or flag drift; do not silently change Flow Record to match stale projection.
+- When Flow Record disagrees with current code, tests, verification evidence, or user decision, route through finish or review before changing done/verified status.
 
 ### Review & Wiki Integrity Gate
 

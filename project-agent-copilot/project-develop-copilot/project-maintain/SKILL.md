@@ -83,7 +83,7 @@ Workflow:
 2. Build a small inventory of lifecycle pages and indexes.
 3. Extract visible lifecycle identifiers: `flow_id`, `parent_flow_id`, requirement IDs, bug IDs, artifact IDs, module names, and handoff paths.
 4. Check the visibility chain for every target flow.
-5. Check Flow Record rows against artifact registry and dashboard projection.
+5. Check Flow Record rows against artifact registry and dashboard projection using the authority order: current user/code/verification evidence -> Flow Record -> artifact registry -> log -> dashboard/handoff projection.
 6. Check dashboard visible cards, `dashboardData.flowRecords`, flow summaries, and lane counts for agreement.
 7. Check module entry points for active or recently changed module-related flows.
 8. Check broken relative links and stale references.
@@ -132,6 +132,8 @@ Allowed narrow repairs:
 - Fix broken wiki-relative links when the target is unambiguous.
 - Add missing dashboard Flow Record cards only when evidence exists in Change Brief, Bug Brief, working-context, or handoff pages.
 - Downgrade unsupported dashboard claims to evidence-backed status.
+- Rebuild dashboard projection from Flow Record plus artifact registry evidence when dashboard drift is the only issue.
+- Repair artifact registry path/status rows when current files prove the registry is stale.
 
 Disallowed repairs:
 
@@ -139,6 +141,7 @@ Disallowed repairs:
 - Do not change requirement scope, acceptance criteria, or business decisions without routing to `project-develop`.
 - Do not change bug diagnosis or fix strategy without routing to `project-fix`.
 - Do not mark testing, archive, or release done without verification or accepted limitation through `project-finish`.
+- Do not change Flow Record lifecycle status merely to match dashboard, handoff, or log text.
 - Do not promote candidate source material into an active requirement automatically.
 - Do not rewrite large groups of wiki pages without explicit confirmation.
 - Do not remove sensitive-looking content unless the user approves the exact redaction or replacement.
@@ -227,12 +230,14 @@ Recommended routes:
 - Do not copy secrets, tokens, private keys, passwords, or long original source material into wiki maintenance reports.
 - Keep repairs small and explain what was intentionally left unchanged.
 - Treat dashboard as an evidence-backed projection, not the source of truth.
+- Treat handoff and log as archive/audit material, not lifecycle status authority.
 
 ## Common Mistakes
 
 - Treating "file exists" as enough when the file is not discoverable from artifact, module, dashboard, or log entry points.
-- Updating the dashboard but forgetting the artifact registry or module README.
+- Updating the dashboard but forgetting the Flow Record, artifact registry, or module README.
 - Marking a Flow Record lane done because a card exists, without verification evidence.
+- Rewriting Flow Record status to match a stale dashboard card.
 - Repairing business meaning during a structural maintenance pass.
 - Running a full wiki rewrite when one backlink or log entry would solve the visibility problem.
 - Applying Obsidian vault assumptions directly to a project `.llm-wiki`; this skill only uses LLM Wiki maintenance ideas as reference.

@@ -131,6 +131,31 @@ Artifact registry:
 .llm-wiki/artifacts/index.md
 ```
 
+## State Authority Model
+
+Flow Record is the lifecycle status authority for a concrete piece of work.
+
+Use this authority order when lifecycle status conflicts:
+
+1. Current user/project owner decision.
+2. Current source code, tests, and verification output.
+3. Flow Record inside Change Brief, Bug Brief, or working-context page.
+4. Artifact registry for artifact existence, ownership, and discoverability.
+5. `.llm-wiki/log.md` for audit trail and chronological notes.
+6. Dashboard and handoff pages as projections or summaries.
+7. Session Digest recall context only after explicit lifecycle promotion.
+
+Rules:
+
+- Update Flow Record first when changing lifecycle status.
+- Update artifact registry when artifact existence, path, owner, or discoverability changes.
+- Rebuild or refresh dashboard from Flow Record plus artifact registry evidence.
+- Write log entries as audit notes, not as the status authority.
+- Write handoff pages as archive/continuation summaries, not as the status authority.
+- If dashboard or handoff disagrees with Flow Record, repair the projection or record the conflict; do not silently rewrite Flow Record to match a stale projection.
+- If artifact registry disagrees with the filesystem, current files and explicit user decisions win; repair the registry.
+- If Flow Record disagrees with current verification evidence, route through `project-finish` or `project-review` before changing done/verified status.
+
 ## Minimal Shape
 
 Inside a Change Brief or Bug Brief:
