@@ -118,6 +118,7 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
 
 事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
+
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
@@ -133,13 +134,14 @@ Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`p
   bugs/
   working-context/
   modules/
-    index.md
-    <scope>/
-      index.md
-      architecture.md
-      rules.md
-      development.md
-      open-questions.md
+  artifacts/
+  cross-refs/
+  project-graph/
+  dashboard/
+  handoff/
+  session-digests/
+  migration/
+  registry.local.json   (gitignored, local paths only)
 ```
 
 这个 wiki 是 LLM Wiki 思想在项目开发中的内化子集：它是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
@@ -147,6 +149,23 @@ Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`p
 `modules/<scope>/` 保存单个模块、微服务或业务域的长期上下文。`working-context/<change-id>.md` 保存一次需求、Bug 或跨模块变更的任务上下文，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个工作闭环里。
 
 旧版 `docs/ai-coding/` 目录视为迁移来源。新的项目上下文应写入 `.llm-wiki`。
+
+## 术语表
+
+| 术语 | 一句话说明 | 主要文件 | 近似概念 |
+|---|---|---|---|
+| Change Brief / Bug Brief | 由 agent 维护的需求或 bug 生命周期页面。 | `requirements/`、`bugs/`、`references/change-brief.md`、`references/bug-brief.md` | mini-RFC / bug report |
+| Flow Record | 一个交付项的证据化生命周期状态行。 | `references/flow-record.md` | 生命周期状态 + 证据索引 |
+| Session Digest | 历史会话上下文的确认摘要；默认只作召回上下文。 | `session-digests/`、`references/session-digest.md` | 会话纪要 |
+| Scoped Working Context | 复杂或跨模块工作中的 active/read-only/candidate/excluded 上下文。 | `working-context/`、`references/scoped-working-context.md` | monorepo sparse context |
+| Lifecycle Gate | 生命周期关键动作前的轻量准入检查。 | `references/lifecycle-gates.md` | readiness checklist |
+| Project Graph edge | 跨项目关系事实，可以是 draft 或已验证。 | `project-graph/edges.md`、`references/project-graph.md` | service dependency edge |
+| candidate | 尚未验证成事实的疑似跨项目关系。 | `project-graph/candidates.md` | discovery finding |
+| pin | 团队导航书签，只引用 `edge_id`，不存事实。 | `cross-refs/index.md` | curated link |
+| fingerprint | 用于关系去重的稳定键。 | `references/project-graph.md` | relationship identity key |
+| verification_status / derived staleness | edge 的验证级别；是否过期由 `last_verified` 派生。 | `project-graph/edges.md`、`references/cross-project-refs.md` | contract confidence / freshness |
+| registry.local.json | 本机项目路径映射文件，必须 gitignore。 | `.llm-wiki/registry.local.json` | local workspace mapping |
+| cross-project boundary check | 在 Context Recovery / External Bridge 规则下执行的只读远程证据检查。 | `references/cross-project-refs.md` | remote evidence access guard |
 
 ## 安全边界
 

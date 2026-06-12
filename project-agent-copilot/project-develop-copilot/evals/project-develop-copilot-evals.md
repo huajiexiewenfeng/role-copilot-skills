@@ -324,7 +324,7 @@ Required behavior:
 
 - Reads `.llm-wiki/cross-refs/index.md` as pin layer, then follows `edge_id` into `.llm-wiki/project-graph/edges.md`.
 - If registry mapping is missing and remote evidence is needed, asks for the local path.
-- Outputs Cross-Project Boundary Gate before reading remote wiki.
+- Outputs a cross-project boundary check before reading remote wiki.
 - Keeps remote scope `read-only`.
 - Returns Project Graph edge evidence in the Project Context Pack.
 - States whether source verification was performed.
@@ -439,7 +439,7 @@ Required behavior:
 
 - Creates or resumes a Change Brief.
 - Checks Project Graph pin -> edge -> candidate for the payment-service contract.
-- Outputs Cross-Project Boundary Gate with `verification_required: source`.
+- Outputs a cross-project boundary check with `verification_required: source`.
 - Records remote evidence in `## External Dependencies`.
 - Does not treat `wiki-checked` evidence as sufficient for implementation decisions.
 
@@ -475,7 +475,7 @@ Required behavior:
 
 - Creates or resumes a Bug Brief.
 - Checks Project Graph pin -> edge -> candidate.
-- Outputs Cross-Project Boundary Gate with `verification_required: source` when the fix depends on remote payload shape.
+- Outputs a cross-project boundary check with `verification_required: source` when the fix depends on remote payload shape.
 - Records findings in current Bug Brief `## External Findings`.
 - Keeps remote wiki and source read-only.
 

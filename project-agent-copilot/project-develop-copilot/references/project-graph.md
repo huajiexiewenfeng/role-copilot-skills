@@ -2,7 +2,7 @@
 
 Project Graph is the fact model for cross-project relationships in a project-local `.llm-wiki`.
 
-Use it with `cross-project-refs.md`. This file owns schema, fingerprints, canonical direction, manual registration, candidate promotion, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary, Boundary Gate, and the stale threshold.
+Use it with `cross-project-refs.md`. This file owns schema, fingerprints, canonical direction, manual registration, candidate promotion, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary checks, and the stale threshold.
 
 ## Files
 
@@ -100,7 +100,7 @@ The direction has meaning. Do not reverse `from_project` and `to_project` just t
 
 Only `source-verified` and fresh edges can drive `project-fix` or `project-develop` decisions. `wiki-checked`, `draft`, and candidates are clues only.
 
-Manual registration defaults to `draft`. Do not accept a user-supplied `verification_status` or `last_verified` as fact. To write `wiki-checked` or `source-verified`, run the Cross-Project Boundary Gate and verify the matching evidence in the current session. Set `last_verified` from the verification date.
+Manual registration defaults to `draft`. Do not accept a user-supplied `verification_status` or `last_verified` as fact. To write `wiki-checked` or `source-verified`, run the cross-project boundary check and verify the matching evidence in the current session. Set `last_verified` from the verification date.
 
 ## `candidates.md`
 
@@ -189,7 +189,7 @@ Process:
 3. Create or update `project-graph/edges.md` with `source: manual` and `verification_status: draft` by default.
 4. If the user asks to pin, write `cross-refs/index.md` with only `edge_id` and navigation fields.
 5. Do not write remote projects.
-6. To set `wiki-checked` or `source-verified`, run the Cross-Project Boundary Gate and verify evidence in-session.
+6. To set `wiki-checked` or `source-verified`, run the cross-project boundary check and verify evidence in-session.
 
 ## Candidate Promotion
 

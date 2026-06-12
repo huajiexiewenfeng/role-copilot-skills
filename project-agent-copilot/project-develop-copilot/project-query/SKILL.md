@@ -116,7 +116,7 @@ Workflow:
    - If no edge matches, search `.llm-wiki/project-graph/candidates.md` and label the result `candidate only`.
    - If remote evidence is needed, resolve the remote project through registry order from `cross-project-refs.md`: preferred `.llm-wiki/registry.local.json`, legacy `.llm-wiki/cross-refs/registry.local.json`, then optional global fallback.
    - If no registry mapping exists, ask for the local path and write only `.llm-wiki/registry.local.json` after user confirmation. Ensure `.gitignore` contains the three local-only ignore lines when writing the registry.
-   - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
+   - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
    - Use `verification_required: wiki-only-allowed` for ownership or clue-finding answers; state when source verification was not performed.
    - Do not write Change Brief, Bug Brief, Flow Record, dashboard, edges, candidates, pins, or remote project files during ordinary query.
    - If the user wants to register a missing relation after query, hand off to `project-maintain` graph maintenance after confirmation.

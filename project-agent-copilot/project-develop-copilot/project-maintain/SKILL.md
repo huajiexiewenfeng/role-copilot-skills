@@ -157,7 +157,7 @@ Process:
 4. Write or update `.llm-wiki/project-graph/edges.md` with `source: manual`.
 5. Default manual registration to `verification_status: draft`.
 6. Do not accept user-supplied `verification_status` or `last_verified` as fact.
-7. To write `wiki-checked` or `source-verified`, first run Cross-Project Boundary Gate and verify the matching evidence in this session. Set `last_verified` from the verification date.
+7. To write `wiki-checked` or `source-verified`, first perform the cross-project boundary check and verify the matching evidence in this session. Set `last_verified` from the verification date.
 8. If the user asks to pin the edge, write `.llm-wiki/cross-refs/index.md` with only `id`, `edge_id`, `local_entry`, `why_pinned`, and `owner_note`.
 9. If registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
 10. Do not write any external project file.

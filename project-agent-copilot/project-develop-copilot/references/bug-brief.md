@@ -126,7 +126,7 @@ YYYY-MM-DD-short-symptom
 | `done` | Finish sync and review readiness are complete or explicitly accepted. |
 | `blocked` | Progress requires user input, missing access, missing environment, or accepted limitation. |
 
-## Bug Evidence Gate
+## Work Definition Gate
 
 Before broad diagnosis or code edits, record:
 
@@ -174,7 +174,7 @@ Systematic debugging and similar skills are bridges. They receive Context Handof
 They must not:
 
 - choose project scope from scratch
-- bypass Bug Evidence Gate
+- bypass Work Definition Gate
 - edit outside active scope without escalation
 - declare the bug fixed without Verification Gate
 

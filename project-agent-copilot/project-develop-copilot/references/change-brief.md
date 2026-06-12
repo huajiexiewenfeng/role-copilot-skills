@@ -60,7 +60,7 @@ The agent must infer and maintain the Change Brief, then ask only for key confir
 
 ## Change ID
 
-`project-develop` generates or reuses `change-id` during Clarification Gate.
+`project-develop` generates or reuses `change-id` during Work Definition Gate.
 
 This `change-id` is also the default `flow_id`. Follow `flow-record.md` matching rules before creating a new id.
 
@@ -219,7 +219,7 @@ Keep plan linkage minimal:
 ```text
 No Change Brief:
   create draft
-  run Clarification Gate
+  run Work Definition Gate
 
 Brief exists but scope or acceptance is missing:
   ask the smallest necessary question
@@ -248,9 +248,9 @@ Change Brief does not replace Superpowers brainstorming.
 Use this order:
 
 ```text
-Context Enrichment Gate
+Context Recovery Gate
 -> Change Brief lookup/create
--> Clarification Gate
+-> Work Definition Gate
 -> brainstorming when requirement, scope, acceptance, or tradeoffs need discussion
 -> update Change Brief
 -> plan or execute

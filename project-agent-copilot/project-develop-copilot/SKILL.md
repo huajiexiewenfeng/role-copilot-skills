@@ -45,7 +45,6 @@ The router owns lifecycle coherence across gates:
 
 - Lightweight Boundary
 - Context Recovery Gate
-- Cross-Project Boundary Gate when cross-service evidence requires another project wiki
 - Lifecycle Anchor Gate
 - External Bridge Gate
 - Session Import Gate
@@ -53,6 +52,8 @@ The router owns lifecycle coherence across gates:
 - Review & Wiki Integrity Gate when the user reports missing, stale, hard-to-find, inconsistent `.llm-wiki` state or lifecycle-quality risk
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
+
+Cross-project evidence is handled as a Context Recovery / External Bridge sub-check, not as a separate lifecycle Gate. Remote wiki/source access must stay read-only and must return through the current lifecycle session.
 
 ## Required First Check
 

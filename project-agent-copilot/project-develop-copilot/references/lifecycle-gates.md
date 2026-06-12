@@ -19,7 +19,6 @@ A gate is not a ceremonial heading. It is a rule for what must be known, recorde
 |---|---|---|---|---|
 | Lightweight Boundary | Lightweight Answer Boundary | any project-related response | lightweight vs read-only vs full lifecycle decision | router |
 | Context Recovery Gate | Context Discovery, Context Enrichment | any full lifecycle, project query, init, ingest, maintenance, review, or scoped work | project root, wiki status, active sources, relevant pages, active/read-only/candidate/excluded scope | router, `project-init`, `project-query`, `project-ingest`, `project-develop`, `project-fix`, `project-maintain`, `project-review` |
-| Cross-Project Boundary Gate | Cross-project refs, remote wiki boundary, remote contract verification | before reading another project's `.llm-wiki` or source through `.llm-wiki/cross-refs` | remote project, resolved path, reason, read-only scope, anchors to read, verification requirement | `project-query`, `project-develop`, `project-fix`, `project-maintain` |
 | Lifecycle Anchor Gate | Lifecycle Session, Routing Record, Documentation Anchor | feature, bug, finish, review, handoff, or executable lifecycle work | Change Brief, Bug Brief, working-context, routing record, or explicit no-anchor reason | router, `project-develop`, `project-fix` |
 | Work Definition Gate | Clarification, Bug Evidence | requirement planning, implementation planning, bug diagnosis, or fix | requirement goal/acceptance/non-goals or bug symptom/evidence/reproduction/severity | `project-develop`, `project-fix` |
 | Scope Lock Gate | Context Lock | executing a plan or editing code | locked scope, accepted assumptions, escalation rule | `project-develop`, `project-fix` |
@@ -72,10 +71,11 @@ Rules:
 - If project root is unknown and cannot be inferred, ask one minimal question.
 - Do not deep-read every document or module by default.
 - In degraded mode without shared references, recover only the evidence needed for the current action and report the limitation.
+- Cross-project evidence gathering is a Context Recovery sub-check. When a decision depends on a remote contract, pair it with the External Bridge Gate return-handoff rules.
 
-### Cross-Project Boundary Gate
+### Cross-Project Boundary Check
 
-Use this gate when a bug, requirement, query, or manual registration crosses another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another Project Graph edge/candidate/pin.
+Use this Context Recovery / External Bridge sub-check when a bug, requirement, query, or manual registration crosses another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another Project Graph edge/candidate/pin.
 
 Minimum output before reading the remote project:
 
@@ -90,7 +90,7 @@ Minimum output before reading the remote project:
 
 Rules:
 
-- Read `references/cross-project-refs.md` and `references/project-graph.md` before using this gate when available.
+- Read `references/cross-project-refs.md` and `references/project-graph.md` before using this check when available.
 - `remote_project` must be a logical project id from a Project Graph edge/candidate or registry prompt, not a local path.
 - Resolve local paths from `.llm-wiki/registry.local.json`, then legacy `.llm-wiki/cross-refs/registry.local.json`, then optional `~/.llm-wiki/registry.json`.
 - Ask the user for the local path when no registry mapping exists; write only the current project's preferred `.llm-wiki/registry.local.json` after confirmation.
@@ -99,7 +99,7 @@ Rules:
 - Default reads are limited to the `remote_anchor`, one-hop links from that page, and exact source/config anchors named by that page.
 - `project-fix` and `project-develop` must use `verification_required: source` when a fix or implementation decision depends on the remote contract.
 - `project-query` may use `verification_required: wiki-only-allowed` for ownership or clue-finding answers, but must state that source verification was not performed.
-- Manual Project Graph registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this gate and matching evidence in the current session.
+- Manual Project Graph registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this check and matching evidence in the current session.
 - Do not persist `stale` as `verification_status`; derive staleness from `last_verified` using the threshold in `cross-project-refs.md`.
 - External findings belong in the current project's Bug Brief or Change Brief. Do not write to the remote project unless the user starts a separate lifecycle session there.
 

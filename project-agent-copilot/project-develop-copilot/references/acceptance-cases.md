@@ -39,7 +39,7 @@ Expected:
 - top-level router selects full lifecycle and primary stage `project-fix`
 - creates or resumes a Bug Brief
 - saves routing record
-- runs Context Enrichment Gate and Bug Evidence Gate
+- runs Context Recovery Gate and Work Definition Gate
 - marks payment-service active and order-service candidate or read-only until escalation is justified
 - invokes systematic-debugging only as a scoped bridge when useful
 - external debugging returns through Return Handoff
@@ -64,9 +64,9 @@ Expected:
 - router selects primary stage `project-develop`
 - creates or resumes Change Brief
 - records routing decision
-- runs Context Enrichment Gate
+- runs Context Recovery Gate
 - records active/read-only/candidate/excluded scopes
-- runs Clarification Gate before planning
+- runs Work Definition Gate before planning
 - locks context before execution
 - asks before expanding scope or changing acceptance criteria
 
@@ -200,7 +200,7 @@ Failure signals:
 Prompt:
 
 ```text
-Review 发现 project-fix 跳过了 Bug Evidence Gate。评估一下这个 skill 需要怎么改，但先不要直接改。
+Review 发现 project-fix 跳过了 Work Definition Gate。评估一下这个 skill 需要怎么改，但先不要直接改。
 ```
 
 Expected:
@@ -420,7 +420,7 @@ Expected:
 - router selects `project-query`
 - query checks pin -> edge -> candidate in that order
 - pin is treated as navigation only; facts come from `project-graph/edges.md`
-- remote reads require Cross-Project Boundary Gate with `scope: read-only`
+- remote reads require a cross-project boundary check with `scope: read-only`
 - registry mapping is written only to `.llm-wiki/registry.local.json` after user confirmation
 - remote project receives zero writes
 
@@ -470,7 +470,7 @@ Expected:
 - requirement work routes to `project-develop`
 - bug work routes to `project-fix`
 - both check Project Graph pin -> edge -> candidate
-- both output Cross-Project Boundary Gate with `verification_required: source` when decisions depend on remote contracts
+- both output a cross-project boundary check with `verification_required: source` when decisions depend on remote contracts
 - Change Brief uses `## External Dependencies` with `edge_id`
 - Bug Brief uses `## External Findings` with `edge_id`
 - candidate-only or wiki-checked evidence is a clue/risk, not a decision basis

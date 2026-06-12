@@ -2,7 +2,7 @@
 
 Cross-Project Refs define how a project-local `.llm-wiki` safely resolves another local project's wiki/source for evidence.
 
-Schema for edges, candidates, pins, fingerprints, manual registration, and candidate promotion lives in `project-graph.md`. This file owns registry resolution, the read-only boundary, the Cross-Project Boundary Gate, and staleness threshold.
+Schema for edges, candidates, pins, fingerprints, manual registration, and candidate promotion lives in `project-graph.md`. This file owns registry resolution, the read-only boundary check, and staleness threshold.
 
 ## Principles
 
@@ -105,7 +105,7 @@ Derived staleness:
 
 Do not write `stale` into `verification_status`. Reports and Briefs may include `derived_staleness: fresh | expired | unknown`.
 
-## Cross-Project Boundary Gate
+## Cross-Project Boundary Check
 
 Before reading another project's wiki or source interactively, output:
 
@@ -122,10 +122,10 @@ Selection rules:
 
 - `project-query` may use `wiki-only-allowed` for ownership and clue-finding answers, but must label evidence as wiki-only.
 - `project-fix` and `project-develop` must use `source` when a fix or implementation decision depends on a remote contract.
-- Manual edge registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this gate and matching evidence in the current session.
+- Manual edge registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this boundary check and matching evidence in the current session.
 - If no registry mapping exists, ask the user for the local path and write only the current project's preferred registry after confirmation.
 
-Batch graph scanning does not emit one gate per project. Its `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
+Batch graph scanning does not emit one boundary check per project. Its `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
 
 ## Remote Read Scope
 

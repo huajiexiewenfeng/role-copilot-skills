@@ -58,7 +58,7 @@ Install integrity check:
 test -d ~/.codex/skills/project-develop/references || test -d ~/.agents/skills/project-develop/references
 ```
 
-Every child stage skill expects the shared `references/` directory next to its skill folder. If a child skill is installed directly without `references/`, lifecycle work must stop until the top-level package is installed or the shared `references/` directory is restored.
+Child stage skills can use the shared `references/` directory when it is installed next to the skill folder. If a child skill is installed directly without `references/`, it must continue in degraded mode using the minimum rules embedded in that child skill and report the missing deep references.
 
 ## Lifecycle
 
@@ -116,6 +116,7 @@ The expected response is a Project Context Pack:
 Project Graph is a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md`; `project-query` uses pin -> edge -> candidate lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` registers manual edges and audits stale verification, malformed anchors, registry conflicts, and pin/edge drift.
 
 Facts live only in `project-graph/edges.md`. `cross-refs/index.md` is a pin layer that references `edge_id`; local paths live in ignored registry files. Remote project wiki and source are read-only by default.
+
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:
@@ -131,6 +132,14 @@ The shared project context layer is `.llm-wiki`:
   bugs/
   working-context/
   modules/
+  artifacts/
+  cross-refs/
+  project-graph/
+  dashboard/
+  handoff/
+  session-digests/
+  migration/
+  registry.local.json   (gitignored, local paths only)
 ```
 
 The wiki is the internalized project subset of the LLM Wiki idea: an index and summary layer, not a replacement for source files, PRDs, issues, design docs, tests, or code. It records where important material is, what it means, which module or requirement it relates to, and what gaps remain.
@@ -138,6 +147,23 @@ The wiki is the internalized project subset of the LLM Wiki idea: an index and s
 Use `working-context/` only for complex or cross-module work that needs active scopes, read-only scopes, excluded scopes, contracts, escalation, and verification to stay together.
 
 Legacy `docs/ai-coding/` directories are migration sources. New project context should be written to `.llm-wiki`.
+
+## Glossary
+
+| Term | Short meaning | Main file | Similar concept |
+|---|---|---|---|
+| Change Brief / Bug Brief | Requirement or bug lifecycle page maintained by the agent. | `requirements/`, `bugs/`, `references/change-brief.md`, `references/bug-brief.md` | mini-RFC / bug report |
+| Flow Record | Evidence-backed lifecycle status rows for one deliverable. | `references/flow-record.md` | lifecycle status + evidence index |
+| Session Digest | Confirmed summary of historical chat/session context; recall context by default. | `session-digests/`, `references/session-digest.md` | conversation digest |
+| Scoped Working Context | Active/read-only/candidate/excluded context for complex or cross-module work. | `working-context/`, `references/scoped-working-context.md` | monorepo sparse context |
+| Lifecycle Gate | Lightweight checkpoint before a risky lifecycle transition. | `references/lifecycle-gates.md` | readiness checklist |
+| Project Graph edge | Verified or draft cross-project relationship fact. | `project-graph/edges.md`, `references/project-graph.md` | service dependency edge |
+| candidate | Suspected cross-project relationship that is not yet a fact. | `project-graph/candidates.md` | discovery finding |
+| pin | Team navigation bookmark that references an `edge_id`; it stores no facts. | `cross-refs/index.md` | curated link |
+| fingerprint | Stable de-duplication key for graph edges or candidates. | `references/project-graph.md` | relationship identity key |
+| verification_status / derived staleness | Verification level stored on an edge; freshness derived from `last_verified`. | `project-graph/edges.md`, `references/cross-project-refs.md` | contract confidence / freshness |
+| registry.local.json | Local-only project path resolver; must be gitignored. | `.llm-wiki/registry.local.json` | local workspace mapping |
+| cross-project boundary check | Read-only remote evidence check under Context Recovery / External Bridge rules. | `references/cross-project-refs.md` | remote evidence access guard |
 
 ## Safety
 

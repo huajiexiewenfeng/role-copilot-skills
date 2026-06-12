@@ -44,7 +44,7 @@ Use when the user asks to:
 4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
 5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
 6. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and run the Cross-Project Boundary Gate before relying on external contract behavior.
+7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
 8. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
 9. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
@@ -141,7 +141,7 @@ Workflow:
    - If only a candidate matches, it is a clue only; perform source verification before using it for an implementation decision.
    - If no edge or candidate exists, suggest manual registration via `project-maintain` only after the contract evidence is clear enough.
    - If a registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
-   - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
+   - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
    - If implementation depends on the remote contract, use `verification_required: source`.
    - Do not base implementation decisions on `wiki-checked`, `draft`, or candidate-only evidence.
    - Record remote evidence in the Change Brief `## External Dependencies` section with `project_id`, `edge_id`, dependency, verification status, required contract, implementation impact, and handoff.

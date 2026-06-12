@@ -27,7 +27,7 @@ Route to Project Skill Evaluator when the user says things like:
 
 - "评估一下这个 skill 为什么跑偏"
 - "这个 skill 需要怎么改，先不要直接改"
-- "刚刚 project-fix 跳过了 Bug Evidence Gate，分析下原因"
+- "刚刚 project-fix 跳过了 Work Definition Gate，分析下原因"
 - "这个 router 是不是选错了 stage"
 - "这次流程哪里有 eval gap"
 - "把这个失败抽象成一个 failure case"
@@ -77,8 +77,8 @@ Trigger examples:
 - router selected the wrong primary stage
 - lightweight discussion became full lifecycle without user intent
 - full lifecycle did not create Change Brief or Bug Brief
-- Bug Evidence Gate was skipped
-- Clarification Gate was skipped before implementation
+- Work Definition Gate was skipped for bug evidence
+- Work Definition Gate was skipped before implementation
 - external bridge bypassed Context Handoff or Return Handoff
 - scope expanded without escalation
 - finish claimed completion without verification

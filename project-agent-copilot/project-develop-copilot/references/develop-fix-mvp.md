@@ -2,7 +2,7 @@
 
 For new features and bug fixes, project context is read at the start of the flow, before brainstorming, planning, debugging, or implementation.
 
-## Context Enrichment Gate
+## Context Recovery Gate
 
 1. Resolve project root.
 2. Read `.llm-wiki/index.md` if present.
@@ -35,7 +35,7 @@ Do not deep-read everything. Compare discovered files against `.llm-wiki/ingest/
 
 ## project develop Flow
 
-1. Run Context Enrichment Gate.
+1. Run Context Recovery Gate.
 2. Summarize current project facts, active sources, active scopes, assumptions, and gaps.
 3. Bridge to Superpowers-style brainstorming and writing-plans after context summary when available.
 4. Define requirement scope and acceptance criteria.
@@ -100,7 +100,7 @@ Use this for complex or cross-module work:
 ## project fix Flow
 
 1. Capture bug source or ingest it when external.
-2. Run Context Enrichment Gate.
+2. Run Context Recovery Gate.
 3. Summarize symptom, expected behavior, affected scope, evidence, and recent changes.
 4. Reproduce the issue or state why reproduction is not possible.
 5. Bridge to systematic-debugging after scoped evidence is captured when available.
