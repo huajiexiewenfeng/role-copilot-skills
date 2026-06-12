@@ -44,7 +44,7 @@ Use when the user asks to:
 4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
 5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
 6. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check `.llm-wiki/cross-refs/index.md` and run the Cross-Project Boundary Gate before relying on external contract behavior.
+7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and run the Cross-Project Boundary Gate before relying on external contract behavior.
 8. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
 9. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
@@ -103,6 +103,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/change-brief.md`
+- `../references/project-graph.md`
 - `../references/cross-project-refs.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
@@ -135,12 +136,15 @@ Workflow:
 3. Search `.llm-wiki/session-digests/` entries for related recall context. Use promoted digest items as evidence only when promotion is explicitly recorded.
 4. Create or resume Change Brief.
 5. Run Context Recovery Gate before brainstorming, planning, or implementation.
-6. If the requirement crosses service/project boundaries, check `.llm-wiki/cross-refs/index.md`.
-   - If no xref exists, propose a concise xref row and ask for the remote project id and local path before reading remote wiki.
-   - If an xref exists but no registry mapping exists, ask for the local path and write only `.llm-wiki/cross-refs/registry.local.json` after confirmation.
+6. If the requirement crosses service/project boundaries, check Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+   - If a pin matches, follow `edge_id`; do not treat pin fields as contract facts.
+   - If only a candidate matches, it is a clue only; perform source verification before using it for an implementation decision.
+   - If no edge or candidate exists, suggest manual registration via `project-maintain` only after the contract evidence is clear enough.
+   - If a registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
    - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
    - If implementation depends on the remote contract, use `verification_required: source`.
-   - Record remote evidence in the Change Brief `## External Dependencies` section with `verification_status` and derived staleness.
+   - Do not base implementation decisions on `wiki-checked`, `draft`, or candidate-only evidence.
+   - Record remote evidence in the Change Brief `## External Dependencies` section with `project_id`, `edge_id`, dependency, verification status, required contract, implementation impact, and handoff.
 7. Produce a concise context summary.
 8. Run Work Definition Gate before implementation planning.
 9. Guide the user conversationally through requirement discussion.

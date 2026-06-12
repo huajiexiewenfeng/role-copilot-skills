@@ -42,7 +42,7 @@ Use when the user reports or wants to fix:
 3. Create or resume Bug Brief.
 4. Capture or ingest external bug source.
 5. Identify active, read-only, candidate, and excluded scopes.
-6. If the bug involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check `.llm-wiki/cross-refs/index.md` and run the Cross-Project Boundary Gate before relying on external contract behavior.
+6. If the bug involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and run the Cross-Project Boundary Gate before relying on external contract behavior.
 7. Run Work Definition Gate before broad diagnosis or edits.
 
 ## Core Process
@@ -52,6 +52,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/bug-brief.md`
+- `../references/project-graph.md`
 - `../references/cross-project-refs.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
@@ -75,12 +76,15 @@ Workflow:
 4. Mark stale or conflict digest items before relying on them.
 5. Create or update the Bug Brief Flow Record with source evidence.
 6. Run Context Recovery Gate.
-7. If the bug crosses service/project boundaries, check `.llm-wiki/cross-refs/index.md`.
-   - If no xref exists, propose a concise xref row and ask for the remote project id and local path before reading remote wiki.
-   - If an xref exists but no registry mapping exists, ask for the local path and write only `.llm-wiki/cross-refs/registry.local.json` after confirmation.
+7. If the bug crosses service/project boundaries, check Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+   - If a pin matches, follow `edge_id`; do not treat pin fields as contract facts.
+   - If only a candidate matches, it is a clue only; perform source verification before using it for a fix decision.
+   - If no edge or candidate exists, suggest manual registration via `project-maintain` only after the fix evidence is clear enough.
+   - If a registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
    - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
    - If the fix decision depends on the remote contract, use `verification_required: source`.
-   - Record remote evidence in the Bug Brief `## External Findings` section with `verification_status` and derived staleness.
+   - Do not base edits on `wiki-checked`, `draft`, or candidate-only evidence.
+   - Record remote evidence in the Bug Brief `## External Findings` section with `project_id`, `edge_id`, evidence, verification status, conclusion, impact, and suggested handoff.
 8. Reproduce the issue or state why reproduction is not currently possible.
 9. Bridge to systematic-debugging only after evidence and scoped context are captured.
 10. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.

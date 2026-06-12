@@ -75,7 +75,7 @@ YYYY-MM-DD-short-symptom
 ## External Findings
 
 - project-id:
-- xref-id:
+- edge_id:
 - evidence:
 - verification_status:
 - derived_staleness:
@@ -148,13 +148,15 @@ Use `## External Findings` when a bug may cross into another project through Fei
 
 Rules:
 
-- Start from `.llm-wiki/cross-refs/index.md` when a cross-project integration point may be involved.
-- Use logical `project-id` and `xref-id`; do not persist local paths.
+- Start from Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+- Use logical `project-id` and `edge_id`; do not persist local paths.
+- `cross-refs/index.md` is pin-only; follow `edge_id` into `project-graph/edges.md` for facts.
 - Store evidence from the remote project as wiki-relative or source-relative anchors, not copied remote content.
 - `verification_status` must be one of `draft`, `wiki-checked`, `source-verified`, or `blocked`.
 - Do not write `stale` as a status. Use `derived_staleness: fresh | expired | unknown`.
 - If the fix decision depends on the remote contract, require `source-verified` evidence before editing active scope.
 - If only `wiki-checked` evidence exists, record the finding as a clue or risk and do not make fix decisions from it alone.
+- Candidate-only evidence must be verified before use in diagnosis or edits.
 - If the remote project must change, create a context handoff for that project instead of editing it from the current lifecycle session.
 
 ## Scope Rules

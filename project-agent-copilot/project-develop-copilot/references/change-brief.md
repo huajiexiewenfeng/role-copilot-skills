@@ -114,7 +114,7 @@ Use this compact shape:
 ## External Dependencies
 
 - project-id:
-- xref-id:
+- edge_id:
 - dependency_type:
 - required_contract:
 - evidence:
@@ -152,13 +152,15 @@ Use `## External Dependencies` when a requirement depends on another project thr
 
 Rules:
 
-- Start from `.llm-wiki/cross-refs/index.md` when a cross-project integration point may be involved.
-- Use logical `project-id` and `xref-id`; do not persist local paths.
+- Start from Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+- Use logical `project-id` and `edge_id`; do not persist local paths.
+- `cross-refs/index.md` is pin-only; follow `edge_id` into `project-graph/edges.md` for facts.
 - Store evidence from the remote project as wiki-relative or source-relative anchors, not copied remote content.
 - `verification_status` must be one of `draft`, `wiki-checked`, `source-verified`, or `blocked`.
 - Do not write `stale` as a status. Use `derived_staleness: fresh | expired | unknown`.
 - If implementation depends on the remote contract, require `source-verified` evidence before treating the dependency as ready.
 - If only `wiki-checked` evidence exists, keep the dependency as a planning risk and do not make implementation decisions from it alone.
+- Candidate-only evidence must be verified before implementation planning depends on it.
 - If the remote project must change, create a context handoff for that project instead of editing it from the current lifecycle session.
 
 ## Flow Record Rules
