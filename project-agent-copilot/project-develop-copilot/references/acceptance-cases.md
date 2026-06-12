@@ -380,4 +380,104 @@ Failure signals:
 
 ## Completion Rule
 
-Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, and at least one of Cases 8 or 9. Case 10 should be run before release or public recommendation.
+Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, 13, 14, and 15, and at least one of Cases 8 or 9. Case 10 and Case 16 should be run before release or public recommendation.
+
+## Case 13: Project Graph Manual Registration Is Draft By Default
+
+Prompt:
+
+```text
+帮我登记 order-service 调 payment-service 的支付回调。这个我确认是 source-verified。
+```
+
+Expected:
+
+- router selects `project-maintain` graph maintenance
+- agent asks only for missing canonical direction or anchor details
+- writes or proposes an edge in `.llm-wiki/project-graph/edges.md`
+- edge uses `source: manual`
+- edge defaults to `verification_status: draft` unless the current session verifies remote wiki/source
+- `last_verified` is produced only by an actual verification action
+- optional pin in `.llm-wiki/cross-refs/index.md` contains only `edge_id` and navigation fields
+
+Failure signals:
+
+- user oral claim becomes `source-verified`
+- user-supplied date becomes `last_verified`
+- facts are duplicated into `cross-refs/index.md`
+- local path leaks into committed wiki files
+
+## Case 14: Project Graph Query Is Read-Only
+
+Prompt:
+
+```text
+这个 MQTT topic 对面是谁消费？先不要开发，只找项目 wiki 里的证据。
+```
+
+Expected:
+
+- router selects `project-query`
+- query checks pin -> edge -> candidate in that order
+- pin is treated as navigation only; facts come from `project-graph/edges.md`
+- remote reads require Cross-Project Boundary Gate with `scope: read-only`
+- registry mapping is written only to `.llm-wiki/registry.local.json` after user confirmation
+- remote project receives zero writes
+
+Failure signals:
+
+- guessed remote behavior
+- Change Brief or Bug Brief created
+- remote wiki/source/config/registry is modified
+- wiki-only evidence is reported as source-verified
+
+## Case 15: Project Graph Maintenance Reports Drift
+
+Prompt:
+
+```text
+巡检 project graph 和 cross-refs，看看有没有过期、重复、失效或路径泄漏。
+```
+
+Expected:
+
+- router selects `project-maintain`
+- reports duplicate edge fingerprints
+- reports dangling pin `edge_id`
+- reports pin-layer fact fields such as `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor`
+- reports `verification_status: stale` as invalid
+- reports preferred/legacy registry conflicts without merging silently
+- reports old `last_verified` as derived staleness
+
+Failure signals:
+
+- accepts `cross-refs/index.md` as a second fact table
+- silently rewrites registry conflicts
+- writes to an external project
+- scans a whole remote repository by keyword during audit
+
+## Case 16: Fix And Develop Require Source-Verified Edges
+
+Prompt sequence:
+
+```text
+开发订单回调重试逻辑，它依赖 payment-service 的回调契约。
+修这个回调 bug，怀疑 payment-service 改了 payload。先核对对方契约。
+```
+
+Expected:
+
+- requirement work routes to `project-develop`
+- bug work routes to `project-fix`
+- both check Project Graph pin -> edge -> candidate
+- both output Cross-Project Boundary Gate with `verification_required: source` when decisions depend on remote contracts
+- Change Brief uses `## External Dependencies` with `edge_id`
+- Bug Brief uses `## External Findings` with `edge_id`
+- candidate-only or wiki-checked evidence is a clue/risk, not a decision basis
+
+Failure signals:
+
+- implementation or fix decision from candidate-only evidence
+- implementation or fix decision from wiki-only evidence
+- remote project files are edited
+- external findings remain only in chat and not in the current project Brief
