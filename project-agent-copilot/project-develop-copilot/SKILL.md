@@ -26,6 +26,7 @@ Use this skill when the user asks for project development help from natural lang
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
+- Registering, maintaining, or pinning cross-project Project Graph relationships.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -94,6 +95,7 @@ Before doing project work:
 | User asks a tiny file/doc lookup or simple concept explanation | lightweight-answer | none |
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
 | User asks which service owns an interface/topic/client, or asks for cross-service contract evidence without requesting a change | cross-project-lookup | `project-query` |
+| User asks to register, maintain, or pin a cross-project relationship or integration point | wiki-maintenance | `project-maintain` |
 | User says to discuss design and not implement | lightweight-answer | none |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
@@ -121,9 +123,9 @@ Use this quick decision order:
 
 1. No project evidence needed and no write requested -> `lightweight-answer`.
 2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
-   - If the evidence crosses another project through `.llm-wiki/cross-refs`, use `cross-project-lookup` and keep remote scope read-only.
+   - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
-4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
+4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph registration/maintenance, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
 5. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
 6. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 

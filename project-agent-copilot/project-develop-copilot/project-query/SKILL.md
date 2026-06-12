@@ -76,6 +76,7 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-router.md`
 - `../references/lifecycle-gates.md`
+- `../references/project-graph.md`
 - `../references/cross-project-refs.md`
 - `../references/progress-dashboard.md`
 - `../references/flow-record.md`
@@ -84,7 +85,10 @@ Read as needed:
 - `.llm-wiki/ingest/index.md`
 - `.llm-wiki/artifacts/index.md`
 - `.llm-wiki/cross-refs/index.md`
+- `.llm-wiki/project-graph/edges.md`
+- `.llm-wiki/project-graph/candidates.md`
 - `.llm-wiki/cross-refs/registry.local.json`
+- `.llm-wiki/registry.local.json`
 - `.llm-wiki/log.md`
 - `.llm-wiki/session-digests/`
 - relevant `.llm-wiki/requirements/*.md`
@@ -105,12 +109,17 @@ Workflow:
 2. Read `.llm-wiki/index.md` first.
 3. Search lightweight indexes before deep-reading pages.
 4. Read the smallest relevant set of wiki pages.
-5. For cross-service questions, read `.llm-wiki/cross-refs/index.md` before inferring remote ownership or contracts.
-   - If an xref exists, resolve the remote project through local registry only when remote evidence is needed.
-   - If no registry mapping exists, ask for the local path and write `.llm-wiki/cross-refs/registry.local.json` only after user confirmation.
+5. For cross-service questions, use Project Graph lookup before inferring remote ownership or contracts:
+   - Read `.llm-wiki/cross-refs/index.md` as the pin layer.
+   - If a pin matches, follow `edge_id` into `.llm-wiki/project-graph/edges.md`; never treat pin fields as contract facts.
+   - If no pin matches, search `.llm-wiki/project-graph/edges.md`.
+   - If no edge matches, search `.llm-wiki/project-graph/candidates.md` and label the result `candidate only`.
+   - If remote evidence is needed, resolve the remote project through registry order from `cross-project-refs.md`: preferred `.llm-wiki/registry.local.json`, legacy `.llm-wiki/cross-refs/registry.local.json`, then optional global fallback.
+   - If no registry mapping exists, ask for the local path and write only `.llm-wiki/registry.local.json` after user confirmation.
    - Before reading remote wiki or source, output Cross-Project Boundary Gate with `scope: read-only`.
    - Use `verification_required: wiki-only-allowed` for ownership or clue-finding answers; state when source verification was not performed.
-   - Do not write Change Brief, Bug Brief, Flow Record, dashboard, or remote project files during ordinary query.
+   - Do not write Change Brief, Bug Brief, Flow Record, dashboard, edges, candidates, pins, or remote project files during ordinary query.
+   - If the user wants to register a missing relation after query, hand off to `project-maintain` graph maintenance after confirmation.
 6. Fall back to original source files only when wiki summaries are insufficient or stale.
 7. Separate sourced wiki facts from inference.
 8. Return a concise answer and a Project Context Pack.
@@ -161,6 +170,8 @@ Answer format:
 - related_modules:
 - related_session_digests:
 - cross_project_refs:
+- project_graph_edges:
+- project_graph_candidates:
 - open_questions:
 - confidence:
 
@@ -245,8 +256,9 @@ For dashboard refresh:
 
 - Do not modify code.
 - Do not create or update `.llm-wiki` by default.
-- Ordinary cross-project lookup must not modify lifecycle state; writing a user-confirmed `.llm-wiki/cross-refs/registry.local.json` mapping is local resolver configuration and must remain gitignored.
+- Ordinary cross-project lookup must not modify lifecycle state; writing a user-confirmed `.llm-wiki/registry.local.json` mapping is local resolver configuration and must remain gitignored.
 - Do not write remote project wiki, source, config, registry, or reverse cross-refs.
+- Do not create or update `project-graph/edges.md`, `project-graph/candidates.md`, or `cross-refs/index.md` in query mode; route registration to `project-maintain`.
 - In `dashboard-refresh` mode, modify only `.llm-wiki/dashboard/progress.html`, `.llm-wiki/artifacts/index.md` dashboard metadata when needed, and `.llm-wiki/log.md`.
 - In `dashboard-refresh` mode, do not create Change Briefs or mark plan/development/testing/archive done; show unmatched source/design docs as candidate or pending.
 - In `dashboard-refresh` mode, do not repair Flow Record status. Route stale or contradictory Flow Record evidence to `project-finish`, `project-develop`, `project-fix`, or `project-review`.
@@ -262,7 +274,7 @@ For dashboard refresh:
 - Ignoring `.llm-wiki` indexes and jumping straight to raw source files.
 - Letting "real code first" override the query boundary. For project questions like "what exists here" or "how is this API called", use `project-query` first to recover requirement/source/working-context evidence, then inspect code only to verify current behavior.
 - Returning a broad essay instead of a small context pack.
-- Answering cross-service behavior from memory or inference instead of checking `cross-refs/index.md` and clearly labeling wiki-only evidence.
+- Answering cross-service behavior from memory or inference instead of checking pin -> edge -> candidate and clearly labeling wiki-only or candidate-only evidence.
 - Failing to name the wiki pages used.
 - Hiding uncertainty when wiki evidence is stale or missing.
 - Treating dashboard refresh as project finish.

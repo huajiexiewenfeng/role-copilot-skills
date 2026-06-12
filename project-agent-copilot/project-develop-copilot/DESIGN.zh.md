@@ -933,7 +933,7 @@ project init 第一版必须创建或维护：
 .llm-wiki/modules/index.md
 ```
 
-`.llm-wiki/cross-refs/index.md` 是跨项目引用层，只存本项目与外部项目的集成点索引、逻辑 project-id、远端 wiki anchor、契约摘要和验证状态。本机路径只允许放在 gitignore 的 `.llm-wiki/cross-refs/registry.local.json`，不进入团队共享 wiki。
+`.llm-wiki/project-graph/edges.md` 是跨项目关系的唯一事实表，保存逻辑 project-id、锚点、契约摘要、验证状态和验证日期。`.llm-wiki/cross-refs/index.md` 只是 pin 层，只保存团队确认入口和 `edge_id` 引用，不复制契约事实。本机路径只允许放在 gitignore 的 `.llm-wiki/registry.local.json`，兼容读取旧 `.llm-wiki/cross-refs/registry.local.json`，不进入团队共享 wiki。
 
 对于多微服务仓库，`.llm-wiki/modules/index.md` 只登记模块清单和状态：
 
@@ -969,19 +969,20 @@ discovered -> candidate -> active
 
 这和 `docs/ai-coding/<context-scope>/` 的思想一致：上下文必须按作用域隔离，不能把一个 scoped context 自动套用到其他微服务。
 
-## Cross-Project Refs
+## Project Graph And Cross-Project Refs
 
-Cross-Project Refs 是 `.llm-wiki` 内的横切 evidence layer，不是新的子 skill，也不是中央同步服务。它解决的是：当前项目的需求或 bug 需要理解外部服务契约时，agent 如何从当前项目索引安全跳转到另一个本地项目的 `.llm-wiki` 继续取证。
+Project Graph / Cross-Project Refs 是 `.llm-wiki` 内的横切 evidence layer，不是新的子 skill，也不是中央同步服务。它解决的是：当前项目的需求、bug 或查询需要理解外部服务契约时，agent 如何从当前项目的 pin/edge/candidate 安全跳转到另一个本地项目的 `.llm-wiki` 继续取证。
 
 核心约束：
 
-- 当前项目只登记 integration point，不复制外部项目内容。
-- `remote_project` 只写逻辑 project-id，不写本机路径。
-- `remote_anchor` 相对外部项目 wiki 根目录，不写 `.llm-wiki/` 前缀。
-- 本机路径只写入 gitignore 的 `registry.local.json`。
+- `project-graph/edges.md` 是唯一事实表。
+- `cross-refs/index.md` 是 pin 层，只引用 `edge_id`。
+- `project-graph/candidates.md` 是发现层，不能直接驱动修复或开发决策。
+- 本机路径只写入 gitignore 的 `.llm-wiki/registry.local.json`；旧 `.llm-wiki/cross-refs/registry.local.json` 只做兼容读取。
 - 外部项目 wiki 和源码默认 read-only。
 - `verification_status` 只记录 `draft`、`wiki-checked`、`source-verified`、`blocked`，不落盘 `stale`。
 - 过期状态由 `last_verified` 和统一阈值实时派生。
+- 手工登记 edge 默认 `draft`；`wiki-checked` / `source-verified` 必须由当前会话通过 Boundary Gate 完成对应验证。
 
 进入外部项目之前必须经过 Cross-Project Boundary Gate：
 

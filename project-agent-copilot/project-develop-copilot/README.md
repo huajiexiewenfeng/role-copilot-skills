@@ -111,11 +111,11 @@ The expected response is a Project Context Pack:
 
 `project-query` is different from `lightweight-answer`: it actively searches project `.llm-wiki` and assembles evidence. It is also different from full lifecycle work: it stays read-only unless the user explicitly asks to continue into development, fixing, ingest, review, or skill evolution.
 
-## Cross-Project Refs
+## Project Graph And Cross-Project Refs
 
-Cross-project refs are a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `.llm-wiki/cross-refs/index.md` and ignores local `registry.local.json`; `project-query` uses refs for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` audits stale verification, malformed anchors, and registry leakage.
+Project Graph is a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md`; `project-query` uses pin -> edge -> candidate lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` registers manual edges and audits stale verification, malformed anchors, registry conflicts, and pin/edge drift.
 
-Refs store logical project ids and remote wiki anchors only. Local paths live in ignored registry files. Remote project wiki and source are read-only by default.
+Facts live only in `project-graph/edges.md`. `cross-refs/index.md` is a pin layer that references `edge_id`; local paths live in ignored registry files. Remote project wiki and source are read-only by default.
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:

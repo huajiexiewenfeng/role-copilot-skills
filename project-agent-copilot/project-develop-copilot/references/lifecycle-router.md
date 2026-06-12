@@ -37,7 +37,8 @@ Use `full-lifecycle` when the user asks to develop, fix, ingest, finish, review,
 |---|---|---|
 | asks where a single file/doc is | lightweight-answer | Tiny read-only lookup. |
 | asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | `project-query` | Read-only project wiki query; no lifecycle session by default. |
-| asks which service owns an interface/topic/client, or asks for cross-service contract evidence without requesting a change | `project-query` | Cross-project lookup through `.llm-wiki/cross-refs`; remote scope is read-only. |
+| asks which service owns an interface/topic/client, or asks for cross-service contract evidence without requesting a change | `project-query` | Cross-project lookup through Project Graph pins/edges/candidates; remote scope is read-only. |
+| asks to register, maintain, or pin a cross-project relationship or integration point | `project-maintain` | Project Graph maintenance; manual edges default to `draft` unless verified in-session. |
 | asks to explain project design, README, reference, or skill | lightweight-answer | Upgrade only if the user asks to save or edit. |
 | says “先讨论”, “不开发”, “只是设计” | lightweight-answer | Respect discussion boundary. |
 | asks init/adopt/refresh project context | `project-init` | Create or refresh `.llm-wiki`. |
@@ -65,14 +66,14 @@ Use this order before relying on keyword matching:
 
 3. Is the request read-only?
    yes -> project-query
-      if it involves Feign, MQTT, HTTP/RPC, shared DB/config, upstream/downstream ownership, or external contracts -> cross-project lookup through `.llm-wiki/cross-refs`
+      if it involves Feign, MQTT, HTTP/RPC, shared DB/config, upstream/downstream ownership, or external contracts -> cross-project lookup through Project Graph pins/edges/candidates
    no  -> continue
 
 4. Is the requested write limited to refreshing visible dashboard/progress from existing evidence?
    yes -> dashboard-refresh via project-query
    no  -> continue
 
-5. Is the requested write about structure, visibility, broken links, stale indexes, missing cards, artifact registry drift, safety, or consistency?
+5. Is the requested write about structure, visibility, broken links, stale indexes, missing cards, artifact registry drift, Project Graph registration/maintenance, safety, or consistency?
    yes -> project-maintain
    no  -> continue
 

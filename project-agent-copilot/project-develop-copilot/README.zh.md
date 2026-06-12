@@ -113,11 +113,11 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 
 `project-query` 不等同于 `lightweight-answer`：它会主动搜索项目 `.llm-wiki` 并组装证据。它也不等同于完整 lifecycle：除非用户明确要求继续开发、修复、摄入、评审或做 skill 进化，否则它保持只读。
 
-## 跨项目引用层
+## Project Graph 与跨项目引用层
 
-Cross-project refs 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `.llm-wiki/cross-refs/index.md` 并忽略本地 `registry.local.json`；`project-query` 用它回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 巡检过期验证、错误 anchor 和 registry 泄漏。
+Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
 
-cross-refs 只存逻辑 project-id 和远端 wiki anchor，本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
+事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
