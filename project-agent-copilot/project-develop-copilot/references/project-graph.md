@@ -212,7 +212,7 @@ Promotion requirements:
 
 ## Scan Files
 
-Phase 3 only:
+Scanning behavior is Phase 3 only. `project-init` may create the `scan-report.md` placeholder earlier; it stays empty until a scan runs.
 
 - `scan-report.md`: team-readable scan summary; may be committed.
 - `scan-state.local.json`: machine-local incrementality state; must be ignored.
