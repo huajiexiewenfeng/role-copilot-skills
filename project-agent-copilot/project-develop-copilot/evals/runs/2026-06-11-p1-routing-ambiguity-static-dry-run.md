@@ -1,5 +1,9 @@
 # P1 Routing Ambiguity Static Dry Run - 2026-06-11
 
+> Numbering note: eval numbers in this report follow the eval file as of commit `b2a0b31`.
+> After cross-project evals 8-15 were inserted, the referenced evals were renumbered:
+> Eval 11 -> Eval 19, Eval 12 -> Eval 20, Eval 13 -> Eval 21.
+
 ## Scope
 
 This dry run checks whether ambiguous natural-language project requests now route by write intent and evidence need rather than by loose keyword matching.

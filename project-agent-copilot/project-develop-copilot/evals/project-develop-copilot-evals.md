@@ -2,6 +2,11 @@
 
 These evals protect high-risk lifecycle behavior. They are written for manual runs now and can later be converted into automated runner fixtures.
 
+## Numbering Rule
+
+- Eval numbers are append-only. New evals are added at the end; existing evals are never renumbered.
+- Historical run reports under `evals/runs/` reference eval numbers as of their recorded commit and are never rewritten to track renumbering.
+
 ## Eval 1: Lightweight Discussion Must Stay Lightweight
 
 Input prompt:

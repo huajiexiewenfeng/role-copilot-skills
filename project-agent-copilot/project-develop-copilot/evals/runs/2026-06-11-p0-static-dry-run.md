@@ -1,5 +1,9 @@
 # Eval Run Report: 2026-06-11 P0 Static Dry Run
 
+> Numbering note: eval numbers in this report follow the eval file as of commit `373327c`.
+> After cross-project evals 8-15 were inserted, the referenced evals were renumbered:
+> Eval 8 -> Eval 16, Eval 9 -> Eval 17, Eval 10 -> Eval 18.
+
 - Commit before run: `373327c`
 - Runner: Codex
 - Skill install checked: repository files plus local `.codex/skills` sync from previous step
