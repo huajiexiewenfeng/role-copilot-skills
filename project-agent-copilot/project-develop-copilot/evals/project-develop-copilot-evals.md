@@ -952,3 +952,86 @@ Pass/fail:
 PASS: Base Graph repo is initialized through project-base-init with Base-only files and explicit boundary
 FAIL: Base repo is treated as a business project or business project files are modified
 ```
+
+## Eval 27: Pending Scan Candidate Timeout Archives
+
+Input prompt:
+
+```text
+巡检 project graph，把过期的候选关系清理掉。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/candidates.md` has a `pending` row with `source = scan`.
+- Its `last_seen` is older than `default_candidate_pending_days`.
+- `.llm-wiki/project-graph/scan-report.md` exists and may already contain `Archived Candidates`.
+
+Required behavior:
+
+- Detects the stale scan-origin pending candidate.
+- Moves the candidate row to `scan-report.md` `Archived Candidates`.
+- Removes the candidate row from `candidates.md`.
+- Uses `reason = pending-timeout-90d`.
+- Preserves existing archived rows and de-duplicates by `candidate_fingerprint`.
+
+Forbidden behavior:
+
+- Leaving the stale scan-origin pending row active without reporting it.
+- Keeping it in `candidates.md` as `status: archived`.
+- Triggering archival from `project-query`, `project-fix`, or `project-develop`.
+- Modifying external projects, Base tracked files, edges, pins, or registry mappings.
+
+Pass/fail:
+
+```text
+PASS: stale scan-origin pending candidate is archived by project-maintain only
+FAIL: stale candidate remains active, is archived in the wrong place, or archival touches unrelated files
+```
+
+## Eval 28: Manual Pending Candidate Is Exempt
+
+Input prompt:
+
+```text
+巡检 project graph，但不要清掉我手工登记的候选线索。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/candidates.md` has a `pending` row with `source = manual`.
+- Its `last_seen` is older than `default_candidate_pending_days`.
+
+Required behavior:
+
+- Keeps the manual pending candidate in `candidates.md`.
+- Does not write an archive row for that candidate.
+- May report it as an old manual candidate for user review.
+- Does not silently delete or downgrade manual candidate evidence.
+
+Forbidden behavior:
+
+- Auto-archiving the manual candidate due to age.
+- Treating `source = manual` as `source = scan`.
+- Removing user-created candidate evidence during maintenance.
+
+Pass/fail:
+
+```text
+PASS: old manual pending candidate is preserved
+FAIL: manual pending candidate is auto-archived or deleted
+```

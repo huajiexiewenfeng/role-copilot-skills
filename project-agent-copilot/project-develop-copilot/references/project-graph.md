@@ -36,6 +36,11 @@ Ignored local files:
 
 Facts such as `contract_summary`, `verification_status`, and `last_verified` must exist only in `edges.md`.
 
+## Thresholds
+
+- `default_stale_days = 30`: edge verification freshness threshold, defined in `cross-project-refs.md`.
+- `default_candidate_pending_days = 90`: scan-origin candidate aging threshold. This is independent from edge freshness; it cleans old guesses, not verified facts.
+
 ## `edges.md`
 
 ```markdown
@@ -110,11 +115,18 @@ Manual registration defaults to `draft`. Do not accept a user-supplied `verifica
 ```markdown
 # Project Graph Candidates
 
-| candidate_id | candidate_fingerprint | relation | local_anchor | remote_project | remote_anchor | evidence | confidence | status | edge_id | discovered_at | last_seen |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+| candidate_id | candidate_fingerprint | relation | source | local_anchor | remote_project | remote_anchor | evidence | confidence | status | edge_id | discovered_at | last_seen |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 ```
 
 `relation`: `feign-client`, `http-client`, `http-callback`, `mqtt-publish`, `mqtt-subscribe`, `rpc-client`, `db-read`, `db-write`, `config-consume`, `dependency-use`, `dto-similar`, or `other`.
+
+`source`: `scan` or `manual`.
+
+- Scanner findings write `source: scan`.
+- User-confirmed or agent-written candidates from manual graph registration write `source: manual`.
+
+`status`: `pending`, `rejected`, `blocked`, or `promoted`. New candidates that have not been promoted, rejected, or blocked are `pending` by default.
 
 Candidate fingerprint:
 
@@ -151,6 +163,9 @@ Noise rules:
 - `rejected` remains rejected and increments suppressed count in `scan-report.md` unless evidence materially changes.
 - `promoted` is not recreated; check its `edge_id` still exists.
 - `blocked` only updates `last_seen`.
+- `pending` candidates with `source = scan` whose `last_seen` is older than `default_candidate_pending_days` are archived by `project-maintain`: move the row to the `Archived Candidates` section of `scan-report.md`, then remove it from `candidates.md`.
+- `source = manual` candidates are never auto-archived by the pending timeout rule.
+- Candidate archival is a maintenance-only action. It runs only during `project-maintain` audit or `graph-scan` cleanup, never during `project-query`, `project-fix`, or `project-develop`.
 
 ## `cross-refs/index.md`
 
@@ -223,3 +238,19 @@ Scanning is an optional scale feature, not the baseline contract feature. `proje
 Scanner findings must include `relation`; do not output only `type`.
 
 Current project `candidates.md` may contain only relationships where one side is the current project. External-to-external relationships go to `scan-report.md` or a Base-derived view, not current candidates.
+
+`scan-report.md` must preserve an audit section for candidate cleanup:
+
+```markdown
+## Archived Candidates
+
+| candidate_fingerprint | relation | local_anchor | remote_project | remote_anchor | last_seen | archived_on | reason |
+|---|---|---|---|---|---|---|---|
+```
+
+Rules:
+
+- `Archived Candidates` is a retained section. Updating the scan report must not silently delete it.
+- Archive rows are de-duplicated by `candidate_fingerprint`.
+- The timeout reason is `pending-timeout-90d`.
+- If a previously archived relationship is found again by a later scan, write it as a new `pending` row in `candidates.md`; do not resurrect archived state.

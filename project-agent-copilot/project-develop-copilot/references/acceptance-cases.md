@@ -634,3 +634,59 @@ Failure signals:
 - creates precise edge/candidate files in Base
 - scans a business project source tree during Base bootstrap
 - writes into a business project while discovering the first project
+
+### Case 24: Pending Scan Candidate Timeout Archives
+
+Prompt:
+
+```text
+巡检 project graph，把过期的候选关系清理掉。
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/candidates.md` contains a `pending` row with `source = scan`.
+- The row's `last_seen` is older than `default_candidate_pending_days`.
+- `.llm-wiki/project-graph/scan-report.md` exists.
+
+Expected:
+
+- router selects `project-maintain`
+- project-maintain reports the stale pending scan candidate
+- the candidate row is moved to `scan-report.md` `Archived Candidates`
+- the candidate row is removed from `candidates.md`
+- archived row uses `reason = pending-timeout-90d`
+- no edge, pin, registry, Base file, or external project is modified
+
+Failure signals:
+
+- stale scan-origin pending candidate is silently retained
+- candidate remains in `candidates.md` with `status: archived`
+- archival is triggered from query/fix/develop
+- manual candidates are archived by the same rule
+
+### Case 25: Manual Pending Candidate Is Exempt
+
+Prompt:
+
+```text
+巡检 project graph，但不要清掉我手工登记的候选线索。
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/candidates.md` contains a `pending` row with `source = manual`.
+- The row's `last_seen` is older than `default_candidate_pending_days`.
+
+Expected:
+
+- router selects `project-maintain`
+- project-maintain keeps the manual pending candidate in `candidates.md`
+- audit may report it as an old manual candidate, but does not auto-archive it
+- `scan-report.md` `Archived Candidates` is unchanged for that row
+
+Failure signals:
+
+- manual pending candidate is removed or moved to Archived
+- old manual candidate is treated like a scan-origin candidate
+- user-created candidate evidence is silently lost

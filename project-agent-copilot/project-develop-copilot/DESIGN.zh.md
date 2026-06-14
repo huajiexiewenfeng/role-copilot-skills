@@ -988,6 +988,16 @@ Project Graph / Cross-Project Refs 是 `.llm-wiki` 内的横切 evidence layer�
 - 过期状态由 `last_verified` 和统一阈值实时派生。
 - 手工登记 edge 默认 `draft`；`wiki-checked` / `source-verified` 必须由当前会话通过 cross-project boundary check 完成对应验证。
 
+Candidate 清理规则：
+
+- candidate 必须记录 `source`，当前只允许 `scan` 或 `manual`。
+- 新发现且未 promote / reject / block 的 candidate 默认为 `pending`。
+- `pending + source=scan` 的 candidate 以 `last_seen` 为年龄基准；超过 `default_candidate_pending_days = 90` 后，由 `project-maintain` 归档。
+- 归档动作是：从 `project-graph/candidates.md` 删除该行，并追加/保留到 `project-graph/scan-report.md` 的 `Archived Candidates` 区，`reason = pending-timeout-90d`。
+- `source=manual` 的 candidate 永不因 90 天规则自动归档。
+- candidate 归档只在 `project-maintain` audit 或 `graph-scan` 收尾执行；`project-query`、`project-fix`、`project-develop` 不触发归档。
+- `default_candidate_pending_days` 与 edge 验证新鲜度 `default_stale_days` 语义独立：前者清理旧猜测，后者判断已验证事实是否过期。
+
 进入外部项目之前必须经过 cross-project boundary check：
 
 ```markdown

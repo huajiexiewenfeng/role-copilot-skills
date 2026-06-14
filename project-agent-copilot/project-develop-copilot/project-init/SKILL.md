@@ -147,7 +147,7 @@ Minimum starter files:
 - `.llm-wiki/cross-refs/index.md`: cross-project pin layer; stores team-confirmed entry points that reference `project-graph/edges.md` by `edge_id` only.
 - `.llm-wiki/project-graph/edges.md`: unique cross-project relationship fact table.
 - `.llm-wiki/project-graph/candidates.md`: candidate/discovered relationship table; candidates do not drive decisions.
-- `.llm-wiki/project-graph/scan-report.md`: latest graph scan summary placeholder.
+- `.llm-wiki/project-graph/scan-report.md`: graph scan summary placeholder plus retained `Archived Candidates` audit section.
 - `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
 - `.llm-wiki/session-digests/README.md`: recallable Session Digest landing area for historical chat/session summaries.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
@@ -249,12 +249,15 @@ Project Graph candidates minimum:
 ```markdown
 # Project Graph Candidates
 
-| candidate_id | candidate_fingerprint | relation | local_anchor | remote_project | remote_anchor | evidence | confidence | status | edge_id | discovered_at | last_seen |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+| candidate_id | candidate_fingerprint | relation | source | local_anchor | remote_project | remote_anchor | evidence | confidence | status | edge_id | discovered_at | last_seen |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 ## Notes
 
 - Candidates are clues only and must not drive fix or development decisions.
+- `source` is `scan` or `manual`.
+- New candidates default to `status: pending`.
+- `pending` scan-origin candidates older than `default_candidate_pending_days` are archived by `project-maintain`, not by query/fix/develop.
 ```
 
 Project Graph scan report minimum:
@@ -277,6 +280,13 @@ Project Graph scan report minimum:
 ## Notes
 
 -
+
+## Archived Candidates
+
+| candidate_fingerprint | relation | local_anchor | remote_project | remote_anchor | last_seen | archived_on | reason |
+|---|---|---|---|---|---|---|---|
+
+<!-- Keep this section across scan-report refreshes. De-duplicate archived rows by candidate_fingerprint. -->
 ```
 
 Base Graph delegation:

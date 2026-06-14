@@ -165,7 +165,7 @@ Process:
 9. If registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
 10. Do not write any external project file.
 
-`project-query` may hand off to this mode only after user confirmation. If the remote project, direction, or anchor is unknown, write/update `candidates.md` rather than forcing an edge.
+`project-query` may hand off to this mode only after user confirmation. If the remote project, direction, or anchor is unknown, write/update `candidates.md` with `source: manual` rather than forcing an edge.
 
 ## Mode: graph-scan
 
@@ -179,6 +179,7 @@ Rules:
 4. Current project `candidates.md` may contain only relationships where one side is the current project.
 5. External-to-external relationships go to `scan-report.md` or a Base derived view, not current candidates.
 6. `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
+7. After updating candidates, archive stale `pending` scan-origin candidates per `project-graph.md`: move each row to `scan-report.md` `Archived Candidates`, remove it from `candidates.md`, and leave manual candidates untouched.
 
 ## Project Graph Audit
 
@@ -204,13 +205,16 @@ Check:
 - If a registry mapping exists, its `path` exists, `wiki` is relative, has no trailing slash, and resolved remote anchors remain inside the remote project root.
 - If a registry mapping exists and a resolved edge anchor is missing, report it; do not scan the whole remote project by keyword.
 - Candidate `candidate_fingerprint` values are unique.
+- Candidate `source` is `scan` or `manual`.
 - `remote_project = unknown` candidates are not promoted to edges.
 - `promoted` candidates have an `edge_id` that resolves.
+- `pending` candidates with `source = scan` and `last_seen` older than `default_candidate_pending_days` should be archived, not silently kept.
+- `pending` candidates with `source = manual` are exempt from automatic pending-timeout archival.
 
 Finding levels:
 
 - Error: pin layer stores fact fields, dangling `edge_id`, duplicate edge fingerprint, edge project is `unknown`, registry is tracked, local path leaked into committed files, anchor is absolute or escapes, or `verification_status` uses unsupported values such as `stale`.
-- Warning: `last_verified` is expired or unknown, registry path is missing, remote anchor cannot be resolved, `.gitignore` is missing a local-only line, or legacy registry needs migration.
+- Warning: `last_verified` is expired or unknown, registry path is missing, remote anchor cannot be resolved, `.gitignore` is missing a local-only line, legacy registry needs migration, or a `pending` scan-origin candidate exceeded `default_candidate_pending_days`.
 - Info: no Project Graph exists yet, registry is absent while no active edge needs it, or an edge is intentionally `draft`.
 
 ## Repair Rules
@@ -230,6 +234,7 @@ Allowed narrow repairs:
 - Copy legacy registry to preferred registry only in approved repair mode and only when the preferred registry is absent; do not delete the legacy file.
 - Rewrite malformed anchors only when the intended target is unambiguous.
 - Replace unsupported `verification_status: stale` with the prior verified level only when evidence in the row or notes makes that level clear; otherwise downgrade to `draft` and report the uncertainty.
+- Archive stale `pending` scan-origin candidates by moving them from `.llm-wiki/project-graph/candidates.md` to `.llm-wiki/project-graph/scan-report.md` `Archived Candidates` with reason `pending-timeout-90d`; do not archive manual candidates.
 
 Disallowed repairs:
 
@@ -244,6 +249,7 @@ Disallowed repairs:
 - Do not write to external project wiki, source, config, registry, or reverse cross-refs.
 - Do not create or edit `registry.local.json` unless the user confirms the local path mapping.
 - Do not write `source-verified` or `wiki-checked` for a manually registered edge unless the current session performed the corresponding verification.
+- Do not archive Project Graph candidates from `project-query`, `project-fix`, `project-develop`, or any external project session; pending-timeout archival belongs only to `project-maintain`.
 
 ## Finding Levels
 
