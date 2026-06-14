@@ -45,6 +45,7 @@ Use `full-lifecycle` when the user asks to develop, fix, ingest, finish, review,
 | asks for large-scope requirement discussion across services | Base overview -> `project-query` | If Base is discoverable, read `overview.md` and `project-catalog.md` first; otherwise degrade to project-local graph. |
 | asks to explain project design, README, reference, or skill | lightweight-answer | Upgrade only if the user asks to save or edit. |
 | says “先讨论”, “不开发”, “只是设计” | lightweight-answer | Respect discussion boundary. |
+| asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, or platform overview repo | `project-base-init` | Dedicated Base Graph bootstrap; do not route to ordinary business `project-init`. |
 | asks init/adopt/refresh project context | `project-init` | Create or refresh `.llm-wiki`. |
 | provides PRD/doc/log/PDF/URL/meeting notes to add | `project-ingest` | Attach to lifecycle session if one exists. |
 | asks feature/requirement/design change/implementation plan | `project-develop` | Create or resume Change Brief. |
@@ -77,23 +78,27 @@ Use this order before relying on keyword matching:
    yes -> dashboard-refresh via project-query
    no  -> continue
 
-5. Is the requested write about structure, visibility, broken links, stale indexes, missing cards, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency?
+5. Is the requested write about initializing, adopting, or refreshing a dedicated Base Graph repository?
+   yes -> project-base-init
+   no  -> continue
+
+6. Is the requested write about structure, visibility, broken links, stale indexes, missing cards, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency?
    yes -> project-maintain
    no  -> continue
 
-6. Is the user asking to evaluate whether the project lifecycle, routing, gate behavior, skill behavior, or prior conversation flow went wrong?
+7. Is the user asking to evaluate whether the project lifecycle, routing, gate behavior, skill behavior, or prior conversation flow went wrong?
    yes -> lifecycle-quality via project-review or evaluator/conversation-review bridge
    no  -> continue
 
-7. Is the user providing source material to add?
+8. Is the user providing source material to add?
    yes -> project-ingest
    no  -> continue
 
-8. Is the user reporting a bug, failed test, runtime symptom, log, incident, or regression?
+9. Is the user reporting a bug, failed test, runtime symptom, log, incident, or regression?
    yes -> project-fix
    no  -> continue
 
-9. Is the user asking to finish, sync implementation status, prepare handoff, or claim done?
+10. Is the user asking to finish, sync implementation status, prepare handoff, or claim done?
    yes -> project-finish
    no  -> project-develop for requirement/feature/plan/implementation work
 ```

@@ -28,6 +28,7 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
 | `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
+| `project-base-init` | Initialize or refresh an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories without treating the Base repo as a business project. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
@@ -69,7 +70,7 @@ project-develop-copilot
 or
 
 project-develop-copilot
--> project-query / project-maintain / project-init / project-ingest
+-> project-query / project-maintain / project-base-init / project-init / project-ingest
 -> project-develop or project-fix
 -> project-finish
 -> project-review
@@ -113,7 +114,7 @@ The expected response is a Project Context Pack:
 
 ## Project Graph And Cross-Project Refs
 
-Project Graph is a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md`; `project-query` uses pin -> edge -> candidate lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` registers manual edges and audits stale verification, malformed anchors, registry conflicts, and pin/edge drift.
+Project Graph is a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md` for business projects; `project-base-init` creates only the independent Base Graph structure for catalog and overview coordination; `project-query` uses pin -> edge -> candidate lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` registers manual edges and audits stale verification, malformed anchors, registry conflicts, and pin/edge drift.
 
 Facts live only in `project-graph/edges.md`. `cross-refs/index.md` is a pin layer that references `edge_id`; local paths live in ignored registry files. Remote project wiki and source are read-only by default.
 
@@ -171,6 +172,7 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 - Ask “这个接口/topic/配置/回调对面是谁” to query pins, edges, candidates, and read-only remote evidence.
 - Ask “帮我登记这个跨项目调用” to run `project-maintain graph-register`; manual registration defaults to `draft` unless this session verifies wiki/source evidence.
 - Ask “扫一下未登记上下游” to run `project-maintain graph-scan` when scanner is enabled.
+- Ask "initialize this Base Graph repository" to run `project-base-init`; use ordinary `project-init` only for business project repositories.
 - Base Graph is optional and discovered through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
 - Base Graph `registry.local.json` is a local-config exception; business-project sessions may write it after confirmation, but must not write Base tracked files such as `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`.
 - `~/.llm-wiki/registry.json` is legacy read-only compatibility. New implementations should not create or prefer it.

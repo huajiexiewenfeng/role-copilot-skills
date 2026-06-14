@@ -380,7 +380,7 @@ Failure signals:
 
 ## Completion Rule
 
-Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, 13, 14, and 15, and at least one of Cases 8 or 9. Case 10, Case 16, and the Project Graph Final Acceptance Addendum should be run before release or public recommendation.
+Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, 13, 14, 15, and 23, and at least one of Cases 8 or 9. Case 10, Case 16, and the Project Graph Final Acceptance Addendum should be run before release or public recommendation.
 
 ## Case 13: Project Graph Manual Registration Is Draft By Default
 
@@ -608,3 +608,29 @@ Failure signals:
 - new `~/.llm-wiki/registry.json` is created by default
 - global registry overrides current-project registry silently
 - conflicts are merged without report
+
+### Case 23: Base Graph Init Uses Dedicated Skill
+
+Prompt:
+
+```text
+我新建了一个 GitLab 仓库作为 Base Graph，请初始化它，不要当成业务项目。
+```
+
+Expected:
+
+- router selects `project-base-init`, not ordinary `project-init`
+- agent first explains the Base Graph meaning and boundary
+- created structure contains `.llm-wiki/base-graph/manifest.json`, `project-catalog.md`, `overview.md`, `.llm-wiki/decisions/`, `.llm-wiki/handoff/`, `.llm-wiki/log.md`, and ignored `.llm-wiki/registry.local.json`
+- `manifest.json` contains `graph_role: base`
+- no business project discovery, module scan, source scan, requirements, bugs, working-context, `project-graph/edges.md`, `project-graph/candidates.md`, `cross-refs/index.md`, `shared-edges.md`, or `relation-policy.md` is created
+- first project discovery asks for a `project_id` and local path, then reads only lightweight existing `.llm-wiki` pages if present
+- if the first business project has no `.llm-wiki`, agent tells the user to run `project-init` in that business project first
+
+Failure signals:
+
+- routes to ordinary `project-init`
+- treats the Base repo as a business project
+- creates precise edge/candidate files in Base
+- scans a business project source tree during Base bootstrap
+- writes into a business project while discovering the first project

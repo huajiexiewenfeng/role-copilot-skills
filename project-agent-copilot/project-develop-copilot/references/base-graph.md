@@ -4,6 +4,8 @@ Base Graph is optional. It provides a machine-local registry master plus an arch
 
 Base Graph does not own precise cross-project edges. Precise relationships live in each project-local `project-graph/edges.md` and in scanner-derived views.
 
+Initialize or refresh dedicated Base Graph repositories through `project-base-init`. Do not use ordinary `project-init` for a Base Graph repo, because Base Graph is not a business project and must not receive business lifecycle files, Project Graph edges/candidates, module discovery output, requirements, or bugs.
+
 ## Bootstrap
 
 Base Graph is discovered by:

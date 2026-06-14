@@ -11,7 +11,7 @@ description: Use when the user wants project development help from natural inten
 
 It helps users enter naturally without choosing a child skill first. It decides whether the request should stay lightweight or enter the full project lifecycle, then routes full work into the right stage while preserving scope, lifecycle state, handoff, verification, knowledge sync, artifact sync, dashboard sync, and review.
 
-It does not replace `project-query`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
+It does not replace `project-query`, `project-base-init`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
 
 ## When to Use
 
@@ -27,6 +27,7 @@ Use this skill when the user asks for project development help from natural lang
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
 - Registering, maintaining, or pinning cross-project Project Graph relationships.
+- Initializing an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -101,6 +102,7 @@ Before doing project work:
 | User asks to register, maintain, or pin a cross-project relationship or integration point | wiki-maintenance | `project-maintain` |
 | User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
 | User says to discuss design and not implement | lightweight-answer | none |
+| User asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, or platform overview repo | full-lifecycle | `project-base-init` |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
 | User asks to initialize/adopt/refresh project context | full-lifecycle | `project-init` |
@@ -130,8 +132,9 @@ Use this quick decision order:
    - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
 4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
-5. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
-6. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+5. Base Graph repository initialization, adoption, or refresh requested -> full lifecycle / `project-base-init`.
+6. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+7. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 
 Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
 

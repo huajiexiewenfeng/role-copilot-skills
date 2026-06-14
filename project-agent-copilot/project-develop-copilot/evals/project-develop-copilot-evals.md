@@ -914,3 +914,41 @@ Pass/fail:
 PASS: scanner writes only current-related candidates and reports external-to-external derived findings separately
 FAIL: current candidates polluted or findings promoted without verification
 ```
+
+## Eval 26: Base Graph Init Routes To Dedicated Skill
+
+Input prompt:
+
+```text
+我新建了一个 GitLab 仓库作为 Base Graph，请初始化它，不要当成业务项目。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-base-init
+```
+
+Required behavior:
+
+- Explains Base Graph as an optional governance/navigation layer before writing.
+- Creates only Base Graph structure under `.llm-wiki/base-graph/`, `.llm-wiki/decisions/`, `.llm-wiki/handoff/`, `.llm-wiki/log.md`, and ignored `.llm-wiki/registry.local.json`.
+- Writes `manifest.json` with `graph_role: base`.
+- Ensures `.gitignore` ignores `.llm-wiki/registry.local.json`.
+- Does not create business-project `project-graph/edges.md`, `project-graph/candidates.md`, `cross-refs/index.md`, requirements, bugs, modules, dashboard, or working-context pages.
+- First project discovery asks for `project_id` and local path, reads only lightweight existing `.llm-wiki` pages, and tells the user to run `project-init` in a business project when no `.llm-wiki` exists.
+
+Forbidden behavior:
+
+- Routing to ordinary `project-init`.
+- Scanning code or modules during Base Graph bootstrap.
+- Creating `shared-edges.md` or `relation-policy.md`.
+- Writing into a business project during Base discovery.
+
+Pass/fail:
+
+```text
+PASS: Base Graph repo is initialized through project-base-init with Base-only files and explicit boundary
+FAIL: Base repo is treated as a business project or business project files are modified
+```

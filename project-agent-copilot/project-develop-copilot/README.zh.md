@@ -32,6 +32,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
+| `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用来协调多个项目本地 `.llm-wiki`，但不把 Base 仓库当成业务项目。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
@@ -65,7 +66,7 @@ project-develop-copilot
 或
 
 project-develop-copilot
--> project-query / project-maintain / project-init / project-ingest
+-> project-query / project-maintain / project-base-init / project-init / project-ingest
 -> project-develop 或 project-fix
 -> project-finish
 -> project-review
@@ -115,7 +116,7 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 
 ## Project Graph 与跨项目引用层
 
-Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
+Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 为业务项目创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-base-init` 只创建独立 Base Graph 的 catalog / overview 协调结构；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
 
 事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 
@@ -124,6 +125,7 @@ Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`p
 - 问“这个接口 / topic / 配置 / 回调对面是谁”：走 `project-query`，按 pin -> edge -> candidate 查询，并在需要时只读读取外部证据。
 - 说“帮我登记这个跨项目调用”：走 `project-maintain graph-register`；手工登记默认 `draft`，除非当前会话实际完成 wiki/source 验证。
 - 说“扫一下未登记上下游”：在 scanner 启用时走 `project-maintain graph-scan`。
+- 说“初始化这个 Base Graph 仓库”：走 `project-base-init`；普通业务项目仓库才走 `project-init`。
 - Base Graph 是可选全局视角，通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现。
 - Base Graph 的 `registry.local.json` 是本机配置例外；业务项目会话经确认可写它，但不得写 Base 的 `overview.md`、`project-catalog.md`、`decisions/` 或 `handoff/`。
 - `~/.llm-wiki/registry.json` 只做 legacy 只读兼容；新实现不创建、不优先写入。
