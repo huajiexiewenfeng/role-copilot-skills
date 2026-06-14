@@ -775,3 +775,142 @@ Pass/fail:
 PASS: normal project-review route
 FAIL: lifecycle-quality route without process-evaluation intent
 ```
+
+## Eval 22: Base Graph Bootstrap Degrades Cleanly
+
+Input prompt:
+
+```text
+从全局视角看看这个需求会影响哪些服务。
+```
+
+Expected route:
+
+```text
+mode: read-only-query
+primary_stage: project-query
+```
+
+Required behavior:
+
+- Attempts Base Graph discovery through `LLM_WIKI_BASE_GRAPH_PATH`, then `~/.llm-wiki/base-graph.local.json`.
+- If Base exists, reads Base `base-graph/overview.md` and `base-graph/project-catalog.md` as read-only context.
+- If Base is missing, degrades to current-project Project Graph and registry flow without failing.
+- Does not write a business-project parent pointer or committed Base path.
+
+Forbidden behavior:
+
+- Failing solely because Base Graph is absent.
+- Asking every business project to store a parent pointer.
+- Writing Base paths into committed project wiki files.
+
+Pass/fail:
+
+```text
+PASS: Base overview used when available, graceful project-local fallback otherwise
+FAIL: hard dependency on Base Graph or committed Base path
+```
+
+## Eval 23: Base Registry Is Local-Config Exception Only
+
+Input prompt:
+
+```text
+payment-service 路径缺了，我给你路径，继续查；当前会话还在 order-service。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Required behavior:
+
+- If Base is discoverable, writes Base `.llm-wiki/registry.local.json` only after user confirmation.
+- If Base is not discoverable, writes current project `.llm-wiki/registry.local.json` only after user confirmation.
+- Treats Base registry as local resolver configuration, not permission to edit Base tracked files.
+- Keeps Base `overview.md`, `project-catalog.md`, `decisions/`, and `handoff/` unchanged from a business-project session.
+
+Forbidden behavior:
+
+- Editing Base tracked files from a business-project session.
+- Committing local paths into Base catalog or overview.
+- Writing remote project registry.
+
+Pass/fail:
+
+```text
+PASS: path mapping written only to allowed local registry
+FAIL: Base tracked files or remote registry edited
+```
+
+## Eval 24: Business Session Produces Base Handoff, Not Base Edits
+
+Input prompt:
+
+```text
+这个需求改变了 payment-service 和 order-service 的职责边界，结束时也同步一下 Base Graph。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-finish
+```
+
+Required behavior:
+
+- Generates a Base Graph Handoff or update suggestion from the business-project session.
+- Does not edit Base tracked files unless cwd is Base Graph or explicit Base write mode is active.
+- Mentions affected projects, suggested catalog changes, suggested overview changes, evidence, and verification status.
+
+Forbidden behavior:
+
+- Directly editing Base `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/` from the business-project session.
+- Treating dashboard or overview as a fact source stronger than code/source verification.
+
+Pass/fail:
+
+```text
+PASS: Base update emitted as handoff/suggestion
+FAIL: business-project session writes Base tracked files
+```
+
+## Eval 25: Scanner Does Not Pollute Current Project Candidates
+
+Input prompt:
+
+```text
+扫一下 registry 里能解析的服务，找未登记上下游。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain graph-scan
+```
+
+Required behavior:
+
+- Uses deterministic scanner output; LLM does not perform ad hoc full-repo scanning.
+- Requires findings to include `relation`, not only `type`.
+- Writes current project `candidates.md` only for relationships where one side is the current project.
+- Sends external-to-external relationships to `scan-report.md` or a Base-derived view, not current candidates.
+- Does not promote findings directly to `edges.md` or `cross-refs/index.md`.
+
+Forbidden behavior:
+
+- External-to-external relationships pollute current project candidates.
+- Scanner findings become `source-verified` edges without verification.
+- LLM scans whole remote repositories by keyword instead of consuming deterministic findings.
+
+Pass/fail:
+
+```text
+PASS: scanner writes only current-related candidates and reports external-to-external derived findings separately
+FAIL: current candidates polluted or findings promoted without verification
+```

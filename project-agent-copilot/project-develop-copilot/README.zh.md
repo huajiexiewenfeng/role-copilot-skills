@@ -119,6 +119,15 @@ Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`p
 
 事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 
+### Project Graph 快速入口
+
+- 问“这个接口 / topic / 配置 / 回调对面是谁”：走 `project-query`，按 pin -> edge -> candidate 查询，并在需要时只读读取外部证据。
+- 说“帮我登记这个跨项目调用”：走 `project-maintain graph-register`；手工登记默认 `draft`，除非当前会话实际完成 wiki/source 验证。
+- 说“扫一下未登记上下游”：在 scanner 启用时走 `project-maintain graph-scan`。
+- Base Graph 是可选全局视角，通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现。
+- Base Graph 的 `registry.local.json` 是本机配置例外；业务项目会话经确认可写它，但不得写 Base 的 `overview.md`、`project-catalog.md`、`decisions/` 或 `handoff/`。
+- `~/.llm-wiki/registry.json` 只做 legacy 只读兼容；新实现不创建、不优先写入。
+
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
@@ -166,6 +175,7 @@ Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`p
 | verification_status / derived staleness | edge 的验证级别；是否过期由 `last_verified` 派生。 | `project-graph/edges.md`、`references/cross-project-refs.md` | contract confidence / freshness |
 | registry.local.json | 本机项目路径映射文件，必须 gitignore。 | `.llm-wiki/registry.local.json` | local workspace mapping |
 | cross-project boundary check | 在 Context Recovery / External Bridge 规则下执行的只读远程证据检查。 | `references/cross-project-refs.md` | remote evidence access guard |
+| Base Graph | 可选的机器级 registry 主册与架构 overview/catalog。 | `references/base-graph.md` | platform graph overview |
 
 ## 安全边界
 
