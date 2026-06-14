@@ -2,7 +2,7 @@
 
 Project Graph is the fact model for cross-project relationships in a project-local `.llm-wiki`.
 
-Use it with `cross-project-refs.md`. This file owns schema, fingerprints, canonical direction, manual registration, candidate promotion, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary checks, and the stale threshold.
+Use it with `cross-project-refs.md` and `base-graph.md`. This file owns schema, fingerprints, canonical direction, manual registration, candidate promotion, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary checks, and the stale threshold. `base-graph.md` owns optional Base Graph bootstrap, registry master, catalog, overview, and Base write boundaries.
 
 ## Files
 
@@ -51,12 +51,15 @@ Field rules:
 - `edge_id`: stable within the current project; it does not need to match remote projects.
 - `fingerprint`: stable de-duplication key.
 - `type`: `feign`, `mqtt`, `http`, `rpc`, `db`, `config`, `dependency`, `dto`, or `other`.
-- `source`: `manual`, `scan`, or `imported`.
+- `source`: `manual` or `scan`.
 - `from_project` and `to_project`: logical project ids only; never `unknown`.
 - anchors: class, interface, topic, config key, table, wiki-relative path, or source-relative path. Do not use local absolute paths. Wiki anchors must not start with `.llm-wiki/`.
+- repo-level dependency anchors use `maven:groupId:artifactId`, `gradle:group:name`, `repo:<name>`, or `module:<name>`; avoid `anchor == project` fallback unless no better coordinate exists.
 - `verification_status`: `draft`, `wiki-checked`, `source-verified`, or `blocked`.
 - `last_verified`: date produced by the actual verification action; do not accept user hand-filled dates.
 - Do not persist `stale`; derive staleness from `last_verified` using the threshold in `cross-project-refs.md`.
+
+`imported` is intentionally not part of the first implementation. If future work imports edges from another tool or file, define that import workflow and add the enum in the same change.
 
 ## Edge Fingerprint
 
@@ -169,7 +172,7 @@ Rules:
 
 ## Manual Registration
 
-Manual edge registration is owned by `project-maintain` graph maintenance.
+Manual edge registration is owned by `project-maintain graph-register`.
 
 Minimum user-provided inputs:
 
@@ -212,9 +215,11 @@ Promotion requirements:
 
 ## Scan Files
 
-Scanning behavior is Phase 3 only. `project-init` may create the `scan-report.md` placeholder earlier; it stays empty until a scan runs.
+Scanning is an optional scale feature, not the baseline contract feature. `project-init` may create the `scan-report.md` placeholder earlier; it stays empty until a scan runs.
 
 - `scan-report.md`: team-readable scan summary; may be committed.
 - `scan-state.local.json`: machine-local incrementality state; must be ignored.
 
 Scanner findings must include `relation`; do not output only `type`.
+
+Current project `candidates.md` may contain only relationships where one side is the current project. External-to-external relationships go to `scan-report.md` or a Base-derived view, not current candidates.

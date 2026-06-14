@@ -2,11 +2,11 @@
 
 Cross-Project Refs define how a project-local `.llm-wiki` safely resolves another local project's wiki/source for evidence.
 
-Schema for edges, candidates, pins, fingerprints, manual registration, and candidate promotion lives in `project-graph.md`. This file owns registry resolution, the read-only boundary check, and staleness threshold.
+Schema for edges, candidates, pins, fingerprints, manual registration, and candidate promotion lives in `project-graph.md`. Optional Base Graph bootstrap and Base write boundaries live in `base-graph.md`. This file owns registry resolution, the read-only boundary check, and staleness threshold.
 
 ## Principles
 
-- Store physical local paths only in ignored registry files.
+- Store physical local paths only in ignored registry or bootstrap files.
 - Store shared relationship facts only in `project-graph/edges.md`.
 - Store team navigation pins only in `cross-refs/index.md`.
 - Do not copy remote project content into the current project as truth.
@@ -31,6 +31,12 @@ Optional global fallback:
 
 ```text
 ~/.llm-wiki/registry.json
+```
+
+Base Graph machine-level registry, when Base is discoverable through `base-graph.md` bootstrap:
+
+```text
+<base-graph>/.llm-wiki/registry.local.json
 ```
 
 All local registry files must be ignored:
@@ -81,17 +87,20 @@ resolved_remote_anchor = path_join(wiki_root, remote_anchor)
 
 1. Current project `.llm-wiki/registry.local.json`.
 2. Legacy current project `.llm-wiki/cross-refs/registry.local.json`.
-3. Optional global fallback `~/.llm-wiki/registry.json`.
+3. Base Graph `.llm-wiki/registry.local.json`, when Base is discoverable.
+4. Legacy global fallback `~/.llm-wiki/registry.json` as read-only compatibility.
 
 Compatibility rules:
 
-- If the preferred registry exists, use it.
+- Current project registry is the project-level override and no-Base fallback.
+- Base Graph registry is the machine-level default registry.
 - If only the legacy registry exists, `project-maintain` should recommend migration; repair mode may copy it to the preferred path after confirmation, but must not delete the legacy file.
-- If preferred and legacy registries both exist and conflict for a project id, report the conflict and do not silently merge.
-- The global fallback is read-only unless the user explicitly asks to edit it.
-- When asking for a missing local path, write only the current project's preferred `.llm-wiki/registry.local.json` after user confirmation.
+- If current, legacy, Base, or global registries conflict for a project id, report the conflict and do not silently merge.
+- New implementations must not create or prefer `~/.llm-wiki/registry.json`.
+- When asking for a missing local path and Base is discoverable, write Base Graph `.llm-wiki/registry.local.json` after user confirmation.
+- When Base is not discoverable, write only the current project's preferred `.llm-wiki/registry.local.json` after user confirmation.
 
-Writing `registry.local.json` is local resolver configuration. It does not violate remote read-only scope because it is written in the current project only.
+Writing registry files is local resolver configuration. Base Graph `registry.local.json` is a local-config exception and is not the same as writing Base tracked architecture files.
 
 ## Staleness
 
@@ -157,6 +166,10 @@ Allowed current-project writes:
 - `.gitignore`
 - current-project Bug Brief / Change Brief
 
+Allowed Base local-config write, after user confirmation:
+
+- Base Graph `.llm-wiki/registry.local.json`
+
 Forbidden remote-project writes:
 
 - remote `.llm-wiki`
@@ -165,4 +178,12 @@ Forbidden remote-project writes:
 - remote Briefs
 - remote registry
 
-If remote project changes are needed, generate a Context Handoff and ask the user to start a lifecycle session in the remote project.
+Forbidden Base tracked-file writes from a business-project session:
+
+- Base `base-graph/overview.md`
+- Base `base-graph/project-catalog.md`
+- Base `decisions/`
+- Base `handoff/`
+- any other committed Base fact file
+
+If remote project changes are needed, generate a Context Handoff and ask the user to start a lifecycle session in the remote project. If Base tracked-file changes are needed, generate a Base Handoff unless cwd is Base or explicit Base write mode is active.
