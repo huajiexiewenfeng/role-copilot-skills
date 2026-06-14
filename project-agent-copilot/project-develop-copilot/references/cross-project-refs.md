@@ -27,7 +27,7 @@ Legacy local registry, read for compatibility:
 .llm-wiki/cross-refs/registry.local.json
 ```
 
-Optional global fallback:
+Legacy global fallback, read-only compatibility only:
 
 ```text
 ~/.llm-wiki/registry.json

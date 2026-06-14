@@ -61,6 +61,7 @@ Read as needed:
 - `progress-dashboard.md`
 - `project-graph.md`
 - `cross-project-refs.md`
+- `base-graph.md`
 - `.llm-wiki/README.md`
 - `.llm-wiki/log.md`
 - `.llm-wiki/artifacts/index.md`
@@ -131,12 +132,14 @@ A missing link is not always an error. Classify it by impact:
 | `consistency-repair` | The user asks to fix missing indexes, backlinks, logs, artifacts, or dashboard references. |
 | `dashboard-audit` | The user asks why the progress dashboard is stale, inconsistent, or missing cards. |
 | `safety-audit` | The user asks to check secrets, absolute paths, sensitive content, copied raw material, or garbled pages. |
-| `project-graph-register` | The user asks to register, maintain, or pin a cross-project relationship. |
+| `graph-register` | The user asks to register a known cross-project integration point. |
+| `graph-scan` | The user asks to discover missing upstream/downstream relationships and scanner is enabled. |
+| `project-graph-register` | Legacy alias for `graph-register`. |
 | `project-graph-audit` | The user asks to check Project Graph edges/candidates, cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
 
-## Project Graph Manual Registration
+## Mode: graph-register
 
-Use `project-graph-register` when the user explicitly asks to register or pin a cross-project relationship.
+Use `graph-register` when the user explicitly asks to register or pin a cross-project relationship. It is the only manual edge registration entry.
 
 Minimum inputs:
 
@@ -162,6 +165,21 @@ Process:
 9. If registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
 10. Do not write any external project file.
 
+`project-query` may hand off to this mode only after user confirmation. If the remote project, direction, or anchor is unknown, write/update `candidates.md` rather than forcing an edge.
+
+## Mode: graph-scan
+
+Use `graph-scan` only when manual registration no longer covers relationship volume.
+
+Rules:
+
+1. The scanner must be deterministic and produce JSON findings.
+2. Findings must include `relation`; do not output only `type`.
+3. The LLM consumes findings and writes/updates candidates only.
+4. Current project `candidates.md` may contain only relationships where one side is the current project.
+5. External-to-external relationships go to `scan-report.md` or a Base derived view, not current candidates.
+6. `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
+
 ## Project Graph Audit
 
 Audit `.llm-wiki/project-graph/` and `.llm-wiki/cross-refs/` when they exist, when cross-service work is active, or when the user asks about Feign, MQTT, HTTP, RPC, shared DB, shared config, upstream/downstream services, or external contracts.
@@ -173,6 +191,8 @@ Check:
 - Preferred and legacy registry files are not tracked by git.
 - Preferred registry `.llm-wiki/registry.local.json` wins over legacy `.llm-wiki/cross-refs/registry.local.json`.
 - If preferred and legacy registries conflict for a project id, report the conflict and do not merge silently.
+- If Base Graph is discoverable, check whether edge project ids appear in Base `base-graph/project-catalog.md`; missing ids produce a Base Handoff/update suggestion, not an automatic Base edit.
+- Base Graph `.llm-wiki/registry.local.json` may be written only as local resolver configuration after user confirmation; Base tracked files remain read-only from a business-project session.
 - `cross-refs/index.md` is pin-only. Report `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor` as redundant fact fields.
 - Every pin `edge_id` resolves to a row in `project-graph/edges.md`.
 - Edge `fingerprint` values are unique.

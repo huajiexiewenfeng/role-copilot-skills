@@ -78,6 +78,7 @@ Read as needed:
 - `../references/lifecycle-gates.md`
 - `../references/project-graph.md`
 - `../references/cross-project-refs.md`
+- `../references/base-graph.md`
 - `../references/progress-dashboard.md`
 - `../references/flow-record.md`
 - `.llm-wiki/index.md`
@@ -114,12 +115,13 @@ Workflow:
    - If a pin matches, follow `edge_id` into `.llm-wiki/project-graph/edges.md`; never treat pin fields as contract facts.
    - If no pin matches, search `.llm-wiki/project-graph/edges.md`.
    - If no edge matches, search `.llm-wiki/project-graph/candidates.md` and label the result `candidate only`.
-   - If remote evidence is needed, resolve the remote project through registry order from `cross-project-refs.md`: preferred `.llm-wiki/registry.local.json`, legacy `.llm-wiki/cross-refs/registry.local.json`, then optional global fallback.
-   - If no registry mapping exists, ask for the local path and write only `.llm-wiki/registry.local.json` after user confirmation. Ensure `.gitignore` contains the three local-only ignore lines when writing the registry.
+   - If remote evidence is needed, resolve the remote project through registry order from `cross-project-refs.md`: current project preferred registry, legacy current-project registry, Base Graph registry when Base is discoverable, then legacy global fallback as read-only compatibility.
+   - If no registry mapping exists, ask for the local path. With Base, write Base Graph `.llm-wiki/registry.local.json` after confirmation; without Base, write only current project `.llm-wiki/registry.local.json`. Ensure `.gitignore` contains the three local-only ignore lines when writing current-project registry.
    - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
    - Use `verification_required: wiki-only-allowed` for ownership or clue-finding answers; state when source verification was not performed.
-   - Do not write Change Brief, Bug Brief, Flow Record, dashboard, edges, candidates, pins, or remote project files during ordinary query.
-   - If the user wants to register a missing relation after query, hand off to `project-maintain` graph maintenance after confirmation.
+   - Do not write Change Brief, Bug Brief, Flow Record, dashboard, edges, candidates, pins, Base tracked files, or remote project files during ordinary query.
+   - If the user wants to register a missing relation after query, hand off to `project-maintain graph-register` after confirmation.
+   - For large cross-service context, discover Base Graph through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`; if found, read Base `base-graph/overview.md` and `base-graph/project-catalog.md` as read-only discussion context. If Base is not found, continue with current-project graph and state the downgrade.
 6. Fall back to original source files only when wiki summaries are insufficient or stale.
 7. Separate sourced wiki facts from inference.
 8. Return a concise answer and a Project Context Pack.
@@ -140,7 +142,8 @@ Workflow:
 | `wiki-answer` | user asks a question answerable from project wiki pages |
 | `discussion-context` | user wants context assembled before discussion |
 | `evidence-map` | user asks which docs, requirements, bugs, or artifacts relate to a topic |
-| `cross-project-lookup` | user asks which remote project owns an interface/topic/client or asks for a cross-service contract clue |
+| `cross-project-lookup` | user asks which remote project owns an interface/topic/client/config/callback or asks for a cross-service contract clue |
+| `base-overview-query` | user asks for large cross-service context and Base Graph is discoverable |
 | `dashboard-refresh` | user explicitly asks to refresh or update the static project dashboard/progress page |
 | `upgrade-candidate` | query reveals a likely requirement, bug, stale source, or review issue |
 

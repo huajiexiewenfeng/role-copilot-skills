@@ -164,6 +164,16 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 | verification_status / derived staleness | Verification level stored on an edge; freshness derived from `last_verified`. | `project-graph/edges.md`, `references/cross-project-refs.md` | contract confidence / freshness |
 | registry.local.json | Local-only project path resolver; must be gitignored. | `.llm-wiki/registry.local.json` | local workspace mapping |
 | cross-project boundary check | Read-only remote evidence check under Context Recovery / External Bridge rules. | `references/cross-project-refs.md` | remote evidence access guard |
+| Base Graph | Optional machine-level registry plus architecture overview/catalog for large cross-service discussions. | `references/base-graph.md` | platform graph overview |
+
+## Project Graph Quick Use
+
+- Ask “这个接口/topic/配置/回调对面是谁” to query pins, edges, candidates, and read-only remote evidence.
+- Ask “帮我登记这个跨项目调用” to run `project-maintain graph-register`; manual registration defaults to `draft` unless this session verifies wiki/source evidence.
+- Ask “扫一下未登记上下游” to run `project-maintain graph-scan` when scanner is enabled.
+- Base Graph is optional and discovered through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
+- Base Graph `registry.local.json` is a local-config exception; business-project sessions may write it after confirmation, but must not write Base tracked files such as `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`.
+- `~/.llm-wiki/registry.json` is legacy read-only compatibility. New implementations should not create or prefer it.
 
 ## Safety
 

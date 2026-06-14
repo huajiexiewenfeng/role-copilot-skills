@@ -105,6 +105,7 @@ Read as needed:
 - `../references/change-brief.md`
 - `../references/project-graph.md`
 - `../references/cross-project-refs.md`
+- `../references/base-graph.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
 - `../references/scoped-working-context.md`
@@ -139,12 +140,15 @@ Workflow:
 6. If the requirement crosses service/project boundaries, check Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
    - If a pin matches, follow `edge_id`; do not treat pin fields as contract facts.
    - If only a candidate matches, it is a clue only; perform source verification before using it for an implementation decision.
-   - If no edge or candidate exists, suggest manual registration via `project-maintain` only after the contract evidence is clear enough.
-   - If a registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
+   - If no edge or candidate exists, suggest manual registration via `project-maintain graph-register` only after the contract evidence is clear enough.
+   - If a registry mapping is missing, ask for the local path. With Base Graph available, write Base Graph `.llm-wiki/registry.local.json` after confirmation; without Base, write only current project `.llm-wiki/registry.local.json`.
    - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
    - If implementation depends on the remote contract, use `verification_required: source`.
-   - Do not base implementation decisions on `wiki-checked`, `draft`, or candidate-only evidence.
+   - Use an external edge for implementation decisions only when it is `source-verified`, not stale, and directly relevant to the requirement. If it is stale, `wiki-checked`, `draft`, `blocked`, or candidate-only, re-verify source or treat it as risk.
+   - Do not base implementation decisions on `wiki-checked`, `draft`, stale, blocked, or candidate-only evidence.
    - Record remote evidence in the Change Brief `## External Dependencies` section with `project_id`, `edge_id`, dependency, verification status, required contract, implementation impact, and handoff.
+   - If Base Graph is discoverable and the requirement is large or cross-service, read Base `base-graph/overview.md` and `base-graph/project-catalog.md` as read-only discussion context before decomposition.
+   - Generate Base Handoff/update suggestions when architecture overview or catalog should change; do not write Base tracked files from a business-project session.
 7. Produce a concise context summary.
 8. Run Work Definition Gate before implementation planning.
 9. Guide the user conversationally through requirement discussion.

@@ -165,6 +165,8 @@ Refresh rules:
 - Create or preserve `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, and `.llm-wiki/project-graph/scan-report.md` with empty templates when missing.
 - Ensure `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` exactly once so local project-path mappings and scan state do not enter git.
 - Do not create `.llm-wiki/registry.local.json` or `.llm-wiki/cross-refs/registry.local.json` during init unless the user provides a remote project path and confirms storing it as local-only configuration.
+- Do not scan external projects during `project-init`; scanner is an optional later `project-maintain graph-scan` flow.
+- If the user initializes a Base Graph repo, create Base Graph files from the Base Graph minimum templates below. Do not create Base `shared-edges.md` or Base `relation-policy.md`.
 - Create or preserve `.llm-wiki/session-digests/` for confirmed Session Digests. Do not scan it as raw source material; treat it as recall context by default, not project truth.
 - When `.llm-wiki/session-digests/` exists, include it in context discovery for recall and duplicate avoidance. Do not promote digest items to requirement, bug, module, Flow Record, dashboard, scope, or verification truth without explicit Lifecycle Promotion confirmation.
 - If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
@@ -276,6 +278,70 @@ Project Graph scan report minimum:
 
 -
 ```
+
+Base Graph directory minimum:
+
+```text
+.llm-wiki/
+  registry.local.json
+  base-graph/
+    manifest.json
+    project-catalog.md
+    overview.md
+  decisions/
+  handoff/
+  log.md
+```
+
+Base Graph `.gitignore` minimum:
+
+```gitignore
+.llm-wiki/registry.local.json
+```
+
+Base Graph manifest minimum:
+
+```json
+{
+  "$schema_version": 2,
+  "graph_role": "base",
+  "graph_id": "platform-base",
+  "name": "Platform Base Graph",
+  "default_stale_days": 30,
+  "project_catalog": "project-catalog.md",
+  "overview": "overview.md"
+}
+```
+
+Base Graph project catalog minimum:
+
+```markdown
+# Project Catalog
+
+| project_id | display_name | domain | owner | repo | status | notes |
+|---|---|---|---|---|---|---|
+```
+
+Base Graph overview minimum:
+
+```markdown
+# Base Graph Overview
+
+## Domains
+
+## Key Cross-Service Flows
+
+## Common Change Entry Points
+
+## Notes
+```
+
+Base Graph constraints:
+
+- Base Graph is optional and discovered by `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
+- Base Graph stores overview and catalog only; precise edges stay in project-local `project-graph/edges.md`.
+- Do not create business-project `manifest.json` or `parent` pointers.
+- Do not create Base `shared-edges.md` or Base `relation-policy.md`.
 
 ## Context Handoff
 

@@ -54,6 +54,7 @@ Read as needed:
 - `../references/bug-brief.md`
 - `../references/project-graph.md`
 - `../references/cross-project-refs.md`
+- `../references/base-graph.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
 - `../references/scoped-working-context.md`
@@ -79,12 +80,14 @@ Workflow:
 7. If the bug crosses service/project boundaries, check Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
    - If a pin matches, follow `edge_id`; do not treat pin fields as contract facts.
    - If only a candidate matches, it is a clue only; perform source verification before using it for a fix decision.
-   - If no edge or candidate exists, suggest manual registration via `project-maintain` only after the fix evidence is clear enough.
-   - If a registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
+   - If no edge or candidate exists, suggest manual registration via `project-maintain graph-register` only after the fix evidence is clear enough.
+   - If a registry mapping is missing, ask for the local path. With Base Graph available, write Base Graph `.llm-wiki/registry.local.json` after confirmation; without Base, write only current project `.llm-wiki/registry.local.json`.
    - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
    - If the fix decision depends on the remote contract, use `verification_required: source`.
-   - Do not base edits on `wiki-checked`, `draft`, or candidate-only evidence.
+   - Use an external edge for fix decisions only when it is `source-verified`, not stale, and directly relevant to the bug. If it is stale, `wiki-checked`, `draft`, `blocked`, or candidate-only, re-verify source or treat it as risk.
+   - Do not base edits on `wiki-checked`, `draft`, stale, blocked, or candidate-only evidence.
    - Record remote evidence in the Bug Brief `## External Findings` section with `project_id`, `edge_id`, evidence, verification status, conclusion, impact, and suggested handoff.
+   - Do not write external project files or Base tracked files from a business-project bug session.
 8. Reproduce the issue or state why reproduction is not currently possible.
 9. Bridge to systematic-debugging only after evidence and scoped context are captured.
 10. Diagnose likely cause before changing code and update the Flow Record `design` step when diagnosis evidence exists.
