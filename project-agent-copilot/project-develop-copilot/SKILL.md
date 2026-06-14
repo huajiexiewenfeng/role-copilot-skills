@@ -1,6 +1,6 @@
 ---
 name: project-develop-copilot
-description: Use when the user wants project development help from natural intent, including requirements, bugs, logs, design discussion, file lookup, progress, finish, review, resume, or routing into project lifecycle skills.
+description: Use when the user wants project development help from natural intent, including requirements, bugs, logs, cross-service or cross-project evidence, design discussion, file lookup, progress, finish, review, resume, or routing into project lifecycle skills.
 ---
 
 # Project Develop Copilot
@@ -18,6 +18,7 @@ It does not replace `project-query`, `project-init`, `project-ingest`, `project-
 Use this skill when the user asks for project development help from natural language, including:
 
 - Finding, explaining, querying, or discussing project `.llm-wiki`, requirements, bugs, design docs, README files, skills, references, artifacts, or current project status.
+- Investigating cross-service or cross-project integration points such as Feign clients, MQTT topics, HTTP/RPC interfaces, shared DB tables, shared config, upstream/downstream services, or external contracts.
 - Developing a feature, requirement, PRD, design change, implementation plan, or scoped project change.
 - Diagnosing or fixing a bug, failed test, runtime error, log symptom, regression, incident, or unexpected behavior.
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
@@ -25,6 +26,7 @@ Use this skill when the user asks for project development help from natural lang
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
+- Registering, maintaining, or pinning cross-project Project Graph relationships.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -51,6 +53,8 @@ The router owns lifecycle coherence across gates:
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 
+Cross-project evidence is handled as a Context Recovery / External Bridge sub-check, not as a separate lifecycle Gate. Remote wiki/source access must stay read-only and must return through the current lifecycle session.
+
 ## Required First Check
 
 Before doing project work:
@@ -70,6 +74,7 @@ Before doing project work:
 3. Classify the user request:
    - lightweight-answer
    - project wiki query / discussion context
+   - cross-project lookup / evidence gathering
    - init / ingest
    - historical session extraction / Session Digest import
    - requirement or feature development
@@ -90,6 +95,11 @@ Before doing project work:
 |---|---|---|
 | User asks a tiny file/doc lookup or simple concept explanation | lightweight-answer | none |
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
+| User asks which service owns an interface/topic/client/config/callback, or asks for cross-service contract evidence without requesting a change | cross-project-lookup | `project-query` |
+| User asks to register a known cross-project integration point | wiki-maintenance | `project-maintain graph-register` |
+| User asks to discover missing upstream/downstream relationships | wiki-maintenance | `project-maintain graph-scan` |
+| User asks to register, maintain, or pin a cross-project relationship or integration point | wiki-maintenance | `project-maintain` |
+| User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
 | User says to discuss design and not implement | lightweight-answer | none |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
@@ -104,6 +114,26 @@ Before doing project work:
 | User asks skill failure review, skill-evaluator, eval gap, failure case, golden case, self-review, conversation self-review, lifecycle trace review, or Dolores | lifecycle-quality | `project-review`, evaluator bridge, or Dolores bridge |
 
 If confidence is low, ask one minimal routing question. Do not start a long intake form.
+
+## Routing Tie-breakers
+
+When multiple routes seem plausible, choose the least state-changing route that still satisfies the user:
+
+```text
+lightweight-answer < read-only-query < dashboard-refresh < wiki-maintenance < full-lifecycle
+```
+
+Use this quick decision order:
+
+1. No project evidence needed and no write requested -> `lightweight-answer`.
+2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
+   - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
+3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
+4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
+5. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+6. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+
+Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
 
 ## No Child Skill Mode
 

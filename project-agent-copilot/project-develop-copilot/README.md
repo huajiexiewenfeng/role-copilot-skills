@@ -5,7 +5,7 @@ Project Develop Copilot is a skill collection for real project development work.
 1. Bridge top-level skills and tools into one project lifecycle.
 2. Internalize a project-level LLM Wiki as the shared context memory.
 
-It combines project LLM Wiki maintenance, scoped context recovery, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
+It combines project LLM Wiki maintenance, scoped context recovery, cross-project refs, requirement development, bug fixing, finish sync, and review into one coherent development lifecycle.
 
 It does not replace Superpowers-style skills. It prepares project context, active scopes, and `.llm-wiki` state first, then bridges to brainstorming, planning, TDD, debugging, execution, verification, and review skills inside that controlled context.
 
@@ -26,13 +26,13 @@ English | [Simplified Chinese](./README.zh.md)
 | Skill | Use When |
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
-| `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
-| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
+| `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
+| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
-| `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
-| `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
+| `project-develop` | Develop a requirement or feature with scoped project context, requirement summaries, and source-verified external dependencies when cross-project contracts affect the change. |
+| `project-fix` | Diagnose and fix project bugs with scoped context, cross-project external findings when needed, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
@@ -58,7 +58,7 @@ Install integrity check:
 test -d ~/.codex/skills/project-develop/references || test -d ~/.agents/skills/project-develop/references
 ```
 
-Every child stage skill expects the shared `references/` directory next to its skill folder. If a child skill is installed directly without `references/`, lifecycle work must stop until the top-level package is installed or the shared `references/` directory is restored.
+Child stage skills can use the shared `references/` directory when it is installed next to the skill folder. If a child skill is installed directly without `references/`, it must continue in degraded mode using the minimum rules embedded in that child skill and report the missing deep references.
 
 ## Lifecycle
 
@@ -75,7 +75,7 @@ project-develop-copilot
 -> project-review
 ```
 
-`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup, cross-project lookup, and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work and record external dependencies/findings when cross-project contracts matter. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
@@ -110,6 +110,13 @@ The expected response is a Project Context Pack:
 - Possible next routes, such as ingesting missing docs, creating a Change Brief, creating a Bug Brief, starting review, or running Lifecycle Quality Review
 
 `project-query` is different from `lightweight-answer`: it actively searches project `.llm-wiki` and assembles evidence. It is also different from full lifecycle work: it stays read-only unless the user explicitly asks to continue into development, fixing, ingest, review, or skill evolution.
+
+## Project Graph And Cross-Project Refs
+
+Project Graph is a `.llm-wiki` evidence layer, not a separate child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md`; `project-query` uses pin -> edge -> candidate lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` registers manual edges and audits stale verification, malformed anchors, registry conflicts, and pin/edge drift.
+
+Facts live only in `project-graph/edges.md`. `cross-refs/index.md` is a pin layer that references `edge_id`; local paths live in ignored registry files. Remote project wiki and source are read-only by default.
+
 ## Context Model
 
 The shared project context layer is `.llm-wiki`:
@@ -125,6 +132,14 @@ The shared project context layer is `.llm-wiki`:
   bugs/
   working-context/
   modules/
+  artifacts/
+  cross-refs/
+  project-graph/
+  dashboard/
+  handoff/
+  session-digests/
+  migration/
+  registry.local.json   (gitignored, local paths only)
 ```
 
 The wiki is the internalized project subset of the LLM Wiki idea: an index and summary layer, not a replacement for source files, PRDs, issues, design docs, tests, or code. It records where important material is, what it means, which module or requirement it relates to, and what gaps remain.
@@ -132,6 +147,33 @@ The wiki is the internalized project subset of the LLM Wiki idea: an index and s
 Use `working-context/` only for complex or cross-module work that needs active scopes, read-only scopes, excluded scopes, contracts, escalation, and verification to stay together.
 
 Legacy `docs/ai-coding/` directories are migration sources. New project context should be written to `.llm-wiki`.
+
+## Glossary
+
+| Term | Short meaning | Main file | Similar concept |
+|---|---|---|---|
+| Change Brief / Bug Brief | Requirement or bug lifecycle page maintained by the agent. | `requirements/`, `bugs/`, `references/change-brief.md`, `references/bug-brief.md` | mini-RFC / bug report |
+| Flow Record | Evidence-backed lifecycle status rows for one deliverable. | `references/flow-record.md` | lifecycle status + evidence index |
+| Session Digest | Confirmed summary of historical chat/session context; recall context by default. | `session-digests/`, `references/session-digest.md` | conversation digest |
+| Scoped Working Context | Active/read-only/candidate/excluded context for complex or cross-module work. | `working-context/`, `references/scoped-working-context.md` | monorepo sparse context |
+| Lifecycle Gate | Lightweight checkpoint before a risky lifecycle transition. | `references/lifecycle-gates.md` | readiness checklist |
+| Project Graph edge | Verified or draft cross-project relationship fact. | `project-graph/edges.md`, `references/project-graph.md` | service dependency edge |
+| candidate | Suspected cross-project relationship that is not yet a fact. | `project-graph/candidates.md` | discovery finding |
+| pin | Team navigation bookmark that references an `edge_id`; it stores no facts. | `cross-refs/index.md` | curated link |
+| fingerprint | Stable de-duplication key for graph edges or candidates. | `references/project-graph.md` | relationship identity key |
+| verification_status / derived staleness | Verification level stored on an edge; freshness derived from `last_verified`. | `project-graph/edges.md`, `references/cross-project-refs.md` | contract confidence / freshness |
+| registry.local.json | Local-only project path resolver; must be gitignored. | `.llm-wiki/registry.local.json` | local workspace mapping |
+| cross-project boundary check | Read-only remote evidence check under Context Recovery / External Bridge rules. | `references/cross-project-refs.md` | remote evidence access guard |
+| Base Graph | Optional machine-level registry plus architecture overview/catalog for large cross-service discussions. | `references/base-graph.md` | platform graph overview |
+
+## Project Graph Quick Use
+
+- Ask “这个接口/topic/配置/回调对面是谁” to query pins, edges, candidates, and read-only remote evidence.
+- Ask “帮我登记这个跨项目调用” to run `project-maintain graph-register`; manual registration defaults to `draft` unless this session verifies wiki/source evidence.
+- Ask “扫一下未登记上下游” to run `project-maintain graph-scan` when scanner is enabled.
+- Base Graph is optional and discovered through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
+- Base Graph `registry.local.json` is a local-config exception; business-project sessions may write it after confirmation, but must not write Base tracked files such as `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`.
+- `~/.llm-wiki/registry.json` is legacy read-only compatibility. New implementations should not create or prefer it.
 
 ## Safety
 

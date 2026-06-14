@@ -52,6 +52,7 @@ Read as needed:
 - `../references/session-digest.md`
 - `../references/progress-dashboard.md`
 - `../references/progress-dashboard-template.html`
+- `../references/base-graph.md`
 - `../references/tool-bridge.md`
 - `../references/superpowers-bridge.md`
 - `../references/templates.md`
@@ -83,6 +84,8 @@ Workflow:
 13. If dashboard is registered or `.llm-wiki/dashboard/progress.html` exists, rebuild or refresh only evidence-backed dashboard data/sections from Flow Record plus artifact registry evidence.
 14. If dashboard is expected but missing, recreate it from `../references/progress-dashboard-template.html` and mark status conservatively.
 15. Prepare or update the handoff in `.llm-wiki/handoff/<flow-id>-handoff.md` unless the project already has a more specific handoff filename for that same `flow_id`; treat handoff as archive/continuation summary, not as the status authority.
+   - If finishing work changed service responsibility, architecture overview, cross-service ownership, or Base catalog/overview expectations, generate a Base Graph Handoff or update suggestion.
+   - Do not write Base tracked files from a business-project session. Only write Base files when cwd is the Base Graph repo with `graph_role: base` or when the user explicitly enters Base write mode from `base-graph.md`.
 16. Write a concise `.llm-wiki/log.md` audit entry when sync changes durable state.
 17. Report implementation summary, verification, sync updates, residual risk, and next action.
 
@@ -175,6 +178,22 @@ Use a descriptive suffix only when it preserves the same `flow_id`, for example:
 ```
 
 Do not store final handoff artifacts in `.llm-wiki/working-context/`. Working context is for scoped planning and execution notes; handoff is the archive/continuation entry point. After moving or creating handoff, update Flow Record `archive` evidence, artifact registry, and dashboard links to the `.llm-wiki/handoff/` path.
+
+## Base Graph Handoff
+
+When Base Graph overview or catalog should change but the current session is a business-project session, generate this handoff instead of editing Base tracked files:
+
+```markdown
+## Base Graph Handoff
+
+- source_project:
+- reason:
+- affected_projects:
+- suggested_catalog_changes:
+- suggested_overview_changes:
+- evidence:
+- verification_status:
+```
 
 ## Context Handoff
 

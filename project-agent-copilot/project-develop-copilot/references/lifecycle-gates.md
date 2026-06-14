@@ -71,6 +71,37 @@ Rules:
 - If project root is unknown and cannot be inferred, ask one minimal question.
 - Do not deep-read every document or module by default.
 - In degraded mode without shared references, recover only the evidence needed for the current action and report the limitation.
+- Cross-project evidence gathering is a Context Recovery sub-check. When a decision depends on a remote contract, pair it with the External Bridge Gate return-handoff rules.
+
+### Cross-Project Boundary Check
+
+Use this Context Recovery / External Bridge sub-check when a bug, requirement, query, or manual registration crosses another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another Project Graph edge/candidate/pin.
+
+Minimum output before reading the remote project:
+
+```markdown
+- remote_project:
+- resolved_path:
+- reason:
+- scope: read-only
+- anchors_to_read:
+- verification_required:
+```
+
+Rules:
+
+- Read `references/cross-project-refs.md` and `references/project-graph.md` before using this check when available.
+- `remote_project` must be a logical project id from a Project Graph edge/candidate or registry prompt, not a local path.
+- Resolve local paths from `.llm-wiki/registry.local.json`, then legacy `.llm-wiki/cross-refs/registry.local.json`, then optional `~/.llm-wiki/registry.json`.
+- Ask the user for the local path when no registry mapping exists; write only the current project's preferred `.llm-wiki/registry.local.json` after confirmation.
+- `remote_anchor` is relative to the remote wiki root and must not start with `.llm-wiki/`.
+- Remote wiki and source are read-only.
+- Default reads are limited to the `remote_anchor`, one-hop links from that page, and exact source/config anchors named by that page.
+- `project-fix` and `project-develop` must use `verification_required: source` when a fix or implementation decision depends on the remote contract.
+- `project-query` may use `verification_required: wiki-only-allowed` for ownership or clue-finding answers, but must state that source verification was not performed.
+- Manual Project Graph registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this check and matching evidence in the current session.
+- Do not persist `stale` as `verification_status`; derive staleness from `last_verified` using the threshold in `cross-project-refs.md`.
+- External findings belong in the current project's Bug Brief or Change Brief. Do not write to the remote project unless the user starts a separate lifecycle session there.
 
 ### Lifecycle Anchor Gate
 

@@ -152,7 +152,7 @@ Examples:
 
 - Over-eager implementation.
 - Missing Change Brief or Bug Brief.
-- Skipping Context Enrichment Gate.
+- Skipping Context Recovery Gate.
 - Letting an external skill own scope.
 - Forgetting Return Handoff.
 - Treating `.llm-wiki` as raw source storage.

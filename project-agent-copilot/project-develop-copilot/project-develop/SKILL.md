@@ -44,8 +44,9 @@ Use when the user asks to:
 4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
 5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
 6. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-7. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
-8. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
+7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
+8. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
+9. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
 
 ## Lifecycle Anchor Gate
@@ -102,6 +103,9 @@ Read as needed:
 - `../references/north-star.md`
 - `../references/lifecycle-gates.md`
 - `../references/change-brief.md`
+- `../references/project-graph.md`
+- `../references/cross-project-refs.md`
+- `../references/base-graph.md`
 - `../references/flow-record.md`
 - `../references/session-digest.md`
 - `../references/scoped-working-context.md`
@@ -133,21 +137,33 @@ Workflow:
 3. Search `.llm-wiki/session-digests/` entries for related recall context. Use promoted digest items as evidence only when promotion is explicitly recorded.
 4. Create or resume Change Brief.
 5. Run Context Recovery Gate before brainstorming, planning, or implementation.
-6. Produce a concise context summary.
-7. Run Work Definition Gate before implementation planning.
-8. Guide the user conversationally through requirement discussion.
-9. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
-10. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
-11. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
-12. If a candidate Flow Record match exists, ask one confirmation question before reusing it.
-13. Do not create `.llm-wiki/working-context/*execution-plan*.md` until the Change Brief exists and links to the same `flow_id`.
-14. If planning reveals a new implementation scope or child deliverable, create a child Change Brief with `parent_flow_id` before writing its execution plan.
-15. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, and non-goals are confirmed or accepted as assumptions.
-16. Provide Context Handoff before external planning/TDD/execution bridges.
-17. Run Scope Lock Gate before implementation.
-18. Ask for implementation confirmation unless the user already explicitly asked to implement now.
-19. Update Change Brief and working-context after clarification, planning, or implementation.
-20. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, and next gate.
+6. If the requirement crosses service/project boundaries, check Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+   - If a pin matches, follow `edge_id`; do not treat pin fields as contract facts.
+   - If only a candidate matches, it is a clue only; perform source verification before using it for an implementation decision.
+   - If no edge or candidate exists, suggest manual registration via `project-maintain graph-register` only after the contract evidence is clear enough.
+   - If a registry mapping is missing, ask for the local path. With Base Graph available, write Base Graph `.llm-wiki/registry.local.json` after confirmation; without Base, write only current project `.llm-wiki/registry.local.json`.
+   - Before reading remote wiki or source, output a cross-project boundary check with `scope: read-only`.
+   - If implementation depends on the remote contract, use `verification_required: source`.
+   - Use an external edge for implementation decisions only when it is `source-verified`, not stale, and directly relevant to the requirement. If it is stale, `wiki-checked`, `draft`, `blocked`, or candidate-only, re-verify source or treat it as risk.
+   - Do not base implementation decisions on `wiki-checked`, `draft`, stale, blocked, or candidate-only evidence.
+   - Record remote evidence in the Change Brief `## External Dependencies` section with `project_id`, `edge_id`, dependency, verification status, required contract, implementation impact, and handoff.
+   - If Base Graph is discoverable and the requirement is large or cross-service, read Base `base-graph/overview.md` and `base-graph/project-catalog.md` as read-only discussion context before decomposition.
+   - Generate Base Handoff/update suggestions when architecture overview or catalog should change; do not write Base tracked files from a business-project session.
+7. Produce a concise context summary.
+8. Run Work Definition Gate before implementation planning.
+9. Guide the user conversationally through requirement discussion.
+10. Use brainstorming after scoped context recovery when tradeoffs or acceptance behavior need discussion; treat it as a discussion/design method only, and keep durable project outputs in `.llm-wiki` unless the user explicitly requests Superpowers artifacts.
+11. Capture an OpenSpec-style change summary even when no OpenSpec tool is installed.
+12. Create or update the Change Brief Flow Record so the source/design document, execution plan, development, testing, and archive steps can be tracked on the dashboard.
+13. If a candidate Flow Record match exists, ask one confirmation question before reusing it.
+14. Do not create `.llm-wiki/working-context/*execution-plan*.md` until the Change Brief exists and links to the same `flow_id`.
+15. If planning reveals a new implementation scope or child deliverable, create a child Change Brief with `parent_flow_id` before writing its execution plan.
+16. Do not enter implementation planning until requirement summary, acceptance criteria, active scope, non-goals, and required source-verified external contracts are confirmed or accepted as assumptions.
+17. Provide Context Handoff before external planning/TDD/execution bridges.
+18. Run Scope Lock Gate before implementation.
+19. Ask for implementation confirmation unless the user already explicitly asked to implement now.
+20. Update Change Brief and working-context after clarification, planning, or implementation.
+21. Return decisions, plan or changes, verification notes, artifacts, Flow Record updates, external dependency status, and next gate.
 
 ## Mode / Entry Selection
 
@@ -174,6 +190,7 @@ Workflow:
 - acceptance criteria
 - active sources
 - related Session Digests when used
+- external dependencies and verification status when cross-project refs are involved
 - active, read-only, candidate, and excluded scopes
 - non-goals and constraints
 - open questions
@@ -216,6 +233,7 @@ After planning or implementation, report:
 - recommended_scope_changes:
 - artifacts:
 - verification_notes:
+- external_dependencies:
 - lifecycle_updates_needed:
 - next_gate:
 ```
@@ -227,6 +245,7 @@ Change:
 Why:
 Acceptance criteria:
 Active sources:
+External dependencies:
 Active scopes:
 Out of scope:
 Plan:
@@ -262,6 +281,7 @@ When bridging to brainstorming, project-develop owns durable project outputs. Br
 - Do not modify production code during requirement discussion, context recovery, or planning unless the user explicitly asks to proceed.
 - Do not generate or require codegraph unless scope is ambiguous, cross-module impact is complex, or the user asks for it.
 - Do not force full brainstorming/spec output for every feature. In project-local `.llm-wiki` workflows, do not inherit brainstorming's default `docs/superpowers/specs/` output path.
+- Do not edit remote project wiki, source, config, or registry during cross-project evidence gathering. Generate a context handoff if remote project changes are needed.
 
 ## Common Mistakes
 
@@ -275,4 +295,5 @@ When bridging to brainstorming, project-develop owns durable project outputs. Br
 - Persisting local workstation absolute paths in `.llm-wiki` requirement, source, module, or working-context pages.
 - Expanding scope because a plan suggests it, without evidence or user confirmation.
 - Treating lightweight design discussion as full lifecycle.
+- Making implementation decisions from `wiki-checked` external evidence when the remote contract needs source verification.
 - Forgetting Return Handoff after planning or implementation.

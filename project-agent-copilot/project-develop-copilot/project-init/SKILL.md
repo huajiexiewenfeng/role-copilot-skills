@@ -123,6 +123,8 @@ A project init must create or preserve this standard structure. Some directories
   modules/
   sources/
   artifacts/
+  cross-refs/
+  project-graph/
   dashboard/
   session-digests/
   migration/
@@ -142,6 +144,10 @@ Minimum starter files:
 - `.llm-wiki/modules/<scope>/README.md`: scoped-context landing area only for selected or clearly active scopes.
 - `.llm-wiki/sources/registry.md`: source and supporting-context registry.
 - `.llm-wiki/artifacts/index.md`: specs, plans, reports, verification notes, generated pages, and dashboard registry.
+- `.llm-wiki/cross-refs/index.md`: cross-project pin layer; stores team-confirmed entry points that reference `project-graph/edges.md` by `edge_id` only.
+- `.llm-wiki/project-graph/edges.md`: unique cross-project relationship fact table.
+- `.llm-wiki/project-graph/candidates.md`: candidate/discovered relationship table; candidates do not drive decisions.
+- `.llm-wiki/project-graph/scan-report.md`: latest graph scan summary placeholder.
 - `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
 - `.llm-wiki/session-digests/README.md`: recallable Session Digest landing area for historical chat/session summaries.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
@@ -155,6 +161,12 @@ Refresh rules:
 
 - Preserve existing directories and richer files even if they are not listed above.
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
+- Create or preserve `.llm-wiki/cross-refs/index.md` with the pin-layer Cross-Project Integration Points template when missing.
+- Create or preserve `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, and `.llm-wiki/project-graph/scan-report.md` with empty templates when missing.
+- Ensure `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` exactly once so local project-path mappings and scan state do not enter git.
+- Do not create `.llm-wiki/registry.local.json` or `.llm-wiki/cross-refs/registry.local.json` during init unless the user provides a remote project path and confirms storing it as local-only configuration.
+- Do not scan external projects during `project-init`; scanner is an optional later `project-maintain graph-scan` flow.
+- If the user initializes a Base Graph repo, create Base Graph files from the Base Graph minimum templates below. Do not create Base `shared-edges.md` or Base `relation-policy.md`.
 - Create or preserve `.llm-wiki/session-digests/` for confirmed Session Digests. Do not scan it as raw source material; treat it as recall context by default, not project truth.
 - When `.llm-wiki/session-digests/` exists, include it in context discovery for recall and duplicate avoidance. Do not promote digest items to requirement, bug, module, Flow Record, dashboard, scope, or verification truth without explicit Lifecycle Promotion confirmation.
 - If an older project uses a different but richer lifecycle layout, record it in `project/overview.md` or `sources/registry.md` and ask before reorganizing.
@@ -202,6 +214,134 @@ Module index minimum:
 | Module | Path | Type | Context | Status | Notes |
 |---|---|---|---|---|---|
 ```
+
+Cross-project refs minimum:
+
+```markdown
+# Cross-Project Integration Points
+
+| id | edge_id | local_entry | why_pinned | owner_note |
+|---|---|---|---|---|
+
+## Notes
+
+- This is a pin layer only. Store facts in `.llm-wiki/project-graph/edges.md`.
+- Do not copy `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor` here.
+```
+
+Project Graph edges minimum:
+
+```markdown
+# Project Graph Edges
+
+| edge_id | fingerprint | type | source | from_project | from_anchor | to_project | to_anchor | contract_summary | verification_status | last_verified |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+## Notes
+
+- This is the unique cross-project relationship fact table.
+- Manual registration defaults to `verification_status: draft`.
+- Do not write `stale`; derive staleness from `last_verified`.
+```
+
+Project Graph candidates minimum:
+
+```markdown
+# Project Graph Candidates
+
+| candidate_id | candidate_fingerprint | relation | local_anchor | remote_project | remote_anchor | evidence | confidence | status | edge_id | discovered_at | last_seen |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+## Notes
+
+- Candidates are clues only and must not drive fix or development decisions.
+```
+
+Project Graph scan report minimum:
+
+```markdown
+# Project Graph Scan Report
+
+- scanned_at:
+- scanner_version:
+- scanned_projects:
+- scan_scope:
+- read_only_scope:
+- new_candidates:
+- updated_candidates:
+- suppressed_candidates:
+- changed_edges:
+- stale_edges:
+- blocked_items:
+
+## Notes
+
+-
+```
+
+Base Graph directory minimum:
+
+```text
+.llm-wiki/
+  registry.local.json
+  base-graph/
+    manifest.json
+    project-catalog.md
+    overview.md
+  decisions/
+  handoff/
+  log.md
+```
+
+Base Graph `.gitignore` minimum:
+
+```gitignore
+.llm-wiki/registry.local.json
+```
+
+Base Graph manifest minimum:
+
+```json
+{
+  "$schema_version": 2,
+  "graph_role": "base",
+  "graph_id": "platform-base",
+  "name": "Platform Base Graph",
+  "default_stale_days": 30,
+  "project_catalog": "project-catalog.md",
+  "overview": "overview.md"
+}
+```
+
+Base Graph project catalog minimum:
+
+```markdown
+# Project Catalog
+
+| project_id | display_name | domain | owner | repo | status | notes |
+|---|---|---|---|---|---|---|
+```
+
+Base Graph overview minimum:
+
+```markdown
+# Base Graph Overview
+
+## Domains
+
+## Key Cross-Service Flows
+
+## Common Change Entry Points
+
+## Notes
+```
+
+Base Graph constraints:
+
+- Base Graph is optional and discovered by `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
+- Base Graph stores overview and catalog only; precise edges stay in project-local `project-graph/edges.md`.
+- Do not create business-project `manifest.json` or `parent` pointers.
+- Do not create Base `shared-edges.md` or Base `relation-policy.md`.
 
 ## Context Handoff
 

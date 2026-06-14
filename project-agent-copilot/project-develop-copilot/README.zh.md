@@ -7,7 +7,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 1. 桥接各个顶级 skills 和 tools，纳入统一项目生命周期。
 2. 内化项目级 LLM Wiki，作为共享上下文记忆层。
 
-它把项目 LLM Wiki 维护、受控上下文恢复、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
+它把项目 LLM Wiki 维护、受控上下文恢复、跨项目引用取证、需求开发、bug 修复、完成同步和交付前评审组合成一条连贯的开发生命周期。
 
 它不替代 Superpowers 类 skills，而是先准备项目上下文、active scopes 和 `.llm-wiki` 状态，再在这个受控上下文里桥接 brainstorming、planning、TDD、debugging、execution、verification 和 review。
 
@@ -30,13 +30,13 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | Skill | 使用场景 |
 |---|---|
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
-| `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
-| `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
+| `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
+| `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
-| `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
-| `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
+| `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能；当需求依赖跨项目契约时，在 Change Brief 中记录外部依赖和验证状态。 |
+| `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题；当 bug 涉及外部服务时，在 Bug Brief 中记录 External Findings。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
 | `project-review` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
 
@@ -71,7 +71,7 @@ project-develop-copilot
 -> project-review
 ```
 
-`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
@@ -112,6 +112,22 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 - 可能的下一步路由，例如补充 ingest、创建 Change Brief、创建 Bug Brief、进入 review，或触发 Lifecycle Quality Review
 
 `project-query` 不等同于 `lightweight-answer`：它会主动搜索项目 `.llm-wiki` 并组装证据。它也不等同于完整 lifecycle：除非用户明确要求继续开发、修复、摄入、评审或做 skill 进化，否则它保持只读。
+
+## Project Graph 与跨项目引用层
+
+Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
+
+事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
+
+### Project Graph 快速入口
+
+- 问“这个接口 / topic / 配置 / 回调对面是谁”：走 `project-query`，按 pin -> edge -> candidate 查询，并在需要时只读读取外部证据。
+- 说“帮我登记这个跨项目调用”：走 `project-maintain graph-register`；手工登记默认 `draft`，除非当前会话实际完成 wiki/source 验证。
+- 说“扫一下未登记上下游”：在 scanner 启用时走 `project-maintain graph-scan`。
+- Base Graph 是可选全局视角，通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现。
+- Base Graph 的 `registry.local.json` 是本机配置例外；业务项目会话经确认可写它，但不得写 Base 的 `overview.md`、`project-catalog.md`、`decisions/` 或 `handoff/`。
+- `~/.llm-wiki/registry.json` 只做 legacy 只读兼容；新实现不创建、不优先写入。
+
 ## 上下文模型
 
 共享项目上下文层是 `.llm-wiki`：
@@ -127,13 +143,14 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
   bugs/
   working-context/
   modules/
-    index.md
-    <scope>/
-      index.md
-      architecture.md
-      rules.md
-      development.md
-      open-questions.md
+  artifacts/
+  cross-refs/
+  project-graph/
+  dashboard/
+  handoff/
+  session-digests/
+  migration/
+  registry.local.json   (gitignored, local paths only)
 ```
 
 这个 wiki 是 LLM Wiki 思想在项目开发中的内化子集：它是索引和摘要层，不替代源码、PRD、issue、设计文档、测试或代码。它记录重要资料在哪里、含义是什么、关联哪个模块或需求，以及还存在哪些缺口。
@@ -141,6 +158,24 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 `modules/<scope>/` 保存单个模块、微服务或业务域的长期上下文。`working-context/<change-id>.md` 保存一次需求、Bug 或跨模块变更的任务上下文，用来把 active scopes、read-only scopes、excluded scopes、契约、范围升级和验证计划放在同一个工作闭环里。
 
 旧版 `docs/ai-coding/` 目录视为迁移来源。新的项目上下文应写入 `.llm-wiki`。
+
+## 术语表
+
+| 术语 | 一句话说明 | 主要文件 | 近似概念 |
+|---|---|---|---|
+| Change Brief / Bug Brief | 由 agent 维护的需求或 bug 生命周期页面。 | `requirements/`、`bugs/`、`references/change-brief.md`、`references/bug-brief.md` | mini-RFC / bug report |
+| Flow Record | 一个交付项的证据化生命周期状态行。 | `references/flow-record.md` | 生命周期状态 + 证据索引 |
+| Session Digest | 历史会话上下文的确认摘要；默认只作召回上下文。 | `session-digests/`、`references/session-digest.md` | 会话纪要 |
+| Scoped Working Context | 复杂或跨模块工作中的 active/read-only/candidate/excluded 上下文。 | `working-context/`、`references/scoped-working-context.md` | monorepo sparse context |
+| Lifecycle Gate | 生命周期关键动作前的轻量准入检查。 | `references/lifecycle-gates.md` | readiness checklist |
+| Project Graph edge | 跨项目关系事实，可以是 draft 或已验证。 | `project-graph/edges.md`、`references/project-graph.md` | service dependency edge |
+| candidate | 尚未验证成事实的疑似跨项目关系。 | `project-graph/candidates.md` | discovery finding |
+| pin | 团队导航书签，只引用 `edge_id`，不存事实。 | `cross-refs/index.md` | curated link |
+| fingerprint | 用于关系去重的稳定键。 | `references/project-graph.md` | relationship identity key |
+| verification_status / derived staleness | edge 的验证级别；是否过期由 `last_verified` 派生。 | `project-graph/edges.md`、`references/cross-project-refs.md` | contract confidence / freshness |
+| registry.local.json | 本机项目路径映射文件，必须 gitignore。 | `.llm-wiki/registry.local.json` | local workspace mapping |
+| cross-project boundary check | 在 Context Recovery / External Bridge 规则下执行的只读远程证据检查。 | `references/cross-project-refs.md` | remote evidence access guard |
+| Base Graph | 可选的机器级 registry 主册与架构 overview/catalog。 | `references/base-graph.md` | platform graph overview |
 
 ## 安全边界
 

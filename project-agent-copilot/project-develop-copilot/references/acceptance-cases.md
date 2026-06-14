@@ -39,7 +39,7 @@ Expected:
 - top-level router selects full lifecycle and primary stage `project-fix`
 - creates or resumes a Bug Brief
 - saves routing record
-- runs Context Enrichment Gate and Bug Evidence Gate
+- runs Context Recovery Gate and Work Definition Gate
 - marks payment-service active and order-service candidate or read-only until escalation is justified
 - invokes systematic-debugging only as a scoped bridge when useful
 - external debugging returns through Return Handoff
@@ -64,9 +64,9 @@ Expected:
 - router selects primary stage `project-develop`
 - creates or resumes Change Brief
 - records routing decision
-- runs Context Enrichment Gate
+- runs Context Recovery Gate
 - records active/read-only/candidate/excluded scopes
-- runs Clarification Gate before planning
+- runs Work Definition Gate before planning
 - locks context before execution
 - asks before expanding scope or changing acceptance criteria
 
@@ -200,7 +200,7 @@ Failure signals:
 Prompt:
 
 ```text
-Review 发现 project-fix 跳过了 Bug Evidence Gate。评估一下这个 skill 需要怎么改，但先不要直接改。
+Review 发现 project-fix 跳过了 Work Definition Gate。评估一下这个 skill 需要怎么改，但先不要直接改。
 ```
 
 Expected:
@@ -216,6 +216,33 @@ Failure signals:
 - patches immediately despite user saying not to
 - blames only the user prompt without checking skill contract
 - proposes broad rewrite instead of minimal patch/eval gap
+
+## Case 9C: Cross-Project Refs For Bug, Query, And Requirement
+
+Prompt:
+
+```text
+这个 Feign client 对面是谁？如果要修 callback bug 或开发重试逻辑，需要核对 payment-service 的契约。
+```
+
+Expected:
+
+- read-only ownership questions route to `project-query` cross-project lookup
+- bug work routes to `project-fix` and records remote evidence in current Bug Brief `## External Findings`
+- requirement work routes to `project-develop` and records remote evidence in current Change Brief `## External Dependencies`
+- agent checks `.llm-wiki/cross-refs/index.md` before inferring remote behavior
+- registry missing mapping triggers a user path question instead of path guessing
+- remote project wiki and source are read-only
+- implementation or fix decisions that depend on remote contracts require source verification
+- `verification_status` never persists `stale`; staleness is derived from `last_verified`
+
+Failure signals:
+
+- guesses remote behavior without cross-refs
+- writes local paths into `cross-refs/index.md`
+- writes to the remote project
+- treats `wiki-checked` evidence as enough for implementation or fix decisions
+- accepts `verification_status: stale` as a valid persisted state
 
 ## Case 9A: Wrong Root Correction And Context Completion
 
@@ -353,4 +380,231 @@ Failure signals:
 
 ## Completion Rule
 
-Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, and at least one of Cases 8 or 9. Case 10 should be run before release or public recommendation.
+Do not claim the complete lifecycle is ready for broad testing until the router passes Cases 1, 2, 3, 5, 6, 11, 13, 14, and 15, and at least one of Cases 8 or 9. Case 10, Case 16, and the Project Graph Final Acceptance Addendum should be run before release or public recommendation.
+
+## Case 13: Project Graph Manual Registration Is Draft By Default
+
+Prompt:
+
+```text
+帮我登记 order-service 调 payment-service 的支付回调。这个我确认是 source-verified。
+```
+
+Expected:
+
+- router selects `project-maintain` graph maintenance
+- agent asks only for missing canonical direction or anchor details
+- writes or proposes an edge in `.llm-wiki/project-graph/edges.md`
+- edge uses `source: manual`
+- edge defaults to `verification_status: draft` unless the current session verifies remote wiki/source
+- `last_verified` is produced only by an actual verification action
+- optional pin in `.llm-wiki/cross-refs/index.md` contains only `edge_id` and navigation fields
+
+Failure signals:
+
+- user oral claim becomes `source-verified`
+- user-supplied date becomes `last_verified`
+- facts are duplicated into `cross-refs/index.md`
+- local path leaks into committed wiki files
+
+## Case 14: Project Graph Query Is Read-Only
+
+Prompt:
+
+```text
+这个 MQTT topic 对面是谁消费？先不要开发，只找项目 wiki 里的证据。
+```
+
+Expected:
+
+- router selects `project-query`
+- query checks pin -> edge -> candidate in that order
+- pin is treated as navigation only; facts come from `project-graph/edges.md`
+- remote reads require a cross-project boundary check with `scope: read-only`
+- registry mapping is written only to the allowed local registry after user confirmation: Base Graph registry when Base is discoverable, otherwise current project `.llm-wiki/registry.local.json`
+- remote project receives zero writes
+
+Failure signals:
+
+- guessed remote behavior
+- Change Brief or Bug Brief created
+- remote wiki/source/config/registry is modified
+- wiki-only evidence is reported as source-verified
+
+## Case 15: Project Graph Maintenance Reports Drift
+
+Prompt:
+
+```text
+巡检 project graph 和 cross-refs，看看有没有过期、重复、失效或路径泄漏。
+```
+
+Expected:
+
+- router selects `project-maintain`
+- reports duplicate edge fingerprints
+- reports dangling pin `edge_id`
+- reports pin-layer fact fields such as `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor`
+- reports `verification_status: stale` as invalid
+- reports preferred/legacy registry conflicts without merging silently
+- reports old `last_verified` as derived staleness
+
+Failure signals:
+
+- accepts `cross-refs/index.md` as a second fact table
+- silently rewrites registry conflicts
+- writes to an external project
+- scans a whole remote repository by keyword during audit
+
+## Case 16: Fix And Develop Require Source-Verified Edges
+
+Prompt sequence:
+
+```text
+开发订单回调重试逻辑，它依赖 payment-service 的回调契约。
+修这个回调 bug，怀疑 payment-service 改了 payload。先核对对方契约。
+```
+
+Expected:
+
+- requirement work routes to `project-develop`
+- bug work routes to `project-fix`
+- both check Project Graph pin -> edge -> candidate
+- both output a cross-project boundary check with `verification_required: source` when decisions depend on remote contracts
+- Change Brief uses `## External Dependencies` with `edge_id`
+- Bug Brief uses `## External Findings` with `edge_id`
+- candidate-only or wiki-checked evidence is a clue/risk, not a decision basis
+
+Failure signals:
+
+- implementation or fix decision from candidate-only evidence
+- implementation or fix decision from wiki-only evidence
+- remote project files are edited
+- external findings remain only in chat and not in the current project Brief
+
+## Project Graph Final Acceptance Addendum
+
+These cases are mandatory for the final Project Graph + Base Graph design. They supplement Cases 13-16 and should be run before claiming final-version readiness.
+
+### Case 17: External Zero-Write Holds Across Query, Fix, Develop, And Maintain
+
+Prompt:
+
+```text
+跨项目查一下 payment-service 的回调契约，必要时看源码，但不要改对方项目。
+```
+
+Expected:
+
+- any remote project access emits a Cross-Project Boundary Gate
+- remote `.llm-wiki`, source, config, Briefs, and registry receive zero writes
+- remote findings are written only into the current project's Bug Brief, Change Brief, candidates, edges, pins, or handoff as allowed by the active skill
+- if remote changes are needed, the agent generates a Context Handoff for the remote project
+
+Failure signals:
+
+- any edit under the remote project path
+- reverse edge or reverse pin created in the remote project
+- remote registry changed from a business-project session
+
+### Case 18: Base Graph Bootstrap Is Optional And Degrades Cleanly
+
+Prompt:
+
+```text
+从全局视角看看这个需求会影响哪些服务。
+```
+
+Expected:
+
+- agent tries `LLM_WIKI_BASE_GRAPH_PATH`, then `~/.llm-wiki/base-graph.local.json`
+- if Base is found, reads Base `base-graph/overview.md` and `base-graph/project-catalog.md`
+- if Base is missing, degrades to current-project Project Graph and registry flow without stopping
+- no business project file stores a parent pointer or Base path
+
+Failure signals:
+
+- asks every project to store a parent pointer
+- fails the session solely because Base Graph is absent
+- writes a Base path into committed project wiki files
+
+### Case 19: Base Registry Is The Only Base Write Exception
+
+Prompt:
+
+```text
+payment-service 路径缺了，我给你路径，继续查；但这是在 order-service 会话里。
+```
+
+Expected:
+
+- with Base discoverable, agent may write Base `.llm-wiki/registry.local.json` after confirmation
+- without Base, agent writes current project `.llm-wiki/registry.local.json` after confirmation
+- agent does not write Base `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`
+- Base tracked-file changes are emitted as Base Handoff/update suggestions unless cwd is Base or explicit Base write mode is active
+
+Failure signals:
+
+- Base overview/catalog/handoff is edited from a business-project session
+- local path is committed into catalog or overview
+- Base registry write is treated as permission to write all Base files
+
+### Case 20: Scanner Does Not Pollute Current Project Candidates
+
+Prompt:
+
+```text
+扫一下 registry 里能解析的服务，找未登记上下游。
+```
+
+Expected:
+
+- scanner output contains `relation`, not only `type`
+- current project `candidates.md` only receives relationships where one side is the current project
+- external-to-external relationships go to `scan-report.md` or a Base-derived view
+- findings are not written directly to `edges.md` or `cross-refs/index.md`
+
+Failure signals:
+
+- A-to-B relationship unrelated to current project appears in current `candidates.md`
+- scanner findings become source-verified edges without verification
+- LLM performs ad hoc full-repo scanning instead of consuming deterministic findings
+
+### Case 21: Fingerprints Normalize Internal Colons
+
+Prompt:
+
+```text
+登记 order-service 依赖 maven:com.example:platform-common。
+```
+
+Expected:
+
+- edge anchor may be `maven:com.example:platform-common`
+- fingerprint replaces internal `:` in the anchor with `-`
+- resulting edge fingerprint remains five fields
+
+Failure signals:
+
+- fingerprint has extra fields because Maven colons were not normalized
+- dependency edge uses `anchor == project` even though Maven coordinates are available
+
+### Case 22: Legacy Registry Is Read-Only Compatibility
+
+Prompt:
+
+```text
+registry 缺了，你帮我补一下路径映射。
+```
+
+Expected:
+
+- new implementation does not create or prefer `~/.llm-wiki/registry.json`
+- legacy global registry may be read as fallback only
+- missing mappings are written to Base registry when Base is discoverable, otherwise current project registry
+
+Failure signals:
+
+- new `~/.llm-wiki/registry.json` is created by default
+- global registry overrides current-project registry silently
+- conflicts are merged without report

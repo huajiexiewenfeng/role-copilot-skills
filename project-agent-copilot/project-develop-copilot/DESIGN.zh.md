@@ -161,6 +161,7 @@ open_questions:
 - 如果项目没有 `.llm-wiki`，先建议或执行 `project-init`，但不要阻塞用户表达的真实目标。
 - 如果用户输入的是 PRD、设计文档、会议纪要、链接、PDF、Word、日志或截图，先进入 `project-ingest`，再判断是否转入 requirement、bug 或 evidence。
 - 如果用户表达“基于项目 wiki 回答、找一下相关需求/开发文档、把上下文找出来、先不要开发、我们先讨论”，进入 `project-query`。
+- 如果用户询问“这个接口对面是谁”“这个 topic 谁发谁消费”“这个 Feign 调哪个服务”或其他跨服务契约线索，且当前 wiki 证据不足，进入 `project-query` 的 cross-project lookup；如果用户要求开发或修 bug，则在当前 `project-develop` / `project-fix` 阶段内执行 cross-project boundary check。
 - 如果用户表达“开发、实现、改需求、做功能”，进入 `project-develop`，但必须先创建或恢复 Change Brief。
 - 如果用户表达“bug、报错、失败、异常、日志、线上问题”，进入 `project-fix`，但必须先创建或恢复 Bug Brief / Change Brief。
 - 如果用户表达“继续、上次、按计划执行”，优先恢复最近 active / ready / executing 的 Change Brief；若存在多个候选，询问用户选择。
@@ -928,8 +929,11 @@ project init 第一版必须创建或维护：
 .llm-wiki/AGENTS.md
 .llm-wiki/ingest/index.md
 .llm-wiki/sources/
+.llm-wiki/cross-refs/index.md
 .llm-wiki/modules/index.md
 ```
+
+`.llm-wiki/project-graph/edges.md` 是跨项目关系的唯一事实表，保存逻辑 project-id、锚点、契约摘要、验证状态和验证日期。`.llm-wiki/cross-refs/index.md` 只是 pin 层，只保存团队确认入口和 `edge_id` 引用，不复制契约事实。本机路径只允许放在 gitignore 的 `.llm-wiki/registry.local.json`，兼容读取旧 `.llm-wiki/cross-refs/registry.local.json`，不进入团队共享 wiki。
 
 对于多微服务仓库，`.llm-wiki/modules/index.md` 只登记模块清单和状态：
 
@@ -964,6 +968,40 @@ discovered -> candidate -> active
 ```
 
 这和 `docs/ai-coding/<context-scope>/` 的思想一致：上下文必须按作用域隔离，不能把一个 scoped context 自动套用到其他微服务。
+
+## Project Graph And Cross-Project Refs
+
+Project Graph / Cross-Project Refs 是 `.llm-wiki` 内的横切 evidence layer，不是新的子 skill，也不是中央同步服务。它解决的是：当前项目的需求、bug 或查询需要理解外部服务契约时，agent 如何从当前项目的 pin/edge/candidate 安全跳转到另一个本地项目的 `.llm-wiki` 继续取证。
+
+核心约束：
+
+- `project-graph/edges.md` 是唯一事实表。
+- `cross-refs/index.md` 是 pin 层，只引用 `edge_id`。
+- `project-graph/candidates.md` 是发现层，不能直接驱动修复或开发决策。
+- 本机路径只写入 gitignore 的 registry / bootstrap 文件；当前项目 `.llm-wiki/registry.local.json` 是项目级 override，无 Base 时也是降级入口。
+- 旧 `.llm-wiki/cross-refs/registry.local.json` 只做兼容读取。
+- 可选 Base Graph 通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现；找不到 Base 时降级为点对点 Project Graph 流程。
+- Base Graph 只维护本机 registry 主册、`base-graph/project-catalog.md` 和 `base-graph/overview.md`，不维护精确边、不创建 `shared-edges.md` / `relation-policy.md`。
+- 业务项目会话不得写 Base 的入库事实文件；只有 Base `.llm-wiki/registry.local.json` 是经用户确认可写的本机配置例外。
+- 外部项目 wiki 和源码默认 read-only。
+- `verification_status` 只记录 `draft`、`wiki-checked`、`source-verified`、`blocked`，不落盘 `stale`。
+- 过期状态由 `last_verified` 和统一阈值实时派生。
+- 手工登记 edge 默认 `draft`；`wiki-checked` / `source-verified` 必须由当前会话通过 cross-project boundary check 完成对应验证。
+
+进入外部项目之前必须经过 cross-project boundary check：
+
+```markdown
+- remote_project:
+- resolved_path:
+- reason:
+- scope: read-only
+- anchors_to_read:
+- verification_required:
+```
+
+`project-query` 可以用 wiki-only 证据回答“对面是谁”这类线索问题，但必须说明未做源码验证。`project-develop` 和 `project-fix` 如果要基于外部契约做实现或修复决策，必须对照外部源码完成 `source-verified`。
+
+大范围跨服务需求讨论可以先读 Base Graph `overview.md` / `project-catalog.md` 获取系统全貌；拆解产出如果需要更新 Base，只生成 Base Handoff，除非当前 cwd 就是 Base Graph 仓库或用户显式进入 Base 写入模式。
 
 ## Multi-Scope Change Protocol
 

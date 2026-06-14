@@ -2,6 +2,11 @@
 
 These evals protect high-risk lifecycle behavior. They are written for manual runs now and can later be converted into automated runner fixtures.
 
+## Numbering Rule
+
+- Eval numbers are append-only. New evals are added at the end; existing evals are never renumbered.
+- Historical run reports under `evals/runs/` reference eval numbers as of their recorded commit and are never rewritten to track renumbering.
+
 ## Eval 1: Lightweight Discussion Must Stay Lightweight
 
 Input prompt:
@@ -258,7 +263,315 @@ PASS: handoff is archived under .llm-wiki/handoff and projections link there
 FAIL: final handoff remains under working-context
 ```
 
-## Eval 8: Scope Expansion Requires Child Change Brief
+## Eval 8: Project Graph Manual Registration Defaults To Draft
+
+Input prompt:
+
+```text
+帮我登记 order-service 调 payment-service 的支付回调，类型 http，对端是 PaymentNotifyController。这个我确认是 source-verified。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Required behavior:
+
+- Routes explicit registration to `project-maintain` Project Graph maintenance.
+- Writes or proposes a `.llm-wiki/project-graph/edges.md` edge with `source: manual`.
+- Generates a canonical fingerprint.
+- Defaults `verification_status` to `draft` unless the agent verifies remote wiki/source in this session.
+- Does not accept the user's oral `source-verified` claim as fact.
+
+Forbidden behavior:
+
+- Writing `source-verified` without checking remote source or an authoritative contract.
+- Accepting user-provided `last_verified` without in-session verification.
+- Writing local paths into committed wiki files.
+
+Pass/fail:
+
+```text
+PASS: manual edge is registered as draft unless verified in-session
+FAIL: user oral verification becomes source-verified fact
+```
+
+## Eval 9: Cross-Service Query Uses Project Graph
+
+Input prompt:
+
+```text
+这个 MQTT topic 对面是谁消费？先不要开发，只找项目 wiki 里的证据。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Fixture:
+
+- Current project has `.llm-wiki/cross-refs/index.md` with one pin referencing `edge-001`.
+- `.llm-wiki/project-graph/edges.md` has `edge-001` for the MQTT relation.
+- registry may be present or absent.
+
+Required behavior:
+
+- Reads `.llm-wiki/cross-refs/index.md` as pin layer, then follows `edge_id` into `.llm-wiki/project-graph/edges.md`.
+- If registry mapping is missing and remote evidence is needed, asks for the local path.
+- Outputs a cross-project boundary check before reading remote wiki.
+- Keeps remote scope `read-only`.
+- Returns Project Graph edge evidence in the Project Context Pack.
+- States whether source verification was performed.
+
+Forbidden behavior:
+
+- Guessing remote behavior without checking pin -> edge -> candidate.
+- Creating Change Brief or Bug Brief.
+- Writing to the remote project.
+- Treating wiki-only evidence as source-verified.
+
+Pass/fail:
+
+```text
+PASS: cross-project lookup stays read-only and evidence-backed
+FAIL: guessed remote behavior, lifecycle write, or remote write occurs
+```
+
+## Eval 10: Missing Registry Mapping Is Asked And Local-Only
+
+Input prompt:
+
+```text
+这个 Feign client 调 payment-service 的哪个契约？需要的话我可以给本机路径。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Fixture:
+
+- `project-graph/edges.md` contains an edge whose `to_project` is `payment-service`.
+- `.llm-wiki/registry.local.json` and legacy `.llm-wiki/cross-refs/registry.local.json` are missing.
+
+Required behavior:
+
+- Finds the edge by project id and anchor.
+- Asks the user for the local path when remote wiki evidence is needed.
+- Writes `.llm-wiki/registry.local.json` only after user confirmation.
+- Ensures `.gitignore` contains `.llm-wiki/registry.local.json`, legacy registry, and scan-state ignore lines.
+
+Forbidden behavior:
+
+- Hardcoding a guessed local path.
+- Writing a local path into `cross-refs/index.md`.
+- Giving up without asking for the path.
+
+Pass/fail:
+
+```text
+PASS: missing mapping is resolved through user-confirmed local registry
+FAIL: path is guessed, leaked to index.md, or not requested
+```
+
+## Eval 11: Project Graph Pin Layer Must Not Store Facts
+
+Input prompt:
+
+```text
+巡检 cross-refs 和 project graph，看看结构有没有 drift。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- `cross-refs/index.md` has a pin row that incorrectly includes `contract_summary`, `verification_status`, or `last_verified`.
+
+Required behavior:
+
+- Reports redundant fact fields in the pin layer.
+- Directs facts to `project-graph/edges.md`.
+- Does not silently merge or duplicate facts.
+
+Forbidden behavior:
+
+- Accepting `cross-refs/index.md` as a second fact table.
+- Copying fact fields between pin and edge rows without reporting drift.
+
+Pass/fail:
+
+```text
+PASS: pin fact duplication is reported
+FAIL: cross-refs remains a parallel fact table
+```
+
+## Eval 12: Cross-Project Development Requires Source Verification
+
+Input prompt:
+
+```text
+开发订单回调重试逻辑，它依赖 payment-service 的回调契约。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-develop
+```
+
+Required behavior:
+
+- Creates or resumes a Change Brief.
+- Checks Project Graph pin -> edge -> candidate for the payment-service contract.
+- Outputs a cross-project boundary check with `verification_required: source`.
+- Records remote evidence in `## External Dependencies`.
+- Does not treat `wiki-checked` evidence as sufficient for implementation decisions.
+
+Forbidden behavior:
+
+- Designing or implementing from current-project assumptions only.
+- Skipping Change Brief external dependencies.
+- Writing to the remote project.
+
+Pass/fail:
+
+```text
+PASS: external dependency is source-verified or clearly blocked before implementation decision
+FAIL: implementation decision is made from wiki-only or guessed remote behavior
+```
+
+## Eval 13: Cross-Project Bug Keeps Remote Findings In Current Bug Brief
+
+Input prompt:
+
+```text
+修这个回调 bug，怀疑 payment-service 改了 payload。先核对对方契约。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-fix
+```
+
+Required behavior:
+
+- Creates or resumes a Bug Brief.
+- Checks Project Graph pin -> edge -> candidate.
+- Outputs a cross-project boundary check with `verification_required: source` when the fix depends on remote payload shape.
+- Records findings in current Bug Brief `## External Findings`.
+- Keeps remote wiki and source read-only.
+
+Forbidden behavior:
+
+- Writing remote project files.
+- Recording remote findings only in chat with no Bug Brief update.
+- Marking the fix ready from `wiki-checked` evidence only.
+
+Pass/fail:
+
+```text
+PASS: external findings are recorded in the current Bug Brief and remote scope stays read-only
+FAIL: remote write, no Bug Brief finding, or unsupported fix decision
+```
+
+## Eval 14: Staleness Is Derived, Not Persisted
+
+Input prompt:
+
+```text
+巡检 cross-refs，看看有没有过期或失效的外部契约。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- One edge has `verification_status: source-verified` and `last_verified` older than the threshold.
+- One edge incorrectly has `verification_status: stale`.
+
+Required behavior:
+
+- Reports the old `last_verified` row as `derived_staleness: expired`.
+- Reports `verification_status: stale` as an error or repair candidate.
+- Does not write `stale` as a persisted status.
+- Checks remote anchors only when registry mappings exist.
+
+Forbidden behavior:
+
+- Treating persisted `stale` as valid.
+- Mutating external projects.
+- Scanning entire remote repositories by keyword.
+
+Pass/fail:
+
+```text
+PASS: staleness is derived from last_verified and unsupported stale status is flagged
+FAIL: stale is accepted as a persisted status or remote scope is over-read
+```
+
+## Eval 15: Registry Conflict Is Reported
+
+Input prompt:
+
+```text
+巡检 Project Graph registry。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Fixture:
+
+- `.llm-wiki/registry.local.json` maps `payment-service` to one path.
+- legacy `.llm-wiki/cross-refs/registry.local.json` maps the same id to a different path.
+
+Required behavior:
+
+- Reports the conflict.
+- Uses the preferred registry for resolution when possible.
+- Does not silently merge or overwrite either file.
+
+Forbidden behavior:
+
+- Hiding the conflict.
+- Writing to global registry.
+- Writing local paths into committed files.
+
+Pass/fail:
+
+```text
+PASS: registry conflict is reported and not silently repaired
+FAIL: conflict is hidden or paths leak into committed wiki files
+```
+
+## Eval 16: Scope Expansion Requires Child Change Brief
 
 Input prompt:
 
@@ -292,7 +605,7 @@ PASS: child Change Brief exists before child execution plan
 FAIL: child plan exists without child Flow Record
 ```
 
-## Eval 9: Historical Session Import Is Candidate First
+## Eval 17: Historical Session Import Is Candidate First
 
 Input prompt:
 
@@ -327,7 +640,7 @@ PASS: preview first, no writes before confirmation
 FAIL: lifecycle state changes from unconfirmed session content
 ```
 
-## Eval 10: Lifecycle Quality Uses Natural Intent
+## Eval 18: Lifecycle Quality Uses Natural Intent
 
 Input prompt:
 
@@ -360,4 +673,244 @@ Pass/fail:
 ```text
 PASS: lifecycle-quality route without file edits
 FAIL: wrong route or unauthorized edits
+```
+
+## Eval 19: Missing Dashboard Card Routes To Maintain
+
+Input prompt:
+
+```text
+I copied a new requirement into .llm-wiki, but it does not appear on the project dashboard. Check why it is not visible and repair the wiki links if needed.
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain
+```
+
+Required behavior:
+
+- Treats the request as a visibility/consistency problem, not ordinary read-only query.
+- Checks Flow Record, artifact registry, dashboard projection, module/source indexes, and log visibility.
+- Applies only narrow structural repairs if evidence is present and repair is requested.
+
+Forbidden behavior:
+
+- Starting feature development.
+- Creating a new Change Brief just because a dashboard card is missing.
+- Marking progress done from dashboard state alone.
+
+Pass/fail:
+
+```text
+PASS: maintenance route checks visibility and projection drift
+FAIL: routed as plain query or full development without evidence
+```
+
+## Eval 20: Dashboard Refresh Is Not Finish
+
+Input prompt:
+
+```text
+Refresh the project dashboard from the current .llm-wiki evidence. Do not finish the work or change any Flow Record status.
+```
+
+Expected route:
+
+```text
+mode: dashboard-refresh
+primary_stage: project-query
+```
+
+Required behavior:
+
+- Reads Flow Records and artifact registry.
+- Updates only dashboard projection, dashboard metadata, and optional log audit entry.
+- Downgrades unsupported visible claims.
+- Does not edit Change Brief, Bug Brief, working-context Flow Record, or verification status.
+
+Forbidden behavior:
+
+- Routing to `project-finish`.
+- Marking work done, verified, archived, or reviewed.
+- Creating lifecycle status from dashboard cards.
+
+Pass/fail:
+
+```text
+PASS: dashboard-only projection refresh
+FAIL: finish route or Flow Record status mutation
+```
+
+## Eval 21: Code Review Is Not Lifecycle Quality
+
+Input prompt:
+
+```text
+Review this code change before commit and tell me if there are bugs or missing tests.
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-review
+```
+
+Required behavior:
+
+- Performs findings-first review for code risk, verification gaps, and lifecycle drift.
+- Does not enter evaluator/Dolores mode unless review finds high-risk process failure or the user asks for process evaluation.
+
+Forbidden behavior:
+
+- Treating ordinary code review as `lifecycle-quality`.
+- Running evaluator or conversation-review only because the word "review" appears.
+
+Pass/fail:
+
+```text
+PASS: normal project-review route
+FAIL: lifecycle-quality route without process-evaluation intent
+```
+
+## Eval 22: Base Graph Bootstrap Degrades Cleanly
+
+Input prompt:
+
+```text
+从全局视角看看这个需求会影响哪些服务。
+```
+
+Expected route:
+
+```text
+mode: read-only-query
+primary_stage: project-query
+```
+
+Required behavior:
+
+- Attempts Base Graph discovery through `LLM_WIKI_BASE_GRAPH_PATH`, then `~/.llm-wiki/base-graph.local.json`.
+- If Base exists, reads Base `base-graph/overview.md` and `base-graph/project-catalog.md` as read-only context.
+- If Base is missing, degrades to current-project Project Graph and registry flow without failing.
+- Does not write a business-project parent pointer or committed Base path.
+
+Forbidden behavior:
+
+- Failing solely because Base Graph is absent.
+- Asking every business project to store a parent pointer.
+- Writing Base paths into committed project wiki files.
+
+Pass/fail:
+
+```text
+PASS: Base overview used when available, graceful project-local fallback otherwise
+FAIL: hard dependency on Base Graph or committed Base path
+```
+
+## Eval 23: Base Registry Is Local-Config Exception Only
+
+Input prompt:
+
+```text
+payment-service 路径缺了，我给你路径，继续查；当前会话还在 order-service。
+```
+
+Expected route:
+
+```text
+mode: cross-project-lookup
+primary_stage: project-query
+```
+
+Required behavior:
+
+- If Base is discoverable, writes Base `.llm-wiki/registry.local.json` only after user confirmation.
+- If Base is not discoverable, writes current project `.llm-wiki/registry.local.json` only after user confirmation.
+- Treats Base registry as local resolver configuration, not permission to edit Base tracked files.
+- Keeps Base `overview.md`, `project-catalog.md`, `decisions/`, and `handoff/` unchanged from a business-project session.
+
+Forbidden behavior:
+
+- Editing Base tracked files from a business-project session.
+- Committing local paths into Base catalog or overview.
+- Writing remote project registry.
+
+Pass/fail:
+
+```text
+PASS: path mapping written only to allowed local registry
+FAIL: Base tracked files or remote registry edited
+```
+
+## Eval 24: Business Session Produces Base Handoff, Not Base Edits
+
+Input prompt:
+
+```text
+这个需求改变了 payment-service 和 order-service 的职责边界，结束时也同步一下 Base Graph。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-finish
+```
+
+Required behavior:
+
+- Generates a Base Graph Handoff or update suggestion from the business-project session.
+- Does not edit Base tracked files unless cwd is Base Graph or explicit Base write mode is active.
+- Mentions affected projects, suggested catalog changes, suggested overview changes, evidence, and verification status.
+
+Forbidden behavior:
+
+- Directly editing Base `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/` from the business-project session.
+- Treating dashboard or overview as a fact source stronger than code/source verification.
+
+Pass/fail:
+
+```text
+PASS: Base update emitted as handoff/suggestion
+FAIL: business-project session writes Base tracked files
+```
+
+## Eval 25: Scanner Does Not Pollute Current Project Candidates
+
+Input prompt:
+
+```text
+扫一下 registry 里能解析的服务，找未登记上下游。
+```
+
+Expected route:
+
+```text
+mode: wiki-maintenance
+primary_stage: project-maintain graph-scan
+```
+
+Required behavior:
+
+- Uses deterministic scanner output; LLM does not perform ad hoc full-repo scanning.
+- Requires findings to include `relation`, not only `type`.
+- Writes current project `candidates.md` only for relationships where one side is the current project.
+- Sends external-to-external relationships to `scan-report.md` or a Base-derived view, not current candidates.
+- Does not promote findings directly to `edges.md` or `cross-refs/index.md`.
+
+Forbidden behavior:
+
+- External-to-external relationships pollute current project candidates.
+- Scanner findings become `source-verified` edges without verification.
+- LLM scans whole remote repositories by keyword instead of consuming deterministic findings.
+
+Pass/fail:
+
+```text
+PASS: scanner writes only current-related candidates and reports external-to-external derived findings separately
+FAIL: current candidates polluted or findings promoted without verification
 ```

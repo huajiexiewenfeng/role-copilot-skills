@@ -1,6 +1,6 @@
 ---
 name: project-maintain
-description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki`, especially when requirements, working-context pages, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
+description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki`, especially when requirements, working-context pages, Project Graph edges/candidates, cross-project refs, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
 ---
 
 # Project Maintain
@@ -24,6 +24,7 @@ Use when the user asks to:
 - check `artifacts/index.md`, `dashboard/progress.html`, module README pages, and `log.md` consistency
 - check Flow Record projection, dashboard cards, `dashboardData.flowRecords`, and lane counts
 - check broken relative links, stale paths, workstation-specific absolute paths, sensitive information, or garbled generated pages
+- register or maintain cross-project Project Graph edges and cross-refs pins after user confirmation
 - apply narrow structural repairs to `.llm-wiki`
 
 ## When Not to Use
@@ -58,9 +59,18 @@ Read as needed:
 - `lifecycle-router.md`
 - `flow-record.md`
 - `progress-dashboard.md`
+- `project-graph.md`
+- `cross-project-refs.md`
+- `base-graph.md`
 - `.llm-wiki/README.md`
 - `.llm-wiki/log.md`
 - `.llm-wiki/artifacts/index.md`
+- `.llm-wiki/cross-refs/index.md`
+- `.llm-wiki/cross-refs/registry.local.json`
+- `.llm-wiki/registry.local.json`
+- `.llm-wiki/project-graph/edges.md`
+- `.llm-wiki/project-graph/candidates.md`
+- `.llm-wiki/project-graph/scan-report.md`
 - `.llm-wiki/modules/index.md`
 - `.llm-wiki/modules/*/README.md`
 - `.llm-wiki/requirements/*.md`
@@ -87,10 +97,11 @@ Workflow:
 6. Check dashboard visible cards, `dashboardData.flowRecords`, flow summaries, and lane counts for agreement.
 7. Check module entry points for active or recently changed module-related flows.
 8. Check broken relative links and stale references.
-9. Check for workstation-specific absolute paths and sensitive information patterns in generated wiki pages.
-10. Produce a health report with Errors, Warnings, Info, and suggested repairs.
-11. If the user requested repair, apply only the approved narrow repairs.
-12. Record maintenance repairs in `.llm-wiki/log.md` unless the repair is explicitly dry-run only.
+9. Check Project Graph and cross-project refs structure, registry ignore status, pin/edge/candidate consistency, derived staleness, and resolvable remote anchors when registry mappings exist.
+10. Check for workstation-specific absolute paths and sensitive information patterns in generated wiki pages.
+11. Produce a health report with Errors, Warnings, Info, and suggested repairs.
+12. If the user requested repair, apply only the approved narrow repairs.
+13. Record maintenance repairs in `.llm-wiki/log.md` unless the repair is explicitly dry-run only.
 
 ## Visibility Chain
 
@@ -121,6 +132,86 @@ A missing link is not always an error. Classify it by impact:
 | `consistency-repair` | The user asks to fix missing indexes, backlinks, logs, artifacts, or dashboard references. |
 | `dashboard-audit` | The user asks why the progress dashboard is stale, inconsistent, or missing cards. |
 | `safety-audit` | The user asks to check secrets, absolute paths, sensitive content, copied raw material, or garbled pages. |
+| `graph-register` | The user asks to register a known cross-project integration point. |
+| `graph-scan` | The user asks to discover missing upstream/downstream relationships and scanner is enabled. |
+| `project-graph-register` | Legacy alias for `graph-register`. |
+| `project-graph-audit` | The user asks to check Project Graph edges/candidates, cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
+
+## Mode: graph-register
+
+Use `graph-register` when the user explicitly asks to register or pin a cross-project relationship. It is the only manual edge registration entry.
+
+Minimum inputs:
+
+```text
+type:
+from_project:
+from_anchor:
+to_project:
+to_anchor:
+contract_summary:
+```
+
+Process:
+
+1. Confirm the canonical direction from `project-graph.md`. Do not reverse direction to put the current project first.
+2. If direction is unclear, ask a targeted question or write a candidate instead of an edge.
+3. Generate the edge fingerprint from `type : from_project : normalize(from_anchor) : to_project : normalize(to_anchor)`.
+4. Write or update `.llm-wiki/project-graph/edges.md` with `source: manual`.
+5. Default manual registration to `verification_status: draft`.
+6. Do not accept user-supplied `verification_status` or `last_verified` as fact.
+7. To write `wiki-checked` or `source-verified`, first perform the cross-project boundary check and verify the matching evidence in this session. Set `last_verified` from the verification date.
+8. If the user asks to pin the edge, write `.llm-wiki/cross-refs/index.md` with only `id`, `edge_id`, `local_entry`, `why_pinned`, and `owner_note`.
+9. If registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
+10. Do not write any external project file.
+
+`project-query` may hand off to this mode only after user confirmation. If the remote project, direction, or anchor is unknown, write/update `candidates.md` rather than forcing an edge.
+
+## Mode: graph-scan
+
+Use `graph-scan` only when manual registration no longer covers relationship volume.
+
+Rules:
+
+1. The scanner must be deterministic and produce JSON findings.
+2. Findings must include `relation`; do not output only `type`.
+3. The LLM consumes findings and writes/updates candidates only.
+4. Current project `candidates.md` may contain only relationships where one side is the current project.
+5. External-to-external relationships go to `scan-report.md` or a Base derived view, not current candidates.
+6. `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
+
+## Project Graph Audit
+
+Audit `.llm-wiki/project-graph/` and `.llm-wiki/cross-refs/` when they exist, when cross-service work is active, or when the user asks about Feign, MQTT, HTTP, RPC, shared DB, shared config, upstream/downstream services, or external contracts.
+
+Check:
+
+- `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, `.llm-wiki/project-graph/scan-report.md`, and `.llm-wiki/cross-refs/index.md` exist when cross-project relationships are used.
+- `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json`.
+- Preferred and legacy registry files are not tracked by git.
+- Preferred registry `.llm-wiki/registry.local.json` wins over legacy `.llm-wiki/cross-refs/registry.local.json`.
+- If preferred and legacy registries conflict for a project id, report the conflict and do not merge silently.
+- If Base Graph is discoverable, check whether edge project ids appear in Base `base-graph/project-catalog.md`; missing ids produce a Base Handoff/update suggestion, not an automatic Base edit.
+- Base Graph `.llm-wiki/registry.local.json` may be written only as local resolver configuration after user confirmation; Base tracked files remain read-only from a business-project session.
+- `cross-refs/index.md` is pin-only. Report `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor` as redundant fact fields.
+- Every pin `edge_id` resolves to a row in `project-graph/edges.md`.
+- Edge `fingerprint` values are unique.
+- Edge `from_project` and `to_project` are logical ids only and are never `unknown`.
+- Edge anchors are not local absolute paths, do not start with `.llm-wiki/`, and do not escape with `../`.
+- `verification_status` is one of `draft`, `wiki-checked`, `source-verified`, or `blocked`; never `stale`.
+- `last_verified` is present and parseable when `verification_status` is `wiki-checked` or `source-verified`.
+- Derived staleness is `fresh`, `expired`, or `unknown` using the default 30 day threshold from `cross-project-refs.md`.
+- If a registry mapping exists, its `path` exists, `wiki` is relative, has no trailing slash, and resolved remote anchors remain inside the remote project root.
+- If a registry mapping exists and a resolved edge anchor is missing, report it; do not scan the whole remote project by keyword.
+- Candidate `candidate_fingerprint` values are unique.
+- `remote_project = unknown` candidates are not promoted to edges.
+- `promoted` candidates have an `edge_id` that resolves.
+
+Finding levels:
+
+- Error: pin layer stores fact fields, dangling `edge_id`, duplicate edge fingerprint, edge project is `unknown`, registry is tracked, local path leaked into committed files, anchor is absolute or escapes, or `verification_status` uses unsupported values such as `stale`.
+- Warning: `last_verified` is expired or unknown, registry path is missing, remote anchor cannot be resolved, `.gitignore` is missing a local-only line, or legacy registry needs migration.
+- Info: no Project Graph exists yet, registry is absent while no active edge needs it, or an edge is intentionally `draft`.
 
 ## Repair Rules
 
@@ -134,6 +225,11 @@ Allowed narrow repairs:
 - Downgrade unsupported dashboard claims to evidence-backed status.
 - Rebuild dashboard projection from Flow Record plus artifact registry evidence when dashboard drift is the only issue.
 - Repair artifact registry path/status rows when current files prove the registry is stale.
+- Create missing `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, `.llm-wiki/project-graph/scan-report.md`, and `.llm-wiki/cross-refs/index.md` empty templates.
+- Add `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` to `.gitignore` exactly once.
+- Copy legacy registry to preferred registry only in approved repair mode and only when the preferred registry is absent; do not delete the legacy file.
+- Rewrite malformed anchors only when the intended target is unambiguous.
+- Replace unsupported `verification_status: stale` with the prior verified level only when evidence in the row or notes makes that level clear; otherwise downgrade to `draft` and report the uncertainty.
 
 Disallowed repairs:
 
@@ -145,6 +241,9 @@ Disallowed repairs:
 - Do not promote candidate source material into an active requirement automatically.
 - Do not rewrite large groups of wiki pages without explicit confirmation.
 - Do not remove sensitive-looking content unless the user approves the exact redaction or replacement.
+- Do not write to external project wiki, source, config, registry, or reverse cross-refs.
+- Do not create or edit `registry.local.json` unless the user confirms the local path mapping.
+- Do not write `source-verified` or `wiki-checked` for a manually registered edge unless the current session performed the corresponding verification.
 
 ## Finding Levels
 
@@ -174,6 +273,8 @@ For audits, return:
 ## Flow Record Consistency
 
 ## Dashboard Consistency
+
+## Project Graph / Cross-Project Refs
 
 ## Safety Findings
 

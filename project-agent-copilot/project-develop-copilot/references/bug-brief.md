@@ -72,6 +72,17 @@ YYYY-MM-DD-short-symptom
 
 ## Diagnosis
 
+## External Findings
+
+- project-id:
+- edge_id:
+- evidence:
+- verification_status:
+- derived_staleness:
+- conclusion:
+- impact_on_current_project:
+- suggested_handoff:
+
 ## Fix Plan
 
 ## Verification
@@ -115,7 +126,7 @@ YYYY-MM-DD-short-symptom
 | `done` | Finish sync and review readiness are complete or explicitly accepted. |
 | `blocked` | Progress requires user input, missing access, missing environment, or accepted limitation. |
 
-## Bug Evidence Gate
+## Work Definition Gate
 
 Before broad diagnosis or code edits, record:
 
@@ -130,6 +141,23 @@ Before broad diagnosis or code edits, record:
 ```
 
 If reproduction is blocked, explain the limitation and choose the safest next action.
+
+## External Findings Rules
+
+Use `## External Findings` when a bug may cross into another project through Feign, MQTT, HTTP, RPC, shared DB, shared config, or another integration point.
+
+Rules:
+
+- Start from Project Graph evidence in order: `.llm-wiki/cross-refs/index.md` pin -> `.llm-wiki/project-graph/edges.md` -> `.llm-wiki/project-graph/candidates.md`.
+- Use logical `project-id` and `edge_id`; do not persist local paths.
+- `cross-refs/index.md` is pin-only; follow `edge_id` into `project-graph/edges.md` for facts.
+- Store evidence from the remote project as wiki-relative or source-relative anchors, not copied remote content.
+- `verification_status` must be one of `draft`, `wiki-checked`, `source-verified`, or `blocked`.
+- Do not write `stale` as a status. Use `derived_staleness: fresh | expired | unknown`.
+- If the fix decision depends on the remote contract, require `source-verified` evidence before editing active scope.
+- If only `wiki-checked` evidence exists, record the finding as a clue or risk and do not make fix decisions from it alone.
+- Candidate-only evidence must be verified before use in diagnosis or edits.
+- If the remote project must change, create a context handoff for that project instead of editing it from the current lifecycle session.
 
 ## Scope Rules
 
@@ -146,7 +174,7 @@ Systematic debugging and similar skills are bridges. They receive Context Handof
 They must not:
 
 - choose project scope from scratch
-- bypass Bug Evidence Gate
+- bypass Work Definition Gate
 - edit outside active scope without escalation
 - declare the bug fixed without Verification Gate
 
