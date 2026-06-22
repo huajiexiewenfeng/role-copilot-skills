@@ -1,6 +1,6 @@
 ---
 name: project-develop-copilot
-description: Use when the user wants project development help from natural intent, including requirements, bugs, logs, cross-service or cross-project evidence, design discussion, file lookup, progress, finish, review, resume, or routing into project lifecycle skills.
+description: Use when the user wants project development help from natural intent, including Chinese prompts for 项目开发、项目文档、跨项目关系、项目图谱仓库、Base Graph、需求、bug、日志、评审、继续, or routing into project lifecycle skills.
 ---
 
 # Project Develop Copilot
@@ -27,7 +27,7 @@ Use this skill when the user asks for project development help from natural lang
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
 - Registering, maintaining, or pinning cross-project Project Graph relationships.
-- Initializing an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories.
+- Initializing an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories, including Chinese requests such as 初始化 Base Graph、初始化项目图谱仓库、创建跨项目导航层、注册多项目目录、跨项目总览仓库.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
 - Evaluating whether a project skill flow went wrong, asking for skill-evaluator, conversation self-review, self-review, Dolores, eval gap, failure case, golden case, or lifecycle trace review.
@@ -102,7 +102,7 @@ Before doing project work:
 | User asks to register, maintain, or pin a cross-project relationship or integration point | wiki-maintenance | `project-maintain` |
 | User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
 | User says to discuss design and not implement | lightweight-answer | none |
-| User asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, or platform overview repo | full-lifecycle | `project-base-init` |
+| User asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, platform overview repo, 项目图谱仓库, 跨项目导航层, Base Graph 初始化, or 多项目 `.llm-wiki` 总目录 | full-lifecycle | `project-base-init` |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
 | User asks to initialize/adopt/refresh project context | full-lifecycle | `project-init` |
@@ -132,7 +132,7 @@ Use this quick decision order:
    - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
 4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
-5. Base Graph repository initialization, adoption, or refresh requested -> full lifecycle / `project-base-init`.
+5. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
 6. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
 7. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 

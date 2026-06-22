@@ -1,6 +1,6 @@
 ---
 name: project-base-init
-description: Use when initializing or refreshing an independent Base Graph repository for Project Develop Copilot, including explaining the Base Graph purpose, creating the Base Graph `.llm-wiki` structure, setting `graph_role: base`, creating catalog and overview templates, and guiding first project discovery without treating the Base repo as a business project.
+description: Use when initializing or refreshing an independent Base Graph repository for Project Develop Copilot, including Chinese prompts like 初始化 Base Graph、项目图谱仓库、跨项目导航层、注册业务项目、多项目 .llm-wiki 总目录, without treating the Base repo as a business project.
 ---
 
 # Project Base Init
@@ -10,6 +10,8 @@ description: Use when initializing or refreshing an independent Base Graph repos
 `project-base-init` initializes an independent Base Graph repository.
 
 Use it when the user creates or refreshes a dedicated repository whose job is to coordinate many project-local `.llm-wiki` directories. Do not use ordinary `project-init` for this case: a Base Graph repo is not a business project and must not receive business-project lifecycle files, edges, candidates, requirements, bugs, or module discovery output.
+
+Chinese trigger phrases include: 初始化 Base Graph、初始化项目图谱仓库、创建跨项目导航层、注册业务项目、登记项目路径、多项目 `.llm-wiki` 总目录、跨项目总览仓库.
 
 ## Required Opening Explanation
 
