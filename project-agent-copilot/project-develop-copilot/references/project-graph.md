@@ -2,7 +2,7 @@
 
 Project Graph is the fact model for cross-project relationships in a project-local `.llm-wiki`.
 
-Use it with `cross-project-refs.md` and `base-graph.md`. This file owns schema, fingerprints, canonical direction, manual registration, candidate promotion, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary checks, and the stale threshold. `base-graph.md` owns optional Base Graph bootstrap, registry master, catalog, overview, and Base write boundaries.
+Use it with `cross-project-refs.md` and `base-graph.md`. This file owns schema, fingerprints, canonical direction, candidate proposal, human edge confirmation, and pin rules. `cross-project-refs.md` owns registry resolution, read-only boundary checks, and the stale threshold. `base-graph.md` owns optional Base Graph bootstrap, registry master, catalog, overview, and Base write boundaries.
 
 ## Files
 
@@ -14,6 +14,7 @@ Use it with `cross-project-refs.md` and `base-graph.md`. This file owns schema, 
   project-graph/
     edges.md
     candidates.md
+    proposals.md
     scan-report.md
     scan-state.local.json
 ```
@@ -31,10 +32,11 @@ Ignored local files:
 | Layer | File | Role | Decision authority |
 |---|---|---|---|
 | Candidate | `project-graph/candidates.md` | discovered or suspected relationship | never |
-| Fact | `project-graph/edges.md` | only place where contract facts are stored | only if `source-verified` and fresh |
+| Proposal | `project-graph/proposals.md` | required review queue for auto-edge proposals | never |
+| Fact | `project-graph/edges.md` | only place where contract facts are stored | only if `source-verified` or `runtime-verified` and fresh |
 | Pin | `cross-refs/index.md` | team-confirmed navigation entry referencing `edge_id` | follows referenced edge |
 
-Facts such as `contract_summary`, `verification_status`, and `last_verified` must exist only in `edges.md`.
+Confirmed facts such as `contract_summary`, `verification_status`, and `last_verified` must exist only in `edges.md`. Proposal rows may carry proposed summaries and evidence fields, but they are not confirmed facts until `project-graph-human-edge` accepts the proposal and writes the edge.
 
 ## Thresholds
 
@@ -48,7 +50,7 @@ Facts such as `contract_summary`, `verification_status`, and `last_verified` mus
 
 | edge_id | fingerprint | type | source | from_project | from_anchor | to_project | to_anchor | contract_summary | verification_status | last_verified |
 |---|---|---|---|---|---|---|---|---|---|---|
-| edge-001 | `http:order-service:ordercallbackcontroller:payment-service:paymentnotifycontroller` | http | manual | order-service | `OrderCallbackController` | payment-service | `PaymentNotifyController` | POST /pay/callback, idempotency key orderId | draft |  |
+| edge-001 | `http:order-service:ordercallbackcontroller:payment-service:paymentnotifycontroller` | http | manual | order-service | `OrderCallbackController` | payment-service | `PaymentNotifyController` | POST /pay/callback, idempotency key orderId | unverified |  |
 ```
 
 Field rules:
@@ -56,11 +58,11 @@ Field rules:
 - `edge_id`: stable within the current project; it does not need to match remote projects.
 - `fingerprint`: stable de-duplication key.
 - `type`: `feign`, `mqtt`, `http`, `rpc`, `db`, `config`, `dependency`, `dto`, or `other`.
-- `source`: `manual` or `scan`.
+- `source`: `auto` or `manual`. `auto` means promoted from an accepted proposal; `manual` means entered through `project-graph-human-edge` without an auto proposal.
 - `from_project` and `to_project`: logical project ids only; never `unknown`.
 - anchors: class, interface, topic, config key, table, wiki-relative path, or source-relative path. Do not use local absolute paths. Wiki anchors must not start with `.llm-wiki/`.
 - repo-level dependency anchors use `maven:groupId:artifactId`, `gradle:group:name`, `repo:<name>`, or `module:<name>`; avoid `anchor == project` fallback unless no better coordinate exists.
-- `verification_status`: `draft`, `wiki-checked`, `source-verified`, or `blocked`.
+- `verification_status`: `unverified`, `source-verified`, or `runtime-verified`.
 - `last_verified`: date produced by the actual verification action; do not accept user hand-filled dates.
 - Do not persist `stale`; derive staleness from `last_verified` using the threshold in `cross-project-refs.md`.
 
@@ -101,14 +103,13 @@ The direction has meaning. Do not reverse `from_project` and `to_project` just t
 
 `verification_status` is not an ordered enum.
 
-- `draft`: registered or discovered but not verified.
-- `wiki-checked`: remote wiki was checked; this is a clue only.
-- `source-verified`: remote source or authoritative contract was checked; can support decisions only when fresh.
-- `blocked`: verification could not be completed.
+- `unverified`: confirmed by human intent but not yet verified from source or runtime evidence.
+- `source-verified`: file, class, method, or endpoint evidence was checked. When a remote project is involved, evidence is required from both local and remote sides.
+- `runtime-verified`: source evidence was checked and runtime evidence such as logs, traces, live API behavior, or deployed configuration confirmed the relationship.
 
-Only `source-verified` and fresh edges can drive `project-fix` or `project-develop` decisions. `wiki-checked`, `draft`, and candidates are clues only.
+Only `source-verified` or `runtime-verified` and fresh edges can drive `project-fix` or `project-develop` decisions. `unverified`, proposals, and candidates are clues only.
 
-Manual registration defaults to `draft`. Do not accept a user-supplied `verification_status` or `last_verified` as fact. To write `wiki-checked` or `source-verified`, run the cross-project boundary check and verify the matching evidence in the current session. Set `last_verified` from the verification date.
+Human edge confirmation defaults to `unverified`. Do not accept a user-supplied `verification_status` or `last_verified` as fact. To write `source-verified` or `runtime-verified`, run the cross-project boundary check and verify the matching evidence in the current session. Set `last_verified` from the verification date.
 
 ## `candidates.md`
 
@@ -124,9 +125,9 @@ Manual registration defaults to `draft`. Do not accept a user-supplied `verifica
 `source`: `scan` or `manual`.
 
 - Scanner findings write `source: scan`.
-- User-confirmed or agent-written candidates from manual graph registration write `source: manual`.
+- User-confirmed or agent-written candidates from human graph maintenance write `source: manual`.
 
-`status`: `pending`, `rejected`, `blocked`, or `promoted`. New candidates that have not been promoted, rejected, or blocked are `pending` by default.
+`status`: `pending`, `proposed`, `rejected`, `blocked`, or `promoted`. New candidates that have not been proposed, promoted, rejected, or blocked are `pending` by default. `proposed` means an auto-edge proposal exists but no confirmed edge has been written.
 
 Candidate fingerprint:
 
@@ -163,9 +164,37 @@ Noise rules:
 - `rejected` remains rejected and increments suppressed count in `scan-report.md` unless evidence materially changes.
 - `promoted` is not recreated; check its `edge_id` still exists.
 - `blocked` only updates `last_seen`.
+- `proposed` is not promoted automatically; check that the related proposal row still exists and remains reviewable.
 - `pending` candidates with `source = scan` whose `last_seen` is older than `default_candidate_pending_days` are archived by `project-maintain`: move the row to the `Archived Candidates` section of `scan-report.md`, then remove it from `candidates.md`.
 - `source = manual` candidates are never auto-archived by the pending timeout rule.
 - Candidate archival is a maintenance-only action. It runs only during `project-maintain` audit or `graph-scan` cleanup, never during `project-query`, `project-fix`, or `project-develop`.
+
+## `proposals.md`
+
+Required review queue:
+
+```markdown
+# Project Graph Proposals
+
+| proposal_id | source_candidate_id | proposed_edge_id | fingerprint | type | source | from_project | from_anchor | to_project | to_anchor | contract_summary | verification_status | verification_evidence | proposed_cross_ref_id | proposed_local_entry | proposed_why_pinned | human_status | human_note | created_at | updated_at |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+```
+
+Field rules:
+
+- `proposal_id`: stable within the current project.
+- `source_candidate_id`: optional back-link to `project-graph/candidates.md`; when present, it must resolve.
+- `proposed_edge_id`: the edge id that `project-graph-human-edge` will write if the proposal is accepted.
+- `fingerprint`: proposed confirmed-edge fingerprint, generated from edge type and canonical anchors.
+- `type`: same values as `edges.md`.
+- `source`: `scan` or `manual`, preserving the candidate or discovery source that led to the proposal.
+- anchors: same anchor rules as `edges.md`; do not use local absolute paths.
+- `verification_status`: `unverified`, `source-verified`, or `runtime-verified`.
+- `verification_evidence`: concise file, class, method, endpoint, config, log, trace, or runtime evidence summary.
+- `human_status`: `pending`, `accepted`, `rejected`, or `needs-more-evidence`.
+- `proposed_cross_ref_id`, `proposed_local_entry`, and `proposed_why_pinned`: suggested pin fields only; no pin is confirmed until `project-graph-human-edge` writes `cross-refs/index.md`.
+
+Proposal rows are not facts. `project-graph-auto-edge` may create or update proposal rows and may move a candidate from `pending` to `proposed`, but it must not write `edges.md` or `cross-refs/index.md`.
 
 ## `cross-refs/index.md`
 
@@ -183,11 +212,12 @@ Rules:
 - `edge_id` must point to the current project's `project-graph/edges.md`.
 - `local_entry` is a human/agent navigation hint.
 - Do not store `contract_summary`, `verification_status`, `last_verified`, `remote_project`, or `remote_anchor`.
-- If a pinned edge becomes stale or blocked, keep the pin but report the referenced edge status.
+- Every confirmed edge written by `project-graph-human-edge` must upsert one pin row unless the human instruction explicitly says to skip the pin; the skip reason must be written in `.llm-wiki/log.md`.
+- If a pinned edge becomes stale or loses required verification, keep the pin but report the referenced edge status.
 
 ## Manual Registration
 
-Manual edge registration is owned by `project-maintain graph-register`.
+Human edge confirmation is owned by `project-graph-human-edge`.
 
 Minimum user-provided inputs:
 
@@ -204,20 +234,25 @@ Process:
 
 1. Confirm canonical direction.
 2. If direction is unclear, ask a targeted question or write a candidate instead of an edge.
-3. Create or update `project-graph/edges.md` with `source: manual` and `verification_status: draft` by default.
-4. If the user asks to pin, write `cross-refs/index.md` with only `edge_id` and navigation fields.
-5. Do not write remote projects.
-6. To set `wiki-checked` or `source-verified`, run the cross-project boundary check and verify evidence in-session.
+3. Create or update `project-graph/edges.md` with `source: manual` when there is no accepted auto proposal, or `source: auto` when accepting a proposal.
+4. Use `verification_status: unverified` by default.
+5. Upsert one `cross-refs/index.md` pin row unless the human instruction explicitly says to skip the pin.
+6. If the pin is skipped, write the explicit skip reason in `.llm-wiki/log.md`.
+7. Do not write remote projects.
+8. To set `source-verified` or `runtime-verified`, run the cross-project boundary check and verify evidence in-session.
 
 ## Candidate Promotion
 
 ```text
 candidate
-  -> verify wiki/source
-  -> write edges.md with source: scan
-  -> update candidate status: promoted
-  -> write candidate.edge_id
-  -> optionally propose cross-refs pin
+  -> project-graph-auto-edge verifies proposal evidence
+  -> write proposals.md only
+  -> update candidate status: proposed
+  -> project-graph-human-edge accepts or rejects
+  -> write edges.md with source: auto or manual
+  -> update candidate status: promoted only after confirmed edge write
+  -> write candidate.edge_id only after confirmed edge write
+  -> upsert cross-refs pin unless explicitly skipped
 ```
 
 Promotion requirements:
@@ -227,6 +262,18 @@ Promotion requirements:
 - edge fingerprint is generated from edge type and canonical anchors;
 - verification evidence is recorded;
 - candidate is back-linked to the edge.
+
+`project-graph-auto-edge` may move `pending -> proposed`. Only `project-graph-human-edge` may move a candidate to `promoted` and assign `edge_id`.
+
+## Validation Rules
+
+- `proposals.md` rows must have unique `proposal_id` and unique `fingerprint` among open pending proposals.
+- `source_candidate_id` must resolve to `candidates.md` when present.
+- Accepted proposals must resolve to an `edges.md` row via `proposed_edge_id`.
+- Confirmed edge `fingerprint` values must remain unique in `edges.md`.
+- Confirmed edge `edge_id` values referenced by `cross-refs/index.md` must resolve.
+- Confirmed edges must have a cross-ref pin unless a log entry records an explicit skip.
+- No committed graph row may contain an absolute local path; use repo-relative anchors and project ids.
 
 ## Scan Files
 
