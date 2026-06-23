@@ -7,8 +7,9 @@ Schema for edges, candidates, pins, fingerprints, manual registration, and candi
 ## Principles
 
 - Store physical local paths only in ignored registry or bootstrap files.
-- Store shared relationship facts only in `project-graph/edges.md`.
-- Store team navigation pins only in `cross-refs/index.md`.
+- Store confirmed shared relationship facts only in `project-graph/edges.md`.
+- Store proposed relationship facts only in `project-graph/proposals.md` until human acceptance.
+- Store team navigation pins only in `cross-refs/index.md`; it is a pin/navigation layer, not a fact store.
 - Do not copy remote project content into the current project as truth.
 - Treat remote project wiki, source, config, Briefs, and registry as read-only.
 - Use source verification before making fix or development decisions that depend on a remote contract.
@@ -131,10 +132,10 @@ Selection rules:
 
 - `project-query` may use `wiki-only-allowed` for ownership and clue-finding answers, but must label evidence as wiki-only.
 - `project-fix` and `project-develop` must use `source` when a fix or implementation decision depends on a remote contract.
-- Manual edge registration starts as `draft`; writing `wiki-checked` or `source-verified` requires this boundary check and matching evidence in the current session.
+- Manual edge registration is handled by `project-graph-human-edge`. Writing `source-verified` or `runtime-verified` requires this boundary check and matching evidence in the current session.
 - If no registry mapping exists, ask the user for the local path and write only the current project's preferred registry after confirmation.
 
-Batch graph scanning does not emit one boundary check per project. Its `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
+Batch candidate scanning does not emit one boundary check per project. Its `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope. `project-graph-auto-edge` may propose cross-ref fields in `proposals.md`, but it must not write `cross-refs/index.md`; `project-graph-human-edge` upserts the pin when it confirms or manually writes an edge.
 
 ## Remote Read Scope
 
@@ -153,12 +154,19 @@ Do not by default:
 
 Ask for user confirmation before expanding scope.
 
+## Project Graph Pin Boundary
+
+`cross-refs/index.md` is only a pin layer. It should contain `id`, `edge_id`, `local_entry`, `why_pinned`, and `owner_note`, not `contract_summary`, `verification_status`, `last_verified`, remote project ids, or remote anchors.
+
+Confirmed facts live in `project-graph/edges.md`. Proposed facts live in `project-graph/proposals.md` until accepted. `project-graph-candidates-scan` must not write cross-refs. `project-graph-auto-edge` may only propose cross-ref fields. `project-graph-human-edge` must upsert a cross-ref pin when it accepts or manually writes an edge unless the human explicitly skips the pin and the skip reason is logged.
+
 ## Write Boundary
 
 Allowed current-project writes:
 
 - `.llm-wiki/project-graph/edges.md`
 - `.llm-wiki/project-graph/candidates.md`
+- `.llm-wiki/project-graph/proposals.md`
 - `.llm-wiki/project-graph/scan-report.md`
 - `.llm-wiki/project-graph/scan-state.local.json`
 - `.llm-wiki/cross-refs/index.md`

@@ -116,15 +116,23 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 
 ## Project Graph 与跨项目引用层
 
-Project Graph 是 `.llm-wiki` 内的横切证据层，不是新的子 skill。`project-init` 为业务项目创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-base-init` 只创建独立 Base Graph 的 catalog / overview 协调结构；`project-query` 按 pin -> edge -> candidate 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责手工登记 edge，并巡检过期验证、错误 anchor、registry 冲突和 pin/edge drift。
+Project Graph 是 `.llm-wiki` 内的横切证据生命周期，现在拆成三个显式维护子 skill。`project-init` 为业务项目创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/proposals.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-base-init` 只创建独立 Base Graph 的 catalog / overview 协调结构；`project-query` 按 pin -> edge -> candidate/proposal 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责图谱一致性巡检和结构修复。
 
-事实只存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
+Project Graph 维护技能：
+
+- `project-graph-candidates-scan`：扫描当前项目并维护 candidates。
+- `project-graph-auto-edge`：通过 Base Graph / 源码证据把 candidate 转成 proposal。
+- `project-graph-human-edge`：接受、拒绝或手动登记 confirmed edge，并维护 cross-ref pin。
+
+事实只在人工确认后存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 
 ### Project Graph 快速入口
 
 - 问“这个接口 / topic / 配置 / 回调对面是谁”：走 `project-query`，按 pin -> edge -> candidate 查询，并在需要时只读读取外部证据。
-- 说“帮我登记这个跨项目调用”：走 `project-maintain graph-register`；手工登记默认 `draft`，除非当前会话实际完成 wiki/source 验证。
-- 说“扫一下未登记上下游”：在 scanner 启用时走 `project-maintain graph-scan`。
+- 说“帮我登记这个跨项目调用”或“确认这个 proposal”：走 `project-graph-human-edge`，写入 `edges.md` 并默认 upsert `cross-refs/index.md`。
+- 说“做一次 project-graph candidates.md 的扫描”：走 `project-graph-candidates-scan`。
+- 说“通过 base-graph 找到对应项目，生成 edge proposal”：走 `project-graph-auto-edge`。
+- 说“确认这个 proposal / 手动登记这条边”：走 `project-graph-human-edge`。
 - 说“初始化这个 Base Graph 仓库”：走 `project-base-init`；普通业务项目仓库才走 `project-init`。
 - Base Graph 是可选全局视角，通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现。
 - Base Graph 的 `registry.local.json` 是本机配置例外；业务项目会话经确认可写它，但不得写 Base 的 `overview.md`、`project-catalog.md`、`decisions/` 或 `handoff/`。

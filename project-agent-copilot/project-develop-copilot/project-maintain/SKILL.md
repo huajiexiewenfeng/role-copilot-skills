@@ -24,7 +24,7 @@ Use when the user asks to:
 - check `artifacts/index.md`, `dashboard/progress.html`, module README pages, and `log.md` consistency
 - check Flow Record projection, dashboard cards, `dashboardData.flowRecords`, and lane counts
 - check broken relative links, stale paths, workstation-specific absolute paths, sensitive information, or garbled generated pages
-- register or maintain cross-project Project Graph edges and cross-refs pins after user confirmation
+- audit Project Graph edges, candidates, proposals, and cross-ref pins for consistency; delegate candidate scanning, proposal generation, and confirmed edge writes to the explicit Project Graph skills
 - audit every project registered in a Base Graph for Project Graph completeness, missing directories, broken edges, unresolved pins, registry problems, and cross-project readiness
 - apply narrow structural repairs to `.llm-wiki`
 
@@ -137,56 +137,24 @@ A missing link is not always an error. Classify it by impact:
 | `consistency-repair` | The user asks to fix missing indexes, backlinks, logs, artifacts, or dashboard references. |
 | `dashboard-audit` | The user asks why the progress dashboard is stale, inconsistent, or missing cards. |
 | `safety-audit` | The user asks to check secrets, absolute paths, sensitive content, copied raw material, or garbled pages. |
-| `graph-register` | The user asks to register a known cross-project integration point. |
-| `graph-scan` | The user asks to discover missing upstream/downstream relationships and scanner is enabled. |
-| `project-graph-register` | Legacy alias for `graph-register`. |
+| `graph-register` | Legacy alias; delegate manual/confirmed edge writing to `project-graph-human-edge`. |
+| `graph-scan` | Legacy alias; delegate candidate discovery to `project-graph-candidates-scan`. |
+| `project-graph-register` | Legacy alias; delegate to `project-graph-human-edge`. |
 | `project-graph-audit` | The user asks to check Project Graph edges/candidates, cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
 | `base-graph-audit` | The user asks to check every project registered in a Base Graph, audit multi-project graph completeness, or verify whether project graphs can route across repositories. |
 | `project-graph-audit-all` | Alias for `base-graph-audit`. |
 
-## Mode: graph-register
+## Delegated Project Graph Write Modes
 
-Use `graph-register` when the user explicitly asks to register or pin a cross-project relationship. It is the only manual edge registration entry.
+`project-maintain` audits and repairs Project Graph structure, but it no longer owns the normal write workflow for new relationships.
 
-Minimum inputs:
+Delegate explicit graph maintenance requests as follows:
 
-```text
-type:
-from_project:
-from_anchor:
-to_project:
-to_anchor:
-contract_summary:
-```
+- Candidate discovery or `graph-scan` -> `project-graph-candidates-scan`.
+- Base Graph/source-backed proposal generation or `auto-edge` -> `project-graph-auto-edge`.
+- Human confirmation, rejection, manual edge registration, or cross-ref pin writing -> `project-graph-human-edge`.
 
-Process:
-
-1. Confirm the canonical direction from `project-graph.md`. Do not reverse direction to put the current project first.
-2. If direction is unclear, ask a targeted question or write a candidate instead of an edge.
-3. Generate the edge fingerprint from `type : from_project : normalize(from_anchor) : to_project : normalize(to_anchor)`.
-4. Write or update `.llm-wiki/project-graph/edges.md` with `source: manual`.
-5. Default manual registration to `verification_status: draft`.
-6. Do not accept user-supplied `verification_status` or `last_verified` as fact.
-7. To write `wiki-checked` or `source-verified`, first perform the cross-project boundary check and verify the matching evidence in this session. Set `last_verified` from the verification date.
-8. If the user asks to pin the edge, write `.llm-wiki/cross-refs/index.md` with only `id`, `edge_id`, `local_entry`, `why_pinned`, and `owner_note`.
-9. If registry mapping is missing, ask for the local path and write only `.llm-wiki/registry.local.json` after confirmation.
-10. Do not write any external project file.
-
-`project-query` may hand off to this mode only after user confirmation. If the remote project, direction, or anchor is unknown, write/update `candidates.md` with `source: manual` rather than forcing an edge.
-
-## Mode: graph-scan
-
-Use `graph-scan` only when manual registration no longer covers relationship volume.
-
-Rules:
-
-1. The scanner must be deterministic and produce JSON findings.
-2. Findings must include `relation`; do not output only `type`.
-3. The LLM consumes findings and writes/updates candidates only.
-4. Current project `candidates.md` may contain only relationships where one side is the current project.
-5. External-to-external relationships go to `scan-report.md` or a Base derived view, not current candidates.
-6. `scan-report.md` must record scanned projects, scan scope, scanner version, and read-only scope.
-7. After updating candidates, archive stale `pending` scan-origin candidates per `project-graph.md`: move each row to `scan-report.md` `Archived Candidates`, remove it from `candidates.md`, and leave manual candidates untouched.
+`project-maintain` may still report missing pins, duplicate fingerprints, stale candidates, unsupported statuses, broken anchors, registry conflicts, and Base Graph readiness problems. It must not write new confirmed edges unless the user is explicitly asking for a maintenance repair to an already confirmed edge and the row identity is unambiguous.
 
 ## Project Graph Audit
 
@@ -194,7 +162,7 @@ Audit `.llm-wiki/project-graph/` and `.llm-wiki/cross-refs/` when they exist, wh
 
 Check:
 
-- `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, `.llm-wiki/project-graph/scan-report.md`, and `.llm-wiki/cross-refs/index.md` exist when cross-project relationships are used.
+- `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, `.llm-wiki/project-graph/proposals.md`, `.llm-wiki/project-graph/scan-report.md`, and `.llm-wiki/cross-refs/index.md` exist when cross-project relationships are used.
 - `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json`.
 - Preferred and legacy registry files are not tracked by git.
 - Preferred registry `.llm-wiki/registry.local.json` wins over legacy `.llm-wiki/cross-refs/registry.local.json`.
@@ -206,15 +174,15 @@ Check:
 - Edge `fingerprint` values are unique.
 - Edge `from_project` and `to_project` are logical ids only and are never `unknown`.
 - Edge anchors are not local absolute paths, do not start with `.llm-wiki/`, and do not escape with `../`.
-- `verification_status` is one of `draft`, `wiki-checked`, `source-verified`, or `blocked`; never `stale`.
-- `last_verified` is present and parseable when `verification_status` is `wiki-checked` or `source-verified`.
+- Edge `verification_status` is one of `unverified`, `source-verified`, or `runtime-verified`; never `stale`. Proposal `verification_status` is proposed evidence metadata until human acceptance writes an edge.
+- `last_verified` is present and parseable when an edge uses `source-verified` or `runtime-verified`.
 - Derived staleness is `fresh`, `expired`, or `unknown` using the default 30 day threshold from `cross-project-refs.md`.
 - If a registry mapping exists, its `path` exists, `wiki` is relative, has no trailing slash, and resolved remote anchors remain inside the remote project root.
 - If a registry mapping exists and a resolved edge anchor is missing, report it; do not scan the whole remote project by keyword.
 - Candidate `candidate_fingerprint` values are unique.
-- Candidate `source` is `scan` or `manual`.
+- Candidate and proposal `source` are `scan` or `manual`; confirmed edge `source` is `auto` or `manual`.
 - `remote_project = unknown` candidates are not promoted to edges.
-- `promoted` candidates have an `edge_id` that resolves.
+- `promoted` candidates have an `edge_id` that resolves. `proposed` candidates have a reviewable unresolved proposal and an empty `edge_id`.
 - `pending` candidates with `source = scan` and `last_seen` older than `default_candidate_pending_days` should be archived, not silently kept.
 - `pending` candidates with `source = manual` are exempt from automatic pending-timeout archival.
 

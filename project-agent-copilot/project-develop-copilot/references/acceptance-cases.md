@@ -690,3 +690,127 @@ Failure signals:
 - manual pending candidate is removed or moved to Archived
 - old manual candidate is treated like a scan-origin candidate
 - user-created candidate evidence is silently lost
+
+### Case 26: Project Graph Candidate Scan Is Candidate-Only
+
+Prompt:
+
+```text
+做一次 project-graph candidates.md 的扫描。
+```
+
+Fixture:
+
+- Current project has `.llm-wiki/project-graph/candidates.md`.
+- Source/config contains Feign, HTTP, MQ, or config-key signals that may imply cross-project relationships.
+- `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/proposals.md`, and `.llm-wiki/cross-refs/index.md` already exist.
+
+Expected:
+
+- router selects `project-graph-candidates-scan`.
+- scanner writes only candidates, scan-report, scan-state, and log files in the current project.
+- new candidates have `status = pending`, `source = scan`, unique `candidate_fingerprint`, and empty `edge_id`.
+- duplicate fingerprints are skipped or updated without duplicate rows.
+- external-to-external findings are reported in `scan-report.md`, not current `candidates.md`.
+- no edge, proposal, cross-ref pin, Base Graph tracked file, or remote project file is modified.
+
+Failure signals:
+
+- scanner writes `edges.md`, `proposals.md`, or `cross-refs/index.md`.
+- scanner promotes candidates directly.
+- scanner writes absolute local paths into committed graph rows.
+- scanner modifies a remote project or Base Graph tracked file.
+
+### Case 27: Auto Edge Creates Proposal Not Edge
+
+Prompt:
+
+```text
+通过 base-graph 找 cand-20260623-009 对应的项目、类和方法，生成 edge proposal，先不要写 edges。
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/candidates.md` contains `cand-20260623-009` with `status = pending`.
+- Base Graph can resolve the remote project id.
+- Local and remote source anchors can be read-only verified.
+
+Expected:
+
+- router selects `project-graph-auto-edge`.
+- agent resolves the canonical remote project through Base Graph when available.
+- agent verifies local and remote anchors read-only.
+- `.llm-wiki/project-graph/proposals.md` receives one proposal row with `human_status = pending`.
+- linked candidate moves from `pending` to `proposed` and keeps `edge_id` empty.
+- proposal includes proposed cross-ref fields for later human confirmation.
+- `edges.md` and `cross-refs/index.md` remain unchanged.
+- remote project files and Base Graph tracked files remain unchanged.
+
+Failure signals:
+
+- auto-edge writes a confirmed edge.
+- auto-edge writes a cross-ref pin.
+- proposal `source` is copied as confirmed `edges.source`.
+- candidate becomes `promoted` before human confirmation.
+
+### Case 28: Human Edge Confirmation Writes Edge And Cross-Ref
+
+Prompt:
+
+```text
+接受 prop-20260623-001，登记这条 edge，并维护 cross-ref。
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/proposals.md` contains `prop-20260623-001` with `human_status = pending` and proposed cross-ref fields.
+- Linked candidate exists with `status = proposed` and empty `edge_id`.
+- `edges.md` does not contain the proposal fingerprint.
+
+Expected:
+
+- router selects `project-graph-human-edge`.
+- agent re-checks fingerprint uniqueness and graph row validity.
+- accepted proposal writes or upserts one confirmed row in `edges.md`.
+- confirmed edge has `source = auto` when accepted from an auto-edge proposal.
+- proposal `human_status` becomes `accepted`.
+- linked candidate becomes `promoted` and receives the confirmed `edge_id`.
+- `cross-refs/index.md` receives or updates one pin row for the confirmed edge unless the human explicitly skips it.
+- `.llm-wiki/log.md` records edge id, proposal id, candidate id, verification status, and cross-ref action.
+
+Failure signals:
+
+- accepted proposal does not write an edge.
+- candidate remains `proposed` after acceptance.
+- cross-ref pin is missing without an explicit logged skip reason.
+- cross-ref row stores fact fields such as `contract_summary`, `verification_status`, or remote anchors.
+
+### Case 29: Human Manual Edge Registration Bypasses Auto Proposal
+
+Prompt:
+
+```text
+手动登记这条跨项目调用：smart-go-web 的 Feign client 调 smarthub-mediakit 的 stream change API。
+```
+
+Fixture:
+
+- Human supplies or confirms `type`, `from_project`, `from_anchor`, `to_project`, `to_anchor`, and `contract_summary`.
+- Source evidence is available when the user asks for source verification.
+- No existing proposal is required.
+
+Expected:
+
+- router selects `project-graph-human-edge`.
+- agent writes or updates one confirmed row in `edges.md` with `source = manual`.
+- agent upserts one `cross-refs/index.md` pin by default unless the human explicitly skips it.
+- agent creates a manual candidate only if the human asks to preserve the discovery trail.
+- remote project files and Base Graph tracked files remain unchanged.
+- `.llm-wiki/log.md` records the manual edge and cross-ref action.
+
+Failure signals:
+
+- manual edge registration requires an auto proposal first.
+- manual edge writes `source = auto`.
+- remote project files are modified.
+- cross-ref pin is missing without explicit logged skip reason.

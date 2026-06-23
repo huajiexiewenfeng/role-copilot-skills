@@ -26,7 +26,10 @@ Use this skill when the user asks for project development help from natural lang
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
-- Registering, maintaining, or pinning cross-project Project Graph relationships.
+- Scanning Project Graph candidates through `project-graph-candidates-scan`.
+- Resolving candidates into evidence-backed edge proposals through `project-graph-auto-edge`.
+- Confirming, rejecting, manually registering, or pinning Project Graph edges through `project-graph-human-edge`.
+- Auditing or repairing Project Graph structure through `project-maintain`.
 - Initializing an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories, including Chinese requests such as 初始化 Base Graph、初始化项目图谱仓库、创建跨项目导航层、注册多项目目录、跨项目总览仓库.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
 - Continuing, resuming, or asking what to do next for previous project work.
@@ -97,9 +100,9 @@ Before doing project work:
 | User asks a tiny file/doc lookup or simple concept explanation | lightweight-answer | none |
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
 | User asks which service owns an interface/topic/client/config/callback, or asks for cross-service contract evidence without requesting a change | cross-project-lookup | `project-query` |
-| User asks to register a known cross-project integration point | wiki-maintenance | `project-maintain graph-register` |
-| User asks to discover missing upstream/downstream relationships | wiki-maintenance | `project-maintain graph-scan` |
-| User asks to register, maintain, or pin a cross-project relationship or integration point | wiki-maintenance | `project-maintain` |
+| User asks to register a known cross-project integration point manually, confirm a proposal, reject a proposal, or pin an accepted relationship | wiki-maintenance | `project-graph-human-edge` |
+| User asks to scan for missing upstream/downstream relationship candidates | wiki-maintenance | `project-graph-candidates-scan` |
+| User asks to turn a candidate into an evidence-backed edge proposal through Base Graph or source verification | wiki-maintenance | `project-graph-auto-edge` |
 | User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
 | User says to discuss design and not implement | lightweight-answer | none |
 | User asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, platform overview repo, 项目图谱仓库, 跨项目导航层, Base Graph 初始化, or 多项目 `.llm-wiki` 总目录 | full-lifecycle | `project-base-init` |
@@ -109,7 +112,7 @@ Before doing project work:
 | User asks for a feature, requirement, plan, or implementation | full-lifecycle | `project-develop` |
 | User reports a bug, log, error, failed test, or incident | full-lifecycle | `project-fix` |
 | User asks to update, refresh, or sync the static dashboard/progress page only | dashboard-refresh | `project-query` |
-| User asks why wiki pages cannot be found, or asks to check, audit, lint, repair, or maintain `.llm-wiki` structure, links, Flow Records, module backlinks, artifacts, logs, dashboard consistency, or safety | wiki-maintenance | `project-maintain` |
+| User asks why wiki pages cannot be found, or asks to check, audit, lint, repair, or maintain `.llm-wiki` structure, links, Flow Records, module backlinks, artifacts, logs, dashboard consistency, Project Graph consistency, or safety | wiki-maintenance | `project-maintain` |
 | User asks finish, done, sync, update status, or handoff | full-lifecycle | `project-finish` |
 | User asks review, risk check, before commit/PR/merge | full-lifecycle | `project-review` |
 | User says continue or resume previous work | full-lifecycle | resume then choose stage |
@@ -131,10 +134,13 @@ Use this quick decision order:
 2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
    - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
-4. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph registration/maintenance, graph-register, graph-scan, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
-5. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
-6. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
-7. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+4. Project Graph candidate scan requested (`graph-scan`, `candidates scan`, `自动扫描候选关系`, `扫一下 candidates`) -> `wiki-maintenance` / `project-graph-candidates-scan`.
+5. Project Graph auto proposal requested (`auto-edge`, `自动登记`, `生成 edge proposal`, `通过 base-graph 找项目类方法但先确认`) -> `wiki-maintenance` / `project-graph-auto-edge`.
+6. Project Graph human confirmation/manual edge requested (`human-edge`, `手动登记`, `确认 proposal`, `接受 proposal`, `拒绝 proposal`) -> `wiki-maintenance` / `project-graph-human-edge`.
+7. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph audit/repair, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
+8. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
+9. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+10. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 
 Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
 
