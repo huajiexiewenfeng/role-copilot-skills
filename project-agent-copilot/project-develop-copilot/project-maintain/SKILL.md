@@ -1,6 +1,6 @@
 ---
 name: project-maintain
-description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki`, especially when requirements, working-context pages, Project Graph edges/candidates, cross-project refs, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
+description: Use when checking, auditing, repairing, linting, or maintaining a project-local `.llm-wiki` or Base Graph Project Graph fleet, especially when requirements, working-context pages, Project Graph edges/candidates, cross-project refs, Base Graph catalog/registry links, artifacts, dashboards, module indexes, Flow Records, logs, links, handoff entries, or wiki visibility may be missing, stale, orphaned, inconsistent, unsafe, or hard to find.
 ---
 
 # Project Maintain
@@ -25,6 +25,7 @@ Use when the user asks to:
 - check Flow Record projection, dashboard cards, `dashboardData.flowRecords`, and lane counts
 - check broken relative links, stale paths, workstation-specific absolute paths, sensitive information, or garbled generated pages
 - register or maintain cross-project Project Graph edges and cross-refs pins after user confirmation
+- audit every project registered in a Base Graph for Project Graph completeness, missing directories, broken edges, unresolved pins, registry problems, and cross-project readiness
 - apply narrow structural repairs to `.llm-wiki`
 
 ## When Not to Use
@@ -50,6 +51,7 @@ Use when the user asks to:
 4. Decide whether the request is read-only maintenance audit or approved repair.
 5. Identify the target scope: whole wiki, one `flow_id`, one module, one dashboard, one page group, or one symptom.
 6. Before edits, state the repair scope and keep it narrow.
+7. For Base Graph fleet audits, resolve the Base Graph root, read its catalog and local registry, and treat all project repositories as read-only unless the user explicitly approves a per-project repair.
 
 ## Core Process
 
@@ -64,6 +66,9 @@ Read as needed:
 - `base-graph.md`
 - `.llm-wiki/README.md`
 - `.llm-wiki/log.md`
+- `.llm-wiki/base-graph/manifest.json`
+- `.llm-wiki/base-graph/project-catalog.md`
+- `.llm-wiki/base-graph/overview.md`
 - `.llm-wiki/artifacts/index.md`
 - `.llm-wiki/cross-refs/index.md`
 - `.llm-wiki/cross-refs/registry.local.json`
@@ -136,6 +141,8 @@ A missing link is not always an error. Classify it by impact:
 | `graph-scan` | The user asks to discover missing upstream/downstream relationships and scanner is enabled. |
 | `project-graph-register` | Legacy alias for `graph-register`. |
 | `project-graph-audit` | The user asks to check Project Graph edges/candidates, cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
+| `base-graph-audit` | The user asks to check every project registered in a Base Graph, audit multi-project graph completeness, or verify whether project graphs can route across repositories. |
+| `project-graph-audit-all` | Alias for `base-graph-audit`. |
 
 ## Mode: graph-register
 
@@ -217,6 +224,42 @@ Finding levels:
 - Warning: `last_verified` is expired or unknown, registry path is missing, remote anchor cannot be resolved, `.gitignore` is missing a local-only line, legacy registry needs migration, or a `pending` scan-origin candidate exceeded `default_candidate_pending_days`.
 - Info: no Project Graph exists yet, registry is absent while no active edge needs it, or an edge is intentionally `draft`.
 
+## Base Graph Fleet Audit
+
+Use `base-graph-audit` from a Base Graph repository or when a Base Graph is discoverable through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
+
+Purpose:
+
+- Check whether every project registered in the Base Graph has enough Project Graph structure to participate in cross-project query, bug, and requirement routing.
+- Identify missing or malformed local graph files before a `project-query` or `project-fix` session depends on them.
+- Verify cross-project readiness without promoting candidates or writing remote project files.
+
+Process:
+
+1. Resolve the Base Graph root and confirm `.llm-wiki/base-graph/manifest.json` has `graph_role: "base"` when the manifest exists.
+2. Read `.llm-wiki/base-graph/project-catalog.md`, `.llm-wiki/base-graph/overview.md`, and `.llm-wiki/registry.local.json`.
+3. Build the project set from the Base catalog and local registry. If they disagree, report catalog-only and registry-only projects separately.
+4. For each resolvable project path, run the Project Graph Audit checks against that project's `.llm-wiki` without changing files.
+5. For unresolved project paths, report the project as not locally auditable and include the missing resolver reason.
+6. Check that edge `from_project` and `to_project` ids are present in the Base catalog or registry.
+7. Check that project-local pins can resolve to local edges and that edge remote ids can resolve through the Base registry.
+8. Check whether required graph files are missing for projects that have cross-project candidates, pins, or active Base overview flows.
+9. Check source-backed scoped context readiness by looking for project-local source or working-context pages referenced by graph anchors; do not infer source coverage from code search alone.
+10. Produce a matrix summary plus per-project errors, warnings, and repair suggestions.
+
+Base fleet finding levels:
+
+- Error: project is registered but path is unresolvable, pin points to a missing edge, edge references a project id absent from Base catalog/registry, local registry is tracked, committed graph files leak local absolute paths, or graph files contain unsupported verification states.
+- Warning: graph templates are missing for a project that participates in Base candidate flows, `last_verified` is expired or unknown, remote anchor cannot be resolved through registry, source-backed scoped context appears missing for an active cross-project edge, or catalog and registry project sets disagree.
+- Info: project has no Project Graph yet and no Base overview flow depends on it, edge is intentionally `draft`, or project is cataloged but intentionally unavailable on this workstation.
+
+Base fleet repairs:
+
+- Default to read-only.
+- Do not write business-project files during a Base fleet audit unless the user explicitly approves repair for named projects.
+- Allowed approved repairs are the same narrow Project Graph structural repairs listed below, applied per named project.
+- Do not edit Base tracked files from a business-project session. From a Base Graph session, suggest Base catalog updates but still ask before changing tracked Base files.
+
 ## Repair Rules
 
 Allowed narrow repairs:
@@ -283,6 +326,31 @@ For audits, return:
 ## Project Graph / Cross-Project Refs
 
 ## Safety Findings
+
+## Suggested Repairs
+
+## Repair Scope
+```
+
+For Base Graph fleet audits, return:
+
+```markdown
+# Base Graph Project Graph Fleet Audit - YYYY-MM-DD
+
+## Summary
+
+## Project Matrix
+
+| project_id | path_status | wiki_status | graph_files | pins | edges | candidates | base_ids | source_context | severity |
+|---|---|---|---|---|---|---|---|---|---|
+
+## Errors
+
+## Warnings
+
+## Info
+
+## Cross-Project Readiness
 
 ## Suggested Repairs
 
