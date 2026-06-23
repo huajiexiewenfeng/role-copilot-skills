@@ -36,7 +36,7 @@ Ignored local files:
 | Fact | `project-graph/edges.md` | only place where contract facts are stored | only if `source-verified` or `runtime-verified` and fresh |
 | Pin | `cross-refs/index.md` | team-confirmed navigation entry referencing `edge_id` | follows referenced edge |
 
-Confirmed facts such as `contract_summary`, `verification_status`, and `last_verified` must exist only in `edges.md`. Proposal rows may carry proposed summaries and evidence fields, but they are not confirmed facts until `project-graph-human-edge` accepts the proposal and writes the edge.
+Confirmed facts such as `contract_summary`, `verification_status`, and `last_verified` must exist only in `edges.md`. Proposal rows may carry proposed summaries, `verification_status`, and evidence fields as proposed/non-confirmed evidence metadata, but they are not confirmed facts until `project-graph-human-edge` accepts the proposal and writes the edge.
 
 ## Thresholds
 
@@ -190,7 +190,7 @@ Field rules:
 - `source`: `scan` or `manual`, preserving the candidate or discovery source that led to the proposal.
 - Proposal `source` is proposal-origin metadata and must not be copied into `edges.source`; accepted auto-edge proposals write confirmed edges with `source=auto`, while manual edge entries write confirmed edges with `source=manual`.
 - anchors: same anchor rules as `edges.md`; do not use local absolute paths.
-- `verification_status`: `unverified`, `source-verified`, or `runtime-verified`.
+- `verification_status`: `unverified`, `source-verified`, or `runtime-verified`; in `proposals.md`, this is proposed/non-confirmed evidence metadata, not a confirmed fact.
 - `verification_evidence`: concise file, class, method, endpoint, config, log, trace, or runtime evidence summary.
 - `human_status`: `pending`, `accepted`, `rejected`, or `needs-more-evidence`.
 - `proposed_cross_ref_id`, `proposed_local_entry`, and `proposed_why_pinned`: suggested pin fields only; no pin is confirmed until `project-graph-human-edge` writes `cross-refs/index.md`.
@@ -255,6 +255,7 @@ candidate
      -> if accepted: write candidate.edge_id
      -> if accepted: upsert cross-refs pin unless explicitly skipped
      -> if rejected: do not write edges.md or cross-refs/index.md
+     -> if rejected and linked to a candidate: update candidate status from proposed to rejected or blocked according to the human reason, and leave candidate.edge_id empty
 
 manual entry
   -> project-graph-human-edge confirms direction and evidence
@@ -274,7 +275,7 @@ Promotion requirements:
 
 ## Validation Rules
 
-- `proposals.md` rows must have unique `proposal_id` and unique `fingerprint` among open pending proposals.
+- `proposals.md` rows must have unique `proposal_id` and unique `fingerprint` among open proposals with `human_status = pending` or `human_status = needs-more-evidence`.
 - `source_candidate_id` must resolve to `candidates.md` when present.
 - Accepted proposals must resolve to an `edges.md` row via `proposed_edge_id`.
 - Confirmed edge `fingerprint` values must remain unique in `edges.md`.
