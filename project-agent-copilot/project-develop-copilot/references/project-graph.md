@@ -188,6 +188,7 @@ Field rules:
 - `fingerprint`: proposed confirmed-edge fingerprint, generated from edge type and canonical anchors.
 - `type`: same values as `edges.md`.
 - `source`: `scan` or `manual`, preserving the candidate or discovery source that led to the proposal.
+- Proposal `source` is proposal-origin metadata and must not be copied into `edges.source`; accepted auto-edge proposals write confirmed edges with `source=auto`, while manual edge entries write confirmed edges with `source=manual`.
 - anchors: same anchor rules as `edges.md`; do not use local absolute paths.
 - `verification_status`: `unverified`, `source-verified`, or `runtime-verified`.
 - `verification_evidence`: concise file, class, method, endpoint, config, log, trace, or runtime evidence summary.
@@ -248,10 +249,16 @@ candidate
   -> project-graph-auto-edge verifies proposal evidence
   -> write proposals.md only
   -> update candidate status: proposed
-  -> project-graph-human-edge accepts or rejects
-  -> write edges.md with source: auto or manual
-  -> update candidate status: promoted only after confirmed edge write
-  -> write candidate.edge_id only after confirmed edge write
+  -> project-graph-human-edge reviews
+     -> if accepted: write edges.md with source=auto
+     -> if accepted: update candidate status: promoted
+     -> if accepted: write candidate.edge_id
+     -> if accepted: upsert cross-refs pin unless explicitly skipped
+     -> if rejected: do not write edges.md or cross-refs/index.md
+
+manual entry
+  -> project-graph-human-edge confirms direction and evidence
+  -> write edges.md with source=manual
   -> upsert cross-refs pin unless explicitly skipped
 ```
 
