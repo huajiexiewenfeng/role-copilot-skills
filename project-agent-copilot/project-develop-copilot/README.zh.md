@@ -33,6 +33,9 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接和安全边界。 |
 | `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用来协调多个项目本地 `.llm-wiki`，但不把 Base 仓库当成业务项目。 |
+| `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选；只写 candidates 和 scan report，不写 confirmed edge 或 cross-ref pin。 |
+| `project-graph-auto-edge` | 通过 Base Graph 和本地/远端源码证据，把 candidate 转成可人工确认的 edge proposal。 |
+| `project-graph-human-edge` | 接受、拒绝或手动登记 Project Graph edge，并在写入 confirmed edge 时维护 `cross-refs/index.md` pin。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |

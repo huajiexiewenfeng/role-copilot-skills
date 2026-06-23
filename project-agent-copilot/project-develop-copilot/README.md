@@ -29,6 +29,9 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
 | `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories without treating the Base repo as a business project. |
+| `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates; it writes candidates and scan reports only, not confirmed edges or cross-ref pins. |
+| `project-graph-auto-edge` | Resolve candidates through Base Graph and local/remote source evidence into human-reviewable edge proposals. |
+| `project-graph-human-edge` | Accept, reject, or manually register Project Graph edges, and maintain `cross-refs/index.md` pins when confirmed edges are written. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
