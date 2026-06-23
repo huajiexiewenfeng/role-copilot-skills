@@ -49,10 +49,16 @@ role-copilot-skills/
     project-develop-copilot/
       project-init/
       project-ingest/
+      project-query/
       project-develop/
       project-fix/
       project-finish/
       project-review/
+      project-maintain/
+      project-base-init/
+      project-graph-candidates-scan/
+      project-graph-auto-edge/
+      project-graph-human-edge/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -101,12 +107,21 @@ hr-agent-copilot/
 
 | Skill | 使用场景 |
 |---|---|
+| `project-develop-copilot` | 将自然语言项目开发请求路由到合适的项目生命周期 skill。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
+| `project-query` | 基于 `.llm-wiki`、Project Graph pin/edge/candidate 和必要源码证据回答只读项目问题。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
 | `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
 | `project-review` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
+| `project-maintain` | 巡检和修复 `.llm-wiki` 结构、Project Graph 一致性、过期 candidates、cross-ref pins、registry 和可见性漂移。 |
+| `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用于多项目 catalog 和 overview 协调。 |
+| `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选，不写 edge 或 cross-ref pin。 |
+| `project-graph-auto-edge` | 通过 Base Graph 和源码证据把 candidate 转成供人工确认的 edge proposal。 |
+| `project-graph-human-edge` | 接受、拒绝或手动登记 Project Graph edge，并维护 `cross-refs/index.md` pin。 |
+
+Project Graph 维护拆成三个显式技能，方便 agent 明确调用对应阶段：先扫描 candidates，再生成 proposal，最后由人工确认或手动登记 edge。只有 `project-graph-human-edge` 写入 confirmed edge 时才维护 `cross-refs/index.md`。
 
 计划中的 Project skills：
 

@@ -166,6 +166,7 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 | Lifecycle Gate | Lightweight checkpoint before a risky lifecycle transition. | `references/lifecycle-gates.md` | readiness checklist |
 | Project Graph edge | Verified or draft cross-project relationship fact. | `project-graph/edges.md`, `references/project-graph.md` | service dependency edge |
 | candidate | Suspected cross-project relationship that is not yet a fact. | `project-graph/candidates.md` | discovery finding |
+| proposal | Human-review queue row generated from a candidate before it becomes a confirmed edge. | `project-graph/proposals.md` | auto-edge review item |
 | pin | Team navigation bookmark that references an `edge_id`; it stores no facts. | `cross-refs/index.md` | curated link |
 | fingerprint | Stable de-duplication key for graph edges or candidates. | `references/project-graph.md` | relationship identity key |
 | verification_status / derived staleness | Verification level stored on an edge; freshness derived from `last_verified`. | `project-graph/edges.md`, `references/cross-project-refs.md` | contract confidence / freshness |

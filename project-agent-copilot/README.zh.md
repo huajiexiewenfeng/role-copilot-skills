@@ -20,7 +20,7 @@ Project Agent Copilot 是 Role Copilot Skills 中的项目研发角色容器。
 
 | 集合 | 包含 |
 |---|---|
-| [`project-develop-copilot`](./project-develop-copilot/README.zh.md) | `project-develop-copilot`、`project-query`、`project-init`、`project-ingest`、`project-develop`、`project-fix`、`project-finish`、`project-review` |
+| [`project-develop-copilot`](./project-develop-copilot/README.zh.md) | `project-develop-copilot`、`project-init`、`project-ingest`、`project-query`、`project-develop`、`project-fix`、`project-finish`、`project-review`、`project-maintain`、`project-base-init`、`project-graph-candidates-scan`、`project-graph-auto-edge`、`project-graph-human-edge` |
 
 计划中的集合：
 
@@ -55,7 +55,16 @@ project-agent-copilot/
     project-fix/
     project-finish/
     project-review/
+    project-maintain/
+    project-base-init/
+    project-graph-candidates-scan/
+    project-graph-auto-edge/
+    project-graph-human-edge/
 ```
+
+## Project Graph 维护
+
+当跨项目关系需要显式维护，而不是普通只读查询时，使用 Project Graph 技能。`project-graph-candidates-scan` 只更新候选关系，`project-graph-auto-edge` 通过 Base Graph / 源码证据生成可人工确认的 proposal，`project-graph-human-edge` 是正常流程里唯一写 confirmed edge 和 cross-ref pin 的入口。
 
 ## 只读项目问答
 

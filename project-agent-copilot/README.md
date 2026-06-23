@@ -20,7 +20,7 @@ For `project-develop-copilot`, use `project-develop-copilot/references/north-sta
 
 | Collection | Contains |
 |---|---|
-| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-develop-copilot`, `project-query`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, `project-review` |
+| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-develop-copilot`, `project-init`, `project-ingest`, `project-query`, `project-develop`, `project-fix`, `project-finish`, `project-review`, `project-maintain`, `project-base-init`, `project-graph-candidates-scan`, `project-graph-auto-edge`, `project-graph-human-edge` |
 
 Planned collections:
 
@@ -55,7 +55,16 @@ project-agent-copilot/
     project-fix/
     project-finish/
     project-review/
+    project-maintain/
+    project-base-init/
+    project-graph-candidates-scan/
+    project-graph-auto-edge/
+    project-graph-human-edge/
 ```
+
+## Project Graph Maintenance
+
+Use the Project Graph skills when cross-project relationships need explicit maintenance instead of ordinary read-only lookup. `project-graph-candidates-scan` updates only candidate findings, `project-graph-auto-edge` creates human-reviewable proposals through Base Graph/source evidence, and `project-graph-human-edge` is the only normal flow that writes confirmed edges and cross-ref pins.
 
 ## Read-Only Project Questions
 

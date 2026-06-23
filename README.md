@@ -49,10 +49,16 @@ role-copilot-skills/
     project-develop-copilot/
       project-init/
       project-ingest/
+      project-query/
       project-develop/
       project-fix/
       project-finish/
       project-review/
+      project-maintain/
+      project-base-init/
+      project-graph-candidates-scan/
+      project-graph-auto-edge/
+      project-graph-human-edge/
   hr-agent-copilot/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
@@ -101,12 +107,21 @@ Planned DevOps skills:
 
 | Skill | Use When |
 |---|---|
+| `project-develop-copilot` | Route natural project-development requests into the right project lifecycle skill. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
+| `project-query` | Answer read-only project questions from `.llm-wiki`, Project Graph pins/edges/candidates, and source evidence when needed. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
 | `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
+| `project-maintain` | Audit and repair `.llm-wiki` structure, Project Graph consistency, stale candidates, cross-ref pins, registries, and visibility drift. |
+| `project-base-init` | Initialize or refresh an independent Base Graph repository for multi-project catalog and overview coordination. |
+| `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates without writing edges or cross-ref pins. |
+| `project-graph-auto-edge` | Resolve candidates through Base Graph and source evidence into human-reviewable edge proposals. |
+| `project-graph-human-edge` | Accept, reject, or manually register Project Graph edges and maintain `cross-refs/index.md` pins. |
+
+Project Graph maintenance is split into three explicit skills so agents can call the intended step visibly: scan candidates, generate proposals, then let a human confirm or manually enter edges. `cross-refs/index.md` is maintained only when `project-graph-human-edge` writes a confirmed edge.
 
 Planned Project skills:
 

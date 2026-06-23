@@ -180,6 +180,7 @@ Project Graph 维护技能：
 | Lifecycle Gate | 生命周期关键动作前的轻量准入检查。 | `references/lifecycle-gates.md` | readiness checklist |
 | Project Graph edge | 跨项目关系事实，可以是 draft 或已验证。 | `project-graph/edges.md`、`references/project-graph.md` | service dependency edge |
 | candidate | 尚未验证成事实的疑似跨项目关系。 | `project-graph/candidates.md` | discovery finding |
+| proposal | candidate 成为 confirmed edge 之前的人工审查队列项。 | `project-graph/proposals.md` | auto-edge review item |
 | pin | 团队导航书签，只引用 `edge_id`，不存事实。 | `cross-refs/index.md` | curated link |
 | fingerprint | 用于关系去重的稳定键。 | `references/project-graph.md` | relationship identity key |
 | verification_status / derived staleness | edge 的验证级别；是否过期由 `last_verified` 派生。 | `project-graph/edges.md`、`references/cross-project-refs.md` | contract confidence / freshness |
