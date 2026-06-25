@@ -115,13 +115,15 @@ Planned DevOps skills:
 | `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
-| `project-maintain` | Audit and repair `.llm-wiki` structure, Project Graph consistency, stale candidates, cross-ref pins, registries, and visibility drift. |
+| `project-maintain` | Audit and repair `.llm-wiki` structure, Project Graph consistency, stale candidates, cross-ref pins, registries, visibility drift, and bundled doctor findings. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository for multi-project catalog and overview coordination. |
 | `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates without writing edges or cross-ref pins. |
 | `project-graph-auto-edge` | Resolve candidates through Base Graph and source evidence into human-reviewable edge proposals. |
 | `project-graph-human-edge` | Accept, reject, or manually register Project Graph edges and maintain `cross-refs/index.md` pins. |
 
 Project Graph maintenance is split into three explicit skills so agents can call the intended step visibly: scan candidates, generate proposals, then let a human confirm or manually enter edges. `cross-refs/index.md` is maintained only when `project-graph-human-edge` writes a confirmed edge.
+
+Installing `project-develop-copilot` now also ships the `scripts/llm_wiki_doctor.py` validator, its tests, and a reusable pre-commit hook. Use it to catch orphan design/requirement/bug/plan docs, missing Project Graph evidence blocks, and unresolved project-id references before project finish or PR merge; see `project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md`.
 
 Planned Project skills:
 

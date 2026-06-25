@@ -27,7 +27,7 @@ English | [Simplified Chinese](./README.zh.md)
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
-| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, and safety boundaries. |
+| `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, safety boundaries, and doctor findings. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories without treating the Base repo as a business project. |
 | `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates; it writes candidates and scan reports only, not confirmed edges or cross-ref pins. |
 | `project-graph-auto-edge` | Resolve candidates through Base Graph and local/remote source evidence into human-reviewable edge proposals. |
@@ -37,7 +37,7 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
 | `project-develop` | Develop a requirement or feature with scoped project context, requirement summaries, and source-verified external dependencies when cross-project contracts affect the change. |
 | `project-fix` | Diagnose and fix project bugs with scoped context, cross-project external findings when needed, evidence, verification, and bug summaries. |
-| `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
+| `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki, running the doctor finish check when available, and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 
 ## Install
@@ -84,6 +84,18 @@ project-develop-copilot
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 
 Other top-level tools follow the same context-first bridge rule. See `references/tool-bridge.md`.
+
+## LLM Wiki Doctor And Validators
+
+Installing this collection includes `scripts/llm_wiki_doctor.py`, `scripts/tests/test_llm_wiki_doctor.py`, and `scripts/git-hooks/pre-commit-llm-wiki-doctor`. The doctor is meant to be copied or vendored into a project `.llm-wiki/tools/` directory, then reused from local pre-commit hooks, CI/PR checks, and `project-finish`.
+
+The current validators focus on machine-checkable hygiene:
+
+- `orphan-design-doc`: design, requirement, bug, or plan documents outside `.llm-wiki` should either be registered as a source or explicitly ignored.
+- `missing-graph-evidence`: docs that mention known project ids should carry a Project Graph Evidence / Gaps block when cross-project reasoning is involved.
+- `unresolved-project-id`: project ids are matched only against configured registry names and aliases, with word-boundary style matching and warning-level behavior.
+
+The expected rollout posture is P0 blocking in local pre-commit and CI for structural errors, while judgment-heavy graph evidence checks remain WARN unless a project deliberately tightens them. See `scripts/README.llm-wiki-doctor.md` for commands, configuration, and hook examples.
 
 ## Historical Session Extraction
 

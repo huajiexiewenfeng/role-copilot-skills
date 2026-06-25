@@ -64,7 +64,7 @@ project-agent-copilot/
 
 ## Project Graph 维护
 
-当跨项目关系需要显式维护，而不是普通只读查询时，使用 Project Graph 技能。`project-graph-candidates-scan` 只更新候选关系，`project-graph-auto-edge` 通过 Base Graph / 源码证据生成可人工确认的 proposal，`project-graph-human-edge` 是正常流程里唯一写 confirmed edge 和 cross-ref pin 的入口。
+当跨项目关系需要显式维护，而不是普通只读查询时，使用 Project Graph 技能。`project-graph-candidates-scan` 只更新候选关系，`project-graph-auto-edge` 通过 Base Graph / 源码证据生成可人工确认的 proposal，`project-graph-human-edge` 是正常流程里唯一写 confirmed edge 和 cross-ref pin 的入口。这个集合也内置 `scripts/llm_wiki_doctor.py` 和可复用 pre-commit hook，让项目可以在本地提交、project finish、CI/PR 边界执行 wiki / graph 卫生检查。
 
 ## 只读项目问答
 

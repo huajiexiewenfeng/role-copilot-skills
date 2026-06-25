@@ -64,7 +64,7 @@ project-agent-copilot/
 
 ## Project Graph Maintenance
 
-Use the Project Graph skills when cross-project relationships need explicit maintenance instead of ordinary read-only lookup. `project-graph-candidates-scan` updates only candidate findings, `project-graph-auto-edge` creates human-reviewable proposals through Base Graph/source evidence, and `project-graph-human-edge` is the only normal flow that writes confirmed edges and cross-ref pins.
+Use the Project Graph skills when cross-project relationships need explicit maintenance instead of ordinary read-only lookup. `project-graph-candidates-scan` updates only candidate findings, `project-graph-auto-edge` creates human-reviewable proposals through Base Graph/source evidence, and `project-graph-human-edge` is the only normal flow that writes confirmed edges and cross-ref pins. The collection also includes `scripts/llm_wiki_doctor.py` plus a reusable pre-commit hook so repositories can enforce wiki/graph hygiene at local commit, project finish, and CI/PR boundaries.
 
 ## Read-Only Project Questions
 
