@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+DOCTOR="${LLM_WIKI_DOCTOR:-.llm-wiki/tools/llm_wiki_doctor.py}"
+if [ -f "$DOCTOR" ]; then
+  python "$DOCTOR" --root . --changed --format text --fail-on error
+fi

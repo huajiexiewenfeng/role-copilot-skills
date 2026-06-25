@@ -59,6 +59,19 @@ Stage skills own their stage-specific gates, but this router must ensure the nex
 
 Cross-project evidence is handled as a Context Recovery / External Bridge sub-check, not as a separate lifecycle Gate. Remote wiki/source access must stay read-only and must return through the current lifecycle session.
 
+## Cross-Service Project Graph First Rule
+
+When a request mentions cross-service, cross-repository, upstream/downstream, Feign, MQTT, HTTP, WebSocket, API gateway, shared DB, shared configuration, event bus, or two or more registry project ids, inject a Project Graph first step before routing into `project-fix`, `project-develop`, or `project-query`.
+
+The injected step is:
+
+1. Read `.llm-wiki/cross-refs/index.md`.
+2. Read `.llm-wiki/project-graph/edges.md`.
+3. Read `.llm-wiki/project-graph/candidates.md` when confirmed edges do not cover the relation.
+4. Use the graph only to narrow source-reading scope.
+5. If graph evidence is missing, stale, draft, or indirect, verify from source before making implementation decisions.
+
+This is a router navigation rule, not a validator guarantee. Do not claim Project Graph was the primary workflow unless the actual trace shows it was used before source exploration.
 ## Required First Check
 
 Before doing project work:

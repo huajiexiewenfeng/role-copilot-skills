@@ -102,6 +102,14 @@ Workflow:
 19. If the failure suggests a project skill rule gap, propose the smallest project-skill patch and an acceptance/eval case. Do not evaluate unrelated non-project skills here.
 20. Report findings first, then open questions, verification gaps, context gaps, residual risk, and summary.
 
+## Project Graph / Wiki Doctor Review Items
+
+For Project Develop Copilot lifecycle reviews, check:
+
+- Whether requirement, design, bug, or plan documents outside `.llm-wiki` would trigger `orphan-design-doc`.
+- Whether cross-service `.llm-wiki` artifacts include either `## Project Graph Evidence` with valid edge ids or `## Project Graph Gaps`.
+- Whether self-review distinguishes primary workflow, retrospective confirmation, and ideal workflow instead of overstating Project Graph usage.
+- Whether WARN findings from `.llm-wiki/tools/llm_wiki_doctor.py` have a visible outlet in handoff, job summary, or PR comment.
 ## Mode / Entry Selection
 
 | Mode | Use when |

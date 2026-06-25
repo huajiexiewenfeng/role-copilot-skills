@@ -1035,3 +1035,10 @@ Pass/fail:
 PASS: old manual pending candidate is preserved
 FAIL: manual pending candidate is auto-archived or deleted
 ```
+
+## Project Graph validator landing cases
+
+- Cross-service debug request: when the user asks why a relation from service A to service B did not work, the first project action should inspect `.llm-wiki/cross-refs/index.md` and `.llm-wiki/project-graph/edges.md` before broad source exploration.
+- Orphan design document: when an answer creates a requirement/design/bug/plan Markdown under `docs/plans`, `.llm-wiki/tools/llm_wiki_doctor.py --all` should emit `orphan-design-doc` unless the source has exact ingest/source proxy registration or explicit ignore with reason.
+- Missing graph evidence: when a `.llm-wiki/requirements` page mentions a known external project id without `## Project Graph Evidence` or `## Project Graph Gaps`, doctor should emit `missing-graph-evidence` WARN.
+- Honest self-review: when a trace shows Project Graph was checked only after source reading, the response should label it as retrospective confirmation rather than primary workflow.

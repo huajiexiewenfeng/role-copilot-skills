@@ -9,6 +9,7 @@
 
 - type:
 - path/url:
+- original_path: `<repo-relative-source-path>`
 - captured_at:
 - processing_mode:
 
@@ -37,6 +38,7 @@
 - title:
 - status: draft | clarified | planned | ready | executing | done | blocked
 - flow_id: <change-id>
+- original_path: `<repo-relative-source-path>`
 
 ## Sources
 
@@ -164,3 +166,19 @@ evidence:
 ```
 
 Keep visible labels in the detected project/user language. Preserve paths, lifecycle ids, status ids, and command names in their original form.
+
+## Project Graph Evidence / Gaps Block
+
+Use this block in Source Proxy, Requirement Summary, or Working Context pages when the artifact discusses cross-service behavior.
+
+```markdown
+## Project Graph Evidence
+
+| Edge | Relation | Verification | Used For |
+|---|---|---|---|
+| `edge-YYYYMMDD-NNN` | `<from> -> <to> <boundary>` | source-verified | <why this graph edge matters> |
+
+## Project Graph Gaps
+
+- No confirmed edge records `<relation>` yet; source verification or candidate creation is required before treating it as graph-backed.
+```

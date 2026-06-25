@@ -117,6 +117,14 @@ Rules:
 
 ## Source Proxy Metadata
 
+For project-relative Markdown sources, include an exact `original_path` metadata line in every source proxy and any generated requirement so `orphan-design-doc` can match by exact repo-relative path:
+
+```markdown
+- original_path: `docs/plans/example.md`
+```
+
+When the ingested source discusses cross-service behavior, include either `## Project Graph Evidence` with valid edge ids or `## Project Graph Gaps`. Do not invent edges; write Gaps when no confirmed source-backed edge exists.
+
 Each source proxy should include these metadata lines near the top when available:
 
 ```markdown

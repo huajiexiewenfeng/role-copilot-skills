@@ -366,6 +366,17 @@ Recommended routes:
 - Merge-readiness or code risk -> `project-review`
 - Source material missing from wiki -> `project-ingest`
 
+## LLM Wiki Doctor
+
+Use repo-vendored `.llm-wiki/tools/llm_wiki_doctor.py` when present:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py --root . --all --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py --root . --changed --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py --root . --base origin/main --format json --fail-on error
+```
+
+The doctor owns `orphan-design-doc`, `missing-graph-evidence`, alias/token-boundary matching, and invalid edge id checks. Project ids and aliases must come from committed `.llm-wiki/project-ids.json`; confirmed edges are used for edge id validation, not as the project vocabulary. Keep `missing-graph-evidence` WARN-only unless a later policy explicitly changes it.
 ## Boundaries
 
 - `.llm-wiki` is a team-shared project knowledge base. Prefer project-relative and wiki-relative paths.

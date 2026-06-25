@@ -89,6 +89,15 @@ Workflow:
 16. Write a concise `.llm-wiki/log.md` audit entry when sync changes durable state.
 17. Report implementation summary, verification, sync updates, residual risk, and next action.
 
+## LLM Wiki Doctor Finish Check
+
+When a repo contains `.llm-wiki/tools/llm_wiki_doctor.py`, run it during project-finish after affected wiki pages are synced and before preparing handoff:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py --root . --changed --format text --fail-on error
+```
+
+Record the command, exit code, WARN count, ERROR count, and unresolved WARN rationale in the handoff. Do not use `--flow`; associate findings with the current flow in the handoff text. WARN findings are visible Phase 1 measurement output and do not fail project-finish unless policy explicitly promotes a check to ERROR.
 ## Mode / Entry Selection
 
 | Mode | Use when |
