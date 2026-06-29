@@ -38,7 +38,7 @@ def run_doctor_cli(root: Path, *args: str):
     )
 ```
 
-- [ ] **Step 2: Add validate subcommand and legacy compatibility tests.** Add tests asserting `validate --all --format json --fail-on error` and legacy `--all --format json --fail-on error` both emit `orphan-design-doc` with exit code 0 when only WARN findings exist.
+- [ ] **Step 2: Add validate subcommand and legacy compatibility tests.** Add tests asserting `validate --all --format json --fail-on error` and legacy `--all --format json --fail-on error` both emit `orphan-design-doc` with exit code 0 when only WARN findings exist. Also add tests proving `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, and `leaked-local-path` are ERROR findings and make `--fail-on error` return exit code 1.
 
 - [ ] **Step 3: Rename existing invalid edge expectations.** Replace every `invalid-graph-edge` test expectation with `invalid-edge-id`.
 
@@ -81,11 +81,13 @@ def normalize_argv(argv: list[str] | None) -> list[str]:
 
 - [ ] **Step 5: Add table helpers.** Add `table_rows_with_header(text)` and `cell_by_header(headers, row, name)` so graph checks can read Markdown tables predictably.
 
-- [ ] **Step 6: Add graph checks.** Implement `check_dangling_cross_refs(root, registry)`, `check_duplicate_edge_fingerprints(root)`, and `check_leaked_local_paths(root, paths)`. All three emit WARN findings with canonical check names.
+- [ ] **Step 6: Add graph checks.** Implement `check_dangling_cross_refs(root, registry)`, `check_duplicate_edge_fingerprints(root)`, and `check_leaked_local_paths(root, paths)`. These three emit ERROR findings with canonical check names. Keep `orphan-design-doc`, `missing-graph-evidence`, and `unresolved-project-id` as WARN. Change `invalid-edge-id` to ERROR.
 
 - [ ] **Step 7: Wire checks into `run_checks`.** Append the new checks after existing orphan and missing-evidence checks.
 
-- [ ] **Step 8: Run tests.**
+- [ ] **Step 8: Enforce committed vocabulary sources.** Keep `.llm-wiki/project-ids.json` as the first-version committed vocabulary file. Do not read `registry.local.json` for validate vocabulary. Use Base Graph `project-catalog.md` only as an optional supplement when it is available. Treat `edges.md` project ids as graph rows to validate, not as the unresolved-project-id vocabulary source.
+
+- [ ] **Step 9: Run tests.**
 
 ```powershell
 python -m unittest discover project-agent-copilot\project-develop-copilot\scripts\tests
@@ -101,7 +103,7 @@ Expected: validator tests pass; score/report tests are not added yet.
 - [ ] **Step 1: Add failing score tests.** Add tests for these behaviors:
 
 ```text
-score --format json returns score_version = 1, score < 60 for a nearly empty wiki, and next_steps mention .llm-wiki/README.md.
+score --format json returns score_version = 1, score < 60 for a nearly empty wiki, includes fact_ids/signals, and next_steps mention closing concrete gaps such as .llm-wiki/README.md.
 score --format json marks Project Graph / cross-refs as not-applicable when only one local project exists and no cross-service signal is present.
 report --format text prints # LLM Wiki Doctor 报告 and ## 建议行动计划.
 report --format json contains findings and score objects.
@@ -144,11 +146,12 @@ validator_errors
 validator_warnings
 graph_applicable
 graph_file_presence
+fact_ids
 ```
 
-- [ ] **Step 5: Implement N/A scoring.** Project Graph / cross-refs is `not-applicable` when registry contains no external project and no Markdown file has cross-service signals. Re-normalize total score over applicable dimensions only.
+- [ ] **Step 5: Implement N/A scoring and fact de-duplication.** Project Graph / cross-refs is `not-applicable` when registry contains no external project and no Markdown file has cross-service signals. Re-normalize total score over applicable dimensions only. Add `fact_id` or equivalent IDs to signals so one underlying fact affects the maturity total only once; do not subtract again in `Validator 健康度` if another dimension already absorbed the same fact.
 
-- [ ] **Step 6: Implement next step generation.** Generate up to 10 Chinese next steps from low-scoring dimensions. Do not produce repair actions that invent module responsibilities, API contracts, requirements, bug conclusions, or confirmed graph edges.
+- [ ] **Step 6: Implement next step generation.** Generate up to 10 Chinese next steps from low-scoring dimensions. Do not produce repair actions that invent module responsibilities, API contracts, requirements, bug conclusions, or confirmed graph edges. Action plans must target closing concrete gaps, not reaching a numeric score.
 
 - [ ] **Step 7: Implement formatters.** Add `score_report_to_dict(report)` and `format_score_report_text(report, findings=None)`. The text report must order sections as:
 
@@ -169,7 +172,7 @@ graph_file_presence
 python -m unittest discover project-agent-copilot\project-develop-copilot\scripts\tests
 ```
 
-Expected: all doctor tests pass.
+Expected: all doctor tests pass, including ERROR exit-code coverage for the four deterministic blocking checks.
 
 ## Task 4: Add The `llm-wiki-doctor` Child Skill
 
@@ -267,6 +270,7 @@ lightweight-answer < read-only-query < wiki-doctor < dashboard-refresh < wiki-ma
 - [ ] **Step 4: Update project-maintain.** Replace doctor command examples with `validate` subcommand examples and add: maturity scoring belongs to `llm-wiki-doctor`; structural repairs after user approval belong to `project-maintain`.
 
 - [ ] **Step 5: Update project-finish and project-review.** Finish blocking checks use `validate`. Review can cite `report` as diagnostic evidence, but PR/merge blocking uses `validate --fail-on error`.
+
 ## Task 6: Update README And Doctor Usage Docs
 
 **Files:**
@@ -304,7 +308,7 @@ python .llm-wiki/tools/llm_wiki_doctor.py report --root . --format text --fail-o
 python .llm-wiki/tools/llm_wiki_doctor.py score --root . --format json
 ```
 
-- [ ] **Step 4: Update check names.** Replace old check names with canonical names. The final Checks section must include:
+- [ ] **Step 4: Update check names.** Replace old check names with canonical names. The final Checks section must include severities: ERROR for `leaked-local-path`, `invalid-edge-id`, `dangling-cross-ref`, and `duplicate-edge-fingerprint`; WARN for the remaining checks. The check list must include:
 
 ```text
 orphan-design-doc

@@ -32,7 +32,7 @@ CI 里 llm_wiki_doctor 报错，帮我修
 ```text
 LLM Wiki Doctor 报告
 关键结论：目录存在，但模块、来源、需求和 Project Graph 事实不足。
-建议行动计划：1-10 步，把 wiki 从 30 分提升到 70 分以上。
+建议行动计划：1-N 步，逐项关闭下方列出的成熟度 gap；完成后重跑 Doctor 复核。
 分数：32/100
 等级：空壳 wiki
 Validator 发现：missing-graph-evidence、orphan-design-doc ...
@@ -135,17 +135,22 @@ llm-wiki doctor report
 
 全文档和实现统一使用以下检查名：
 
-| 检查名 | 含义 |
-|---|---|
-| `orphan-design-doc` | 外部 design/requirement/bug/plan 文档未登记到 `.llm-wiki` source/original_path |
-| `missing-graph-evidence` | 涉及跨项目推理的 wiki 文档缺少 Project Graph Evidence / Gaps |
-| `unresolved-project-id` | 文档引用了 registry 不可解析的 project-id 或 alias |
-| `invalid-edge-id` | Evidence 或普通 wiki 文档引用的 edge_id 在 `edges.md` 中不存在 |
-| `dangling-cross-ref` | `cross-refs/index.md` 的 pin 指向不存在的 edge |
-| `duplicate-edge-fingerprint` | confirmed edge fingerprint 重复 |
-| `leaked-local-path` | 入库文件出现本机绝对路径、`registry.local.json` 或 local-only registry 内容 |
+| 检查名 | 含义 | severity | 进 validate |
+|---|---|---|---|
+| `leaked-local-path` | 入库文件出现本机绝对路径、`registry.local.json` 或 local-only registry 内容 | ERROR | 是 |
+| `invalid-edge-id` | Evidence 或普通 wiki 文档引用的 edge_id 在 `edges.md` 中不存在 | ERROR | 是 |
+| `dangling-cross-ref` | `cross-refs/index.md` 的 pin 指向不存在的 edge | ERROR | 是 |
+| `duplicate-edge-fingerprint` | confirmed edge fingerprint 重复 | ERROR | 是 |
+| `orphan-design-doc` | 外部 design/requirement/bug/plan 文档未登记到 `.llm-wiki` source/original_path | WARN | 是 |
+| `missing-graph-evidence` | 涉及跨项目推理的 wiki 文档缺少 Project Graph Evidence / Gaps | WARN | 是 |
+| `unresolved-project-id` | 文档引用了 registry 不可解析的 project-id 或 alias | WARN | 是 |
 
-这些规则仍服务于 pre-commit、CI 和 project-finish，不因新增 maturity score 而弱化。
+规则：
+
+- ERROR 类检查必须确定、可机械判定、无歧义；CI / pre-commit / project-finish 的 `--fail-on error` 阻断这些。
+- WARN 类检查依赖散文语义识别或项目登记时序，存在 alias、指代或误报；永不默认升 ERROR。
+- severity 是检查的固有属性，写在检查定义里，不由调用方临时指定。
+- 这些规则仍服务于 pre-commit、CI 和 project-finish，不因新增 maturity score 而弱化。
 
 ### Project Graph 结构检查
 
@@ -169,6 +174,21 @@ cross-refs/index.md
 - edge `from_project` / `to_project` 是否为已知 logical project id。
 
 这些检查中，确定性错误进入 `validate`；结构缺口可以同时作为 `score` 的 signals。
+
+### 词表来源
+
+`unresolved-project-id` 和 project-id / alias 解析必须只使用入库、CI 可读的词表来源。
+
+词表来源按优先级合并：
+
+1. `<repo>/.llm-wiki/project-ids.json`：committed，CI 可读，第一版权威源。
+2. Base Graph `project-catalog.md`：仅当当前环境可解析 Base Graph 时作为补充。
+
+禁止从 `registry.local.json` 取词表用于 `validate`。`registry.local.json` 是 gitignored 的本机路径配置，CI 上可能不存在，会导致本地和 CI 判定不一致。
+
+`edges.md` 的 `from_project` / `to_project` 只用于 edge 是否解析和 Project Graph 结构校验，不作为 `unresolved-project-id` 的词表来源。否则刚引入一个新服务但还没登记词表时，所有新关系都会被误当成权威词表。
+
+`unresolved-project-id` 必须保持 WARN：它提醒补登记，不阻断提交。
 
 ## 成熟度评分
 
@@ -198,7 +218,16 @@ Skill 层判断：
 2. 字符数只作辅助、低权重，只用于疑似空壳提示，不直接加分。
 3. 正文增长但可验证锚点未增加时，成熟度不升。
 4. 缺少证据的跨项目内容不加分，必要时通过 validator 或占位识别扣分。
-5. 分数在报告中服务于 gap 和行动计划，不作为主标题或唯一目标。
+5. 分数在报告中服务于 gap 和行动计划，不作为主标题或唯一目标。`行动计划` 以关闭具体 gap 为成功判据，不以达到某个分数为目标。
+
+### 计分去重
+
+同一个底层事实在成熟度总分中只能被计一次。
+
+- 每个 signal 应带 `fact_id` 或等价标识，表示它对应的底层事实。
+- 结构缺口如果已经在某个维度中扣分，不再在 `Validator 健康度` 中二次扣分。
+- `Validator 健康度` 只反映 validate findings 的整体风险数量级，不重复惩罚已经被基础结构、Project Graph 或来源登记维度吸收的同一事实。
+- 实现上先按 `fact_id` 聚合，再决定它影响哪个维度。
 
 ### 维度与权重
 
@@ -222,11 +251,11 @@ Project Graph / cross-refs 在以下条件下可标记为 not-applicable：
 | 基础结构 | 15 | 脚本测量 | `.llm-wiki`、README、log、modules、sources、requirements、bugs、working-context、artifacts 是否存在 |
 | 入口可读性 | 10 | LLM 判断 | README/index 是否基于 signals 展示真实项目入口和导航，不奖励长篇散文 |
 | 模块上下文 | 20 | 脚本测量 + LLM 判断 | modules/index 覆盖、source-map 锚点存在、模块页能否说明职责和验证入口 |
-| 来源登记 | 10 | 脚本测量 | `sources/`、`ingest/index.md`、`original_path` 是否登记真实资料且路径可解析 |
+| 来源登记 | 10 | 脚本测量 + LLM 判断 | `sources/`、`ingest/index.md`、`original_path` 是否登记真实资料且路径可解析；登记内容是否为真实资料而非占位 stub |
 | 生命周期内容 | 15 | 脚本测量 + LLM 判断 | requirements、bugs、working-context、handoff、log 是否有真实条目和可追溯关系 |
 | artifacts/dashboard 可见链路 | 10 | 脚本测量 | `artifacts/index.md`、dashboard、log、模块 README 是否能形成发现链 |
 | Project Graph / cross-refs | 15 | 脚本测量 + LLM 判断 | graph 文件、edges/candidates、Project Graph Evidence / Gaps、cross-ref pins 是否适用且可用 |
-| Validator 健康度 | 5 | 脚本测量 | 根据 validate ERROR/WARN 扣分 |
+| Validator 健康度 | 5 | 脚本测量 | 根据去重后的 validate ERROR/WARN 风险数量级扣分 |
 
 等级建议：
 
@@ -241,12 +270,17 @@ Project Graph / cross-refs 在以下条件下可标记为 not-applicable：
 
 Doctor 需要识别“文件存在但几乎没用”的情况。第一版使用轻量启发式：
 
-- 正文有效字符数过少，但阈值按文件类型区分。
-- 只有标题、目录、占位词、空表格。
-- 出现 `TODO`、`TBD`、`待补充`、`placeholder`、`coming soon` 等占位信号。
-- 模块页缺少可验证源码入口、关键类/API、验证方式之一。
+主信号满足任一即可视为 gap：
 
-这些结果默认作为 maturity gap，不作为 validator ERROR。阈值必须温和，避免误伤短但完整的页面。
+- 模块页的 source-map、关键类或 API 锚点无法解析到真实源码。
+- 页面只有标题、目录、空表格或占位词。
+- 出现 `TODO`、`TBD`、`待补充`、`placeholder`、`coming soon` 等占位信号，且缺少可验证锚点。
+
+辅信号只提示、不单独定性：
+
+- 正文有效字符数过少，但阈值按文件类型区分。
+
+原则：短但 source-map 锚点全部解析的页面，不算空壳；长但没有任何可解析锚点的页面，仍算空壳。
 
 ## 中文报告模板
 
@@ -273,7 +307,7 @@ Doctor 需要识别“文件存在但几乎没用”的情况。第一版使用�
 7. 扫描 Project Graph candidates。
 8. 把关键产物登记到 `artifacts/index.md`。
 9. 更新 `log.md`，记录初始化和补全过程。
-10. 再次运行 Doctor，目标提升到 70 分以上。
+10. 关闭上面列出的成熟度 gap 后再次运行 Doctor，确认 gap 收敛、无新增 ERROR。分数会随之上升，但目标是关闭具体 gap，不是凑到某个分数。
 
 ## 总体评分
 
@@ -289,7 +323,7 @@ Doctor 需要识别“文件存在但几乎没用”的情况。第一版使用�
 |---|---|---:|---|---|
 | 基础结构 | applicable | 12/15 | 脚本测量 | 目录基本完整 |
 | 模块上下文 | applicable | 4/20 | 脚本测量 + LLM 判断 | README 多为空壳，source-map 锚点不足 |
-| 来源登记 | applicable | 0/10 | 脚本测量 | 没有登记真实资料 |
+| 来源登记 | applicable | 0/10 | 脚本测量 + LLM 判断 | 没有登记真实资料，或登记内容像占位 stub |
 | Project Graph | not-applicable | - | 脚本测量 | 单模块且未发现跨服务信号 |
 
 ## Validator 发现
