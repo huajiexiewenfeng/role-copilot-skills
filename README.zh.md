@@ -55,6 +55,7 @@ role-copilot-skills/
       project-finish/
       project-review/
       project-maintain/
+      llm-wiki-doctor/
       project-base-init/
       project-graph-candidates-scan/
       project-graph-auto-edge/
@@ -116,6 +117,7 @@ hr-agent-copilot/
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |
 | `project-review` | 检查项目变更的代码风险、测试缺口、范围漂移、过期上下文和 wiki 同步。 |
 | `project-maintain` | 巡检和修复 `.llm-wiki` 结构、Project Graph 一致性、过期 candidates、cross-ref pins、registry、可见性漂移和内置 doctor 发现。 |
+| `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别和 Project Graph validator 发现。 |
 | `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用于多项目 catalog 和 overview 协调。 |
 | `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选，不写 edge 或 cross-ref pin。 |
 | `project-graph-auto-edge` | 通过 Base Graph 和源码证据把 candidate 转成供人工确认的 edge proposal。 |
@@ -123,7 +125,7 @@ hr-agent-copilot/
 
 Project Graph 维护拆成三个显式技能，方便 agent 明确调用对应阶段：先扫描 candidates，再生成 proposal，最后由人工确认或手动登记 edge。只有 `project-graph-human-edge` 写入 confirmed edge 时才维护 `cross-refs/index.md`。
 
-安装 `project-develop-copilot` 现在也会带上 `scripts/llm_wiki_doctor.py` 校验器、测试和可复用 pre-commit hook。它用于在 project finish 或 PR merge 前发现孤儿设计/需求/bug/plan 文档、缺失 Project Graph evidence block、以及未解析的 project-id 引用；详细用法见 `project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md`。
+安装 `project-develop-copilot` 现在也会带上 `scripts/llm_wiki_doctor.py` 校验器、测试、`llm-wiki-doctor` skill 和面向业务项目的 scaffold 模板。`project-init` 会把 vendored doctor、pre-commit 配置和 CI workflow 安装到每个业务项目里，让 `validate` 在 project finish 或 PR merge 前拦截结构性 ERROR；人工诊断使用 `report` 和 `score`。详细用法见 `project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md`。
 
 计划中的 Project skills：
 

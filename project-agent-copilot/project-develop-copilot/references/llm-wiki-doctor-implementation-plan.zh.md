@@ -456,9 +456,10 @@ Linux / CI equivalent:
 
 ```bash
 python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
+python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check
 ```
 
-Expected: all tests pass.
+Expected: all tests pass and scaffolded doctor copy is in sync with the source script.
 
 - [ ] **Step 2: Run skill package listing.**
 
@@ -471,8 +472,8 @@ Expected: output lists `llm-wiki-doctor` and existing project skills.
 - [ ] **Step 3: Run source grep checks.**
 
 ```powershell
-rg -n "invalid-graph-edge" project-agent-copilot\project-develop-copilot --glob "!references/llm-wiki-doctor-*.md"
-rg -n "project-ids\.(yml|yaml)" project-agent-copilot README.md README.zh.md --glob "!references/*补丁*.md"
+rg -n "invalid-graph-edge" project-agent-copilot\project-develop-copilot --glob "!**/references/llm-wiki-doctor-*.md"
+rg -n "project-ids\.(yml|yaml)" project-agent-copilot README.md README.zh.md --glob "!**/references/*patch*.md"
 rg -n "llm-wiki-doctor|wiki-doctor|llm_wiki_doctor.py validate|score_version" project-agent-copilot\project-develop-copilot
 rg -n "^- Create: `\\.(llm-wiki/tools|github/workflows|pre-commit-config.yaml)" project-agent-copilot\project-develop-copilot\references\llm-wiki-doctor-implementation-plan.zh.md
 ```

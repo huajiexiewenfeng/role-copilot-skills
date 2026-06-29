@@ -32,6 +32,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接、安全边界和 doctor 发现。 |
+| `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别和 Project Graph validator 发现。 |
 | `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用来协调多个项目本地 `.llm-wiki`，但不把 Base 仓库当成业务项目。 |
 | `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选；只写 candidates 和 scan report，不写 confirmed edge 或 cross-ref pin。 |
 | `project-graph-auto-edge` | 通过 Base Graph 和本地/远端源码证据，把 candidate 转成可人工确认的 edge proposal。 |
@@ -69,13 +70,13 @@ project-develop-copilot
 或
 
 project-develop-copilot
--> project-query / project-maintain / project-base-init / project-init / project-ingest
+-> project-query / project-maintain / llm-wiki-doctor / project-base-init / project-init / project-ingest
 -> project-develop 或 project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`llm-wiki-doctor` 负责只读运行 validate/score/report 诊断。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
@@ -83,15 +84,16 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 
 ## LLM Wiki Doctor 与校验器
 
-安装这个集合会同时带上 `scripts/llm_wiki_doctor.py`、`scripts/tests/test_llm_wiki_doctor.py` 和 `scripts/git-hooks/pre-commit-llm-wiki-doctor`。doctor 设计为复制或 vendoring 到项目的 `.llm-wiki/tools/` 目录，然后在本地 pre-commit、CI/PR 检查和 `project-finish` 中复用。
+安装这个集合会同时带上 `llm-wiki-doctor`、`scripts/llm_wiki_doctor.py`、测试，以及 `assets/llm-wiki-doctor-scaffold/` 下的业务项目 scaffold 模板。`project-init` 会把 vendored doctor 安装到业务项目的 `.llm-wiki/tools/` 目录，并为该项目提供 pre-commit / CI workflow 文件。
 
 当前 validator 聚焦机器能稳定检查的卫生问题：
 
 - `orphan-design-doc`：`.llm-wiki` 外部的 design、requirement、bug 或 plan 文档，应登记为 source，或显式 ignore。
 - `missing-graph-evidence`：文档正文提到已知 project-id 且涉及跨项目推理时，应带 Project Graph Evidence / Gaps block。
 - `unresolved-project-id`：project-id 只匹配 registry 中配置的逻辑名和 alias，采用词边界风格匹配，并保持 warning 级别。
+- `invalid-edge-id`、`dangling-cross-ref`、`duplicate-edge-fingerprint`、`leaked-local-path`：面向 CI/pre-commit/project-finish 的确定性 ERROR 检查。
 
-推荐落地策略是：本地 pre-commit 和 CI 对结构性 P0 问题阻断；判断性更强的 graph evidence 检查长期保持 WARN，除非某个项目主动收紧。命令、配置和 hook 示例见 `scripts/README.llm-wiki-doctor.md`。
+推荐落地策略是：本地 pre-commit 和 CI 通过 `validate` 对结构性 P0 问题阻断；`report` 和 `score` 保持咨询性质，并以中文报告为主。命令、配置和 scaffold 示例见 `scripts/README.llm-wiki-doctor.md`。
 
 ## 历史 session 提纯
 

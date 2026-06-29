@@ -85,19 +85,20 @@ Workflow:
 2. Inspect project markers under the resolved project root only: `.git`, build files, `docs/`, `.llm-wiki/`, legacy `docs/ai-coding/`, and explicitly active graph outputs.
 3. Create missing `.llm-wiki` standard directories and starter files. Do not use an ad-hoc minimal layout when the project development lifecycle expects the standard structure.
 4. Ensure the standard `.llm-wiki` directory structure exists; create missing directories without deleting extra existing directories.
-5. Create or update `.llm-wiki/modules/index.md`.
-6. Create `.llm-wiki/modules/<scope>/` only for user-selected or clearly active scopes that need source-backed context.
-7. Detect modules conservatively from build files and top-level service directories.
-8. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
-9. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
-10. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
-11. Create `.llm-wiki/dashboard/progress.html` from `../references/progress-dashboard-template.html` when missing, using the detected project language for visible labels when practical.
-12. Register the dashboard in `.llm-wiki/artifacts/index.md` when the artifact registry exists; if the registry does not exist yet, create the standard artifact registry starter.
-13. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
-14. Preserve existing statuses unless evidence or user instruction changes them.
-15. Write a `.llm-wiki/log.md` entry.
-16. Return a concise handoff with the current init completion level.
-17. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
+5. Install or refresh the LLM Wiki Doctor scaffold from `../assets/llm-wiki-doctor-scaffold/` into the consuming project when available.
+6. Create or update `.llm-wiki/modules/index.md`.
+7. Create `.llm-wiki/modules/<scope>/` only for user-selected or clearly active scopes that need source-backed context.
+8. Detect modules conservatively from build files and top-level service directories.
+9. Mark modules as `active`, `reference-only`, `discovered`, or `unknown`.
+10. Do not automatically record `.codegraph/`, `graphify-out/`, `GRAPH_REPORT.md`, or generated graph files merely because they exist; register them only when user-requested, already maintained in `.llm-wiki`, or explicitly active in project docs.
+11. Summarize legacy `docs/ai-coding` into `.llm-wiki` without deleting or rewriting legacy files.
+12. Create `.llm-wiki/dashboard/progress.html` from `../references/progress-dashboard-template.html` when missing, using the detected project language for visible labels when practical.
+13. Register the dashboard in `.llm-wiki/artifacts/index.md` when the artifact registry exists; if the registry does not exist yet, create the standard artifact registry starter.
+14. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
+15. Preserve existing statuses unless evidence or user instruction changes them.
+16. Write a `.llm-wiki/log.md` entry.
+17. Return a concise handoff with the current init completion level.
+18. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
 
 ## Language Policy
 
@@ -125,6 +126,7 @@ A project init must create or preserve this standard structure. Some directories
   artifacts/
   cross-refs/
   project-graph/
+  tools/
   dashboard/
   session-digests/
   migration/
@@ -148,6 +150,8 @@ Minimum starter files:
 - `.llm-wiki/project-graph/edges.md`: unique cross-project relationship fact table.
 - `.llm-wiki/project-graph/candidates.md`: candidate/discovered relationship table; candidates do not drive decisions.
 - `.llm-wiki/project-graph/scan-report.md`: graph scan summary placeholder plus retained `Archived Candidates` audit section.
+- `.llm-wiki/tools/llm_wiki_doctor.py`: project-vendored deterministic validator installed from the skill scaffold.
+- `.llm-wiki/tools/VERSION`: source path and commit metadata for the vendored validator.
 - `.llm-wiki/dashboard/progress.html`: static project progress dashboard generated from the skill template.
 - `.llm-wiki/session-digests/README.md`: recallable Session Digest landing area for historical chat/session summaries.
 - `.llm-wiki/migration/legacy-ai-coding.md`: legacy docs/ai-coding migration index when present.
@@ -163,6 +167,9 @@ Refresh rules:
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
 - Create or preserve `.llm-wiki/cross-refs/index.md` with the pin-layer Cross-Project Integration Points template when missing.
 - Create or preserve `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, and `.llm-wiki/project-graph/scan-report.md` with empty templates when missing.
+- Install or refresh `.llm-wiki/tools/llm_wiki_doctor.py`, `.llm-wiki/tools/VERSION`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml` from the scaffold so each consuming project has its own machine-check entry points.
+- Do not silently overwrite project-owned `.pre-commit-config.yaml` or `.github/workflows/llm-wiki-doctor.yml`; merge safely when obvious, write a `.example` file, or report a manual merge action.
+- Refresh `.llm-wiki/tools/llm_wiki_doctor.py` only when it was scaffold-generated or when the user confirms replacement.
 - Ensure `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` exactly once so local project-path mappings and scan state do not enter git.
 - Do not create `.llm-wiki/registry.local.json` or `.llm-wiki/cross-refs/registry.local.json` during init unless the user provides a remote project path and confirms storing it as local-only configuration.
 - Do not scan external projects during `project-init`; scanner is an optional later `project-maintain graph-scan` flow.

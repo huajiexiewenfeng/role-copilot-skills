@@ -55,6 +55,7 @@ role-copilot-skills/
       project-finish/
       project-review/
       project-maintain/
+      llm-wiki-doctor/
       project-base-init/
       project-graph-candidates-scan/
       project-graph-auto-edge/
@@ -116,6 +117,7 @@ Planned DevOps skills:
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |
 | `project-review` | Review project changes for code risk, test gaps, scope drift, stale context, and wiki sync. |
 | `project-maintain` | Audit and repair `.llm-wiki` structure, Project Graph consistency, stale candidates, cross-ref pins, registries, visibility drift, and bundled doctor findings. |
+| `llm-wiki-doctor` | Run or explain LLM Wiki Doctor validate/score/report output, including Chinese maturity reports, empty wiki skeleton detection, and Project Graph validator findings. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository for multi-project catalog and overview coordination. |
 | `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates without writing edges or cross-ref pins. |
 | `project-graph-auto-edge` | Resolve candidates through Base Graph and source evidence into human-reviewable edge proposals. |
@@ -123,7 +125,7 @@ Planned DevOps skills:
 
 Project Graph maintenance is split into three explicit skills so agents can call the intended step visibly: scan candidates, generate proposals, then let a human confirm or manually enter edges. `cross-refs/index.md` is maintained only when `project-graph-human-edge` writes a confirmed edge.
 
-Installing `project-develop-copilot` now also ships the `scripts/llm_wiki_doctor.py` validator, its tests, and a reusable pre-commit hook. Use it to catch orphan design/requirement/bug/plan docs, missing Project Graph evidence blocks, and unresolved project-id references before project finish or PR merge; see `project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md`.
+Installing `project-develop-copilot` now also ships the `scripts/llm_wiki_doctor.py` validator, tests, the `llm-wiki-doctor` skill, and consuming-project scaffold templates. `project-init` installs the vendored doctor, pre-commit config, and CI workflow into each business project so `validate` can catch structural ERROR findings before project finish or PR merge. Human diagnosis can use `report` and `score`; see `project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md`.
 
 Planned Project skills:
 
