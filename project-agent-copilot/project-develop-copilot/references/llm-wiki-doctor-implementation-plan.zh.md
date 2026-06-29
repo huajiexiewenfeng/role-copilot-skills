@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python standard library, `unittest`, Markdown skill docs, existing `npx skills add . --list` validation.
 
-**Execution model:** Implement on a feature branch, for example `feat/llm-wiki-doctor`. Do not commit red TDD states on `main`, and do not finish by pushing directly to `main`. The implementation must open a PR and let CI run `validate --fail-on error` before merge.
+**Execution model:** Implement on a feature branch, for example `feat/llm-wiki-doctor`. Do not commit red TDD states on `main`, and do not finish by pushing directly to `main`. The implementation must open a PR. The skill-source repo CI proves script tests and scaffold drift checks; consuming-project CI is installed by `project-init` and is the real merge gate for business repositories.
 
 ---
 
@@ -21,10 +21,10 @@
 - Modify `project-maintain/SKILL.md`, `project-finish/SKILL.md`, and `project-review/SKILL.md`: use `validate` for blocking checks and delegate scoring to `llm-wiki-doctor`.
 - Modify README surfaces and `scripts/README.llm-wiki-doctor.md`: document the new skill and subcommands.
 - Modify `evals/project-develop-copilot-evals.md` and, if needed, `references/acceptance-cases.md`: add routing and scoring coverage.
-- Create `.llm-wiki/tools/llm_wiki_doctor.py` and `.llm-wiki/tools/VERSION`: vendored project-local doctor used by CI and pre-commit.
-- Create or modify `project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py`: sync and drift-check the vendored doctor.
-- Create `.pre-commit-config.yaml`: local hook that runs `validate` only.
-- Create `.github/workflows/llm-wiki-doctor.yml`: PR/push workflow that runs tests, vendoring drift check, and `validate --fail-on error`.
+- Create scaffold templates under `project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/`: consuming-project `.llm-wiki/tools/`, pre-commit, and GitHub Actions files.
+- Create or modify `project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py`: sync the source doctor into the scaffold template and drift-check it.
+- Modify `project-agent-copilot/project-develop-copilot/project-init/SKILL.md`: install or refresh the scaffold into the target business repository during init/refresh.
+- Do not create root `.llm-wiki/tools/`, `.pre-commit-config.yaml`, or `.github/workflows/` in the skill-source repo unless explicitly dogfooding this repo with a real `.llm-wiki`.
 
 ## Task 1: Add Failing CLI And Canonical Validator Tests
 
@@ -277,52 +277,48 @@ lightweight-answer < read-only-query < wiki-doctor < dashboard-refresh < wiki-ma
 
 - [ ] **Step 5: Update project-finish and project-review.** Finish blocking checks use `validate`. Review can cite `report` as diagnostic evidence, but PR/merge blocking uses `validate --fail-on error`.
 
-## Task 6: Add Machine Enforcement Artifacts
+## Task 6: Add Consuming-Project Enforcement Scaffold
 
 **Files:**
-- Create: `.llm-wiki/tools/llm_wiki_doctor.py`
-- Create: `.llm-wiki/tools/VERSION`
+- Create: `project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/llm_wiki_doctor.py`
+- Create: `project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/VERSION`
+- Create: `project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.pre-commit-config.yaml`
+- Create: `project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.github/workflows/llm-wiki-doctor.yml`
 - Create/Modify: `project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py`
-- Create: `.pre-commit-config.yaml`
-- Create: `.github/workflows/llm-wiki-doctor.yml`
+- Modify: `project-agent-copilot/project-develop-copilot/project-init/SKILL.md`
 
-- [ ] **Step 1: Add the vendoring sync script.** Implement `sync-doctor.py` with Python standard library only. It must copy `project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py` into `.llm-wiki/tools/llm_wiki_doctor.py`, create parent directories, and write `.llm-wiki/tools/VERSION` with the source path plus current Git commit when available. Add a `--check` mode that compares the source and vendored copy and exits non-zero when they drift.
+- [ ] **Step 1: Keep enforcement artifacts as scaffold templates, not skill-repo root files.** Store the vendored doctor, pre-commit config, and CI workflow under `assets/llm-wiki-doctor-scaffold/`. These files are templates to copy into each consuming business project. Do not create `.llm-wiki/tools/`, `.pre-commit-config.yaml`, or `.github/workflows/` at the role-copilot-skills repository root unless this repository is explicitly dogfooding with a real, maintained `.llm-wiki`.
 
-- [ ] **Step 2: Run the sync script.** Create the vendored files before README examples reference them.
+- [ ] **Step 2: Add the scaffold sync script.** Implement `sync-doctor.py` with Python standard library only. It must copy `project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py` into `assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/llm_wiki_doctor.py`, create parent directories, and write `assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/VERSION` with the source path plus current Git commit when available. Add a `--check` mode that compares the source and scaffold copy and exits non-zero when they drift.
 
-```powershell
-python project-agent-copilot\project-develop-copilot\scripts\sync-doctor.py
-```
-
-Expected: `.llm-wiki/tools/llm_wiki_doctor.py` exists and matches the source script.
-
-- [ ] **Step 3: Verify drift detection locally.**
-
-```powershell
-python project-agent-copilot\project-develop-copilot\scripts\sync-doctor.py --check
-```
-
-Expected: exit code 0 when source and vendored copy match. A temporary edit to either copy should make `--check` fail; revert the temporary edit immediately after this verification.
-
-- [ ] **Step 4: Add pre-commit enforcement.** Add a local pre-commit hook that runs only deterministic validation and blocks only ERROR findings:
+- [ ] **Step 3: Create scaffolded local and CI enforcement files.** The scaffolded `.pre-commit-config.yaml` must run only deterministic validation and block only ERROR findings:
 
 ```text
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
 ```
 
-Do not run `score` or `report` from pre-commit. WARN findings must not block commits.
-
-- [ ] **Step 5: Add CI enforcement.** Create a GitHub Actions workflow for PR and push events on `ubuntu-latest`. Use Linux paths and commands:
+The scaffolded GitHub Actions workflow must run in the consuming project on `ubuntu-latest` and use Linux paths:
 
 ```bash
-python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
-python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
 ```
 
-The workflow must fetch enough history for `origin/main` to resolve. If the workflow uses `npx`, use `npx`, not `npx.cmd`. Keep path handling in scripts on `pathlib` so Windows local runs and Linux CI runs share the same behavior.
+The workflow must fetch enough history for `origin/main` to resolve. Do not run `score` or `report` from pre-commit or CI. WARN findings must not block commits or merge.
 
-- [ ] **Step 6: Treat CI as the merge gate.** Configure the workflow as the required PR status check in repository branch protection. The repository setting is outside code review diff, but the implementation PR must call it out explicitly. CI and pre-commit use `validate`; `score` and `report` remain consulting commands and never gate merge.
+- [ ] **Step 4: Wire scaffold installation into `project-init`.** During business-project init/refresh, install or refresh the scaffold into the resolved `project_root`:
+
+```text
+<project_root>/.llm-wiki/tools/llm_wiki_doctor.py
+<project_root>/.llm-wiki/tools/VERSION
+<project_root>/.pre-commit-config.yaml
+<project_root>/.github/workflows/llm-wiki-doctor.yml
+```
+
+Preserve project-owned files. If a target file already exists and differs, do not overwrite silently: either merge the local hook/workflow safely, write a `.example` beside it, or report a manual merge action. The vendored doctor under `.llm-wiki/tools/` may be refreshed when it was previously generated by this scaffold or when the user confirms replacement.
+
+- [ ] **Step 5: Separate skill-source repo CI from consuming-project CI.** The role-copilot-skills repository CI should run script unit tests and `sync-doctor.py --check` against scaffold templates. It must not claim that `validate --root .` protects real project work unless this repository has a real dogfood `.llm-wiki` with maintained project content. If dogfood is enabled later, document that explicitly as a separate workflow or job.
+
+- [ ] **Step 6: Add project-init acceptance coverage.** Add tests or eval/acceptance text proving that after `project-init` on a sample business project, the target project receives the vendored doctor, pre-commit config, and CI workflow. The pass condition is the consuming project having the three artifacts; creating them only in the skill-source repo is a failure.
 
 ## Task 7: Update README And Doctor Usage Docs
 
@@ -349,9 +345,9 @@ Chinese row:
 | `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别和 Project Graph validator 发现。 |
 ```
 
-- [ ] **Step 2: Update collection lists.** Add `llm-wiki-doctor` beside `project-maintain` in top-level, role-level, and inner collection descriptions.
+- [ ] **Step 2: Update collection lists.** Add `llm-wiki-doctor` beside `project-maintain` in top-level, role-level, and inner collection descriptions. Document that installing the skill provides the doctor script and scaffold templates, while `project-init` installs those templates into each consuming project.
 
-- [ ] **Step 3: Rewrite script README commands.** Use:
+- [ ] **Step 3: Rewrite script README commands.** Explain both locations: `scripts/llm_wiki_doctor.py` is the skill-source script, while `.llm-wiki/tools/llm_wiki_doctor.py` is the consuming-project vendored copy installed by `project-init`. Use:
 
 ```text
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --all --format text --fail-on error
@@ -431,7 +427,7 @@ Expected: no `invalid-graph-edge`; new skill and subcommands are documented.
         PASS: Project Graph is N/A and not counted as missing
         FAIL: subtracts Project Graph points from a simple project without cross-service signals
 
-- [ ] **Step 3: Update acceptance cases if a validator section exists.** Use the canonical seven check names exactly as listed in Task 7.
+- [ ] **Step 3: Update acceptance cases if a validator section exists.** Use the canonical seven check names exactly as listed in Task 7. Also add a project-init scaffold acceptance case: initializing a business project creates or offers `.llm-wiki/tools/llm_wiki_doctor.py`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml` in that business project, not only in the skill-source repository.
 
 - [ ] **Step 4: Run grep for old names.**
 
@@ -446,7 +442,7 @@ Expected: no old check name remains except in deliberate migration notes.
 **Files:**
 - All modified files from prior tasks.
 
-Run both local Windows commands and the Linux-equivalent commands that CI will execute. The final PR must prove the machine-enforced path works, not only the developer-local path.
+Run both local Windows commands and the Linux-equivalent commands that CI will execute. The final PR must prove the scaffold templates and `project-init` installation path work, not only the developer-local script path.
 
 - [ ] **Step 1: Run unit tests locally and with CI-equivalent paths.**
 
@@ -478,9 +474,10 @@ Expected: output lists `llm-wiki-doctor` and existing project skills.
 rg -n "invalid-graph-edge" project-agent-copilot\project-develop-copilot --glob "!references/llm-wiki-doctor-*.md"
 rg -n "project-ids\.(yml|yaml)" project-agent-copilot README.md README.zh.md --glob "!references/*补丁*.md"
 rg -n "llm-wiki-doctor|wiki-doctor|llm_wiki_doctor.py validate|score_version" project-agent-copilot\project-develop-copilot
+rg -n "^- Create: `\\.(llm-wiki/tools|github/workflows|pre-commit-config.yaml)" project-agent-copilot\project-develop-copilot\references\llm-wiki-doctor-implementation-plan.zh.md
 ```
 
-Expected: first command returns no production-doc or code matches for the retired check name; second command returns no `.yml` / `.yaml` project-id vocabulary references; third command shows script, skill, router, README, evals, and design/plan references.
+Expected: first command returns no production-doc or code matches for the retired check name; second command returns no `.yml` / `.yaml` project-id vocabulary references; third command shows script, skill, router, README, evals, design/plan references, and scaffold templates; fourth command returns no matches for root-level enforcement files in the plan.
 
 - [ ] **Step 4: Check Git status.**
 
@@ -496,16 +493,17 @@ Use explicit path staging so unrelated files are not included. Do not stage whol
 
 ```powershell
 git add -- README.md README.zh.md `
-  .pre-commit-config.yaml `
-  .github/workflows/llm-wiki-doctor.yml `
-  .llm-wiki/tools/llm_wiki_doctor.py `
-  .llm-wiki/tools/VERSION `
   project-agent-copilot/README.md `
   project-agent-copilot/README.zh.md `
   project-agent-copilot/project-develop-copilot/README.md `
   project-agent-copilot/project-develop-copilot/README.zh.md `
   project-agent-copilot/project-develop-copilot/SKILL.md `
+  project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.pre-commit-config.yaml `
+  project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.github/workflows/llm-wiki-doctor.yml `
+  project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/llm_wiki_doctor.py `
+  project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/.llm-wiki/tools/VERSION `
   project-agent-copilot/project-develop-copilot/llm-wiki-doctor/SKILL.md `
+  project-agent-copilot/project-develop-copilot/project-init/SKILL.md `
   project-agent-copilot/project-develop-copilot/project-maintain/SKILL.md `
   project-agent-copilot/project-develop-copilot/project-finish/SKILL.md `
   project-agent-copilot/project-develop-copilot/project-review/SKILL.md `
