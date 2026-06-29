@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python standard library, `unittest`, Markdown skill docs, existing `npx skills add . --list` validation.
 
+**Execution model:** Implement on a feature branch, for example `feat/llm-wiki-doctor`. Do not commit red TDD states on `main`, and do not finish by pushing directly to `main`. The implementation must open a PR and let CI run `validate --fail-on error` before merge.
+
 ---
 
 ## File Map
@@ -19,6 +21,10 @@
 - Modify `project-maintain/SKILL.md`, `project-finish/SKILL.md`, and `project-review/SKILL.md`: use `validate` for blocking checks and delegate scoring to `llm-wiki-doctor`.
 - Modify README surfaces and `scripts/README.llm-wiki-doctor.md`: document the new skill and subcommands.
 - Modify `evals/project-develop-copilot-evals.md` and, if needed, `references/acceptance-cases.md`: add routing and scoring coverage.
+- Create `.llm-wiki/tools/llm_wiki_doctor.py` and `.llm-wiki/tools/VERSION`: vendored project-local doctor used by CI and pre-commit.
+- Create or modify `project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py`: sync and drift-check the vendored doctor.
+- Create `.pre-commit-config.yaml`: local hook that runs `validate` only.
+- Create `.github/workflows/llm-wiki-doctor.yml`: PR/push workflow that runs tests, vendoring drift check, and `validate --fail-on error`.
 
 ## Task 1: Add Failing CLI And Canonical Validator Tests
 
@@ -56,7 +62,7 @@ leaked-local-path: a committed .llm-wiki markdown page contains C:\Users\admin\s
 python -m unittest discover project-agent-copilot\project-develop-copilot\scripts\tests
 ```
 
-Expected: tests fail because subcommands and new canonical checks are not implemented yet. Do not commit this failing state on `main`.
+Expected: tests fail because subcommands and new canonical checks are not implemented yet. Keep this red TDD state on the feature branch; do not commit or push it to `main`.
 
 ## Task 2: Implement Validate Subcommand And Canonical Checks
 
@@ -271,7 +277,54 @@ lightweight-answer < read-only-query < wiki-doctor < dashboard-refresh < wiki-ma
 
 - [ ] **Step 5: Update project-finish and project-review.** Finish blocking checks use `validate`. Review can cite `report` as diagnostic evidence, but PR/merge blocking uses `validate --fail-on error`.
 
-## Task 6: Update README And Doctor Usage Docs
+## Task 6: Add Machine Enforcement Artifacts
+
+**Files:**
+- Create: `.llm-wiki/tools/llm_wiki_doctor.py`
+- Create: `.llm-wiki/tools/VERSION`
+- Create/Modify: `project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py`
+- Create: `.pre-commit-config.yaml`
+- Create: `.github/workflows/llm-wiki-doctor.yml`
+
+- [ ] **Step 1: Add the vendoring sync script.** Implement `sync-doctor.py` with Python standard library only. It must copy `project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py` into `.llm-wiki/tools/llm_wiki_doctor.py`, create parent directories, and write `.llm-wiki/tools/VERSION` with the source path plus current Git commit when available. Add a `--check` mode that compares the source and vendored copy and exits non-zero when they drift.
+
+- [ ] **Step 2: Run the sync script.** Create the vendored files before README examples reference them.
+
+```powershell
+python project-agent-copilot\project-develop-copilot\scripts\sync-doctor.py
+```
+
+Expected: `.llm-wiki/tools/llm_wiki_doctor.py` exists and matches the source script.
+
+- [ ] **Step 3: Verify drift detection locally.**
+
+```powershell
+python project-agent-copilot\project-develop-copilot\scripts\sync-doctor.py --check
+```
+
+Expected: exit code 0 when source and vendored copy match. A temporary edit to either copy should make `--check` fail; revert the temporary edit immediately after this verification.
+
+- [ ] **Step 4: Add pre-commit enforcement.** Add a local pre-commit hook that runs only deterministic validation and blocks only ERROR findings:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
+```
+
+Do not run `score` or `report` from pre-commit. WARN findings must not block commits.
+
+- [ ] **Step 5: Add CI enforcement.** Create a GitHub Actions workflow for PR and push events on `ubuntu-latest`. Use Linux paths and commands:
+
+```bash
+python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
+python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+```
+
+The workflow must fetch enough history for `origin/main` to resolve. If the workflow uses `npx`, use `npx`, not `npx.cmd`. Keep path handling in scripts on `pathlib` so Windows local runs and Linux CI runs share the same behavior.
+
+- [ ] **Step 6: Treat CI as the merge gate.** Configure the workflow as the required PR status check in repository branch protection. The repository setting is outside code review diff, but the implementation PR must call it out explicitly. CI and pre-commit use `validate`; `score` and `report` remain consulting commands and never gate merge.
+
+## Task 7: Update README And Doctor Usage Docs
 
 **Files:**
 - Modify: `README.md`
@@ -328,7 +381,7 @@ rg -n "invalid-graph-edge|invalid-edge-id|llm-wiki-doctor|validate --root|score 
 
 Expected: no `invalid-graph-edge`; new skill and subcommands are documented.
 
-## Task 7: Add Eval And Acceptance Coverage
+## Task 8: Add Eval And Acceptance Coverage
 
 **Files:**
 - Modify: `project-agent-copilot/project-develop-copilot/evals/project-develop-copilot-evals.md`
@@ -378,7 +431,7 @@ Expected: no `invalid-graph-edge`; new skill and subcommands are documented.
         PASS: Project Graph is N/A and not counted as missing
         FAIL: subtracts Project Graph points from a simple project without cross-service signals
 
-- [ ] **Step 3: Update acceptance cases if a validator section exists.** Use the canonical seven check names exactly as listed in Task 6.
+- [ ] **Step 3: Update acceptance cases if a validator section exists.** Use the canonical seven check names exactly as listed in Task 7.
 
 - [ ] **Step 4: Run grep for old names.**
 
@@ -388,15 +441,25 @@ rg -n "invalid-graph-edge|invalid-edge-id|dangling-cross-ref|duplicate-edge-fing
 
 Expected: no old check name remains except in deliberate migration notes.
 
-## Task 8: Validate Package, Tests, And Git Hygiene
+## Task 9: Validate Package, Tests, And Git Hygiene
 
 **Files:**
 - All modified files from prior tasks.
 
-- [ ] **Step 1: Run unit tests.**
+Run both local Windows commands and the Linux-equivalent commands that CI will execute. The final PR must prove the machine-enforced path works, not only the developer-local path.
+
+- [ ] **Step 1: Run unit tests locally and with CI-equivalent paths.**
+
+Windows / PowerShell:
 
 ```powershell
 python -m unittest discover project-agent-copilot\project-develop-copilot\scripts\tests
+```
+
+Linux / CI equivalent:
+
+```bash
+python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
 ```
 
 Expected: all tests pass.
@@ -412,11 +475,12 @@ Expected: output lists `llm-wiki-doctor` and existing project skills.
 - [ ] **Step 3: Run source grep checks.**
 
 ```powershell
-rg -n "invalid-graph-edge" project-agent-copilot\project-develop-copilot
+rg -n "invalid-graph-edge" project-agent-copilot\project-develop-copilot --glob "!references/llm-wiki-doctor-*.md"
+rg -n "project-ids\.(yml|yaml)" project-agent-copilot README.md README.zh.md --glob "!references/*补丁*.md"
 rg -n "llm-wiki-doctor|wiki-doctor|llm_wiki_doctor.py validate|score_version" project-agent-copilot\project-develop-copilot
 ```
 
-Expected: first command returns no matches; second command shows script, skill, router, README, evals, and design/plan references.
+Expected: first command returns no production-doc or code matches for the retired check name; second command returns no `.yml` / `.yaml` project-id vocabulary references; third command shows script, skill, router, README, evals, and design/plan references.
 
 - [ ] **Step 4: Check Git status.**
 
@@ -428,25 +492,44 @@ Expected: only intended files are modified or added. The existing untracked `pro
 
 - [ ] **Step 5: Commit implementation after reviewing staged diff.**
 
-Use explicit path staging so unrelated files are not included:
+Use explicit path staging so unrelated files are not included. Do not stage whole directories such as `project-agent-copilot/project-develop-copilot`, because unrelated local directories may exist under them. Stage only files that were actually created or modified from this list:
 
 ```powershell
-git add -- README.md README.zh.md project-agent-copilot/README.md project-agent-copilot/README.zh.md project-agent-copilot/project-develop-copilot
+git add -- README.md README.zh.md `
+  .pre-commit-config.yaml `
+  .github/workflows/llm-wiki-doctor.yml `
+  .llm-wiki/tools/llm_wiki_doctor.py `
+  .llm-wiki/tools/VERSION `
+  project-agent-copilot/README.md `
+  project-agent-copilot/README.zh.md `
+  project-agent-copilot/project-develop-copilot/README.md `
+  project-agent-copilot/project-develop-copilot/README.zh.md `
+  project-agent-copilot/project-develop-copilot/SKILL.md `
+  project-agent-copilot/project-develop-copilot/llm-wiki-doctor/SKILL.md `
+  project-agent-copilot/project-develop-copilot/project-maintain/SKILL.md `
+  project-agent-copilot/project-develop-copilot/project-finish/SKILL.md `
+  project-agent-copilot/project-develop-copilot/project-review/SKILL.md `
+  project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py `
+  project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py `
+  project-agent-copilot/project-develop-copilot/scripts/tests/test_llm_wiki_doctor.py `
+  project-agent-copilot/project-develop-copilot/scripts/README.llm-wiki-doctor.md `
+  project-agent-copilot/project-develop-copilot/evals/project-develop-copilot-evals.md `
+  project-agent-copilot/project-develop-copilot/references/acceptance-cases.md
 ```
 
-Then commit:
+If optional files were not changed, remove those paths from the staging command instead of staging a parent directory. Then commit:
 
 ```powershell
 git commit -m "feat(project-develop): add llm-wiki doctor skill"
 ```
 
-- [ ] **Step 6: Push.**
+- [ ] **Step 6: Push the feature branch and open PR.**
 
 ```powershell
-git push origin main
+git push origin feat/llm-wiki-doctor
 ```
 
-Expected: GitHub `main` includes the new skill, upgraded doctor script, tests, docs, and evals.
+Expected: a PR is opened from the feature branch. Merge only after CI passes and branch protection accepts the `llm-wiki-doctor` workflow. Do not push directly to `main`.
 
 ## Self-Review
 
@@ -455,11 +538,12 @@ Spec coverage:
 - Child skill creation is covered by Task 4.
 - Router update is covered by Task 5.
 - `validate` / `score` / `report` split is covered by Tasks 1-3.
-- Canonical Project Graph checks are covered by Tasks 1-2 and Task 7.
+- Canonical Project Graph checks are covered by Tasks 1-2 and Task 8.
 - Chinese-first report and score metadata are covered by Task 3.
-- README and usage docs are covered by Task 6.
-- Evals and acceptance coverage are covered by Task 7.
-- Verification and Git hygiene are covered by Task 8.
+- Machine enforcement artifacts are covered by Task 6.
+- README and usage docs are covered by Task 7.
+- Evals and acceptance coverage are covered by Task 8.
+- Verification and Git hygiene are covered by Task 9.
 
 Placeholder scan:
 
