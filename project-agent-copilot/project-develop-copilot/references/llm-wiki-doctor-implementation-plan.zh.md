@@ -75,7 +75,7 @@ def normalize_argv(argv: list[str] | None) -> list[str]:
 
 - [ ] **Step 2: Split validate command.** Move existing main behavior into `run_validate_command(args)`, preserving `--root`, `--all`, `--changed`, `--base`, `--format`, and `--fail-on` behavior.
 
-- [ ] **Step 3: Add subparsers.** `main()` must register `validate`, `score`, and `report`; `score` needs `--root` and `--format`; `report` needs scan args plus `--format` and `--fail-on`.
+- [ ] **Step 3: Add subparsers.** `main()` must register `validate`, `score`, and `report`; `score` needs `--root` and `--format`; `report` needs `--root`, optional scan scope, and `--format`, but must not expose `--fail-on` because report is advisory and always exits 0.
 
 - [ ] **Step 4: Rename validator output.** Change the check name emitted for unknown Project Graph evidence edges to `invalid-edge-id`.
 
@@ -85,7 +85,7 @@ def normalize_argv(argv: list[str] | None) -> list[str]:
 
 - [ ] **Step 7: Wire checks into `run_checks`.** Append the new checks after existing orphan and missing-evidence checks.
 
-- [ ] **Step 8: Enforce committed vocabulary sources.** Keep `.llm-wiki/project-ids.json` as the first-version committed vocabulary file. Do not read `registry.local.json` for validate vocabulary. Use Base Graph `project-catalog.md` only as an optional supplement when it is available. Treat `edges.md` project ids as graph rows to validate, not as the unresolved-project-id vocabulary source.
+- [ ] **Step 8: Enforce committed vocabulary sources and structured unresolved scans.** Keep `.llm-wiki/project-ids.json` as the first-version committed vocabulary file. Do not read `registry.local.json` for validate vocabulary. Use Base Graph `project-catalog.md` only as an optional supplement when it is available. Treat `edges.md` project ids as graph rows to validate, not as the unresolved-project-id vocabulary source. Implement `unresolved-project-id` only over structured fields: edge `from_project` / `to_project`, cross-ref project columns, Project Graph Evidence project columns, explicit `project:` / `from_project:` / `to_project:` fields, and relation cells that contain explicit `project-id -> project-id`, backticked ids, or `project: id`. Do not scan free-form paragraphs.
 
 - [ ] **Step 9: Run tests.**
 
@@ -105,7 +105,7 @@ Expected: validator tests pass; score/report tests are not added yet.
 ```text
 score --format json returns score_version = 1, score < 60 for a nearly empty wiki, includes fact_ids/signals, and next_steps mention closing concrete gaps such as .llm-wiki/README.md.
 score --format json marks Project Graph / cross-refs as not-applicable when only one local project exists and no cross-service signal is present.
-report --format text prints # LLM Wiki Doctor 报告 and ## 建议行动计划.
+report --format text prints # LLM Wiki Doctor 报告 and ## 建议行动计划, and returns exit code 0 even when validate findings include ERROR.
 report --format json contains findings and score objects.
 ```
 
@@ -133,7 +133,7 @@ class ScoreReport:
     next_steps: list[str]
 ```
 
-- [ ] **Step 3: Add effective text helpers.** Add helpers that remove headings, table dividers, and placeholder phrases before measuring useful text. Keep thresholds conservative and file-type aware enough to avoid penalizing short but complete pages.
+- [ ] **Step 3: Add page-type-aware empty-template helpers.** Add helpers that remove headings, table dividers, and placeholder phrases before measuring useful text. Apply anchor-resolution gap rules only to module pages, source proxies, and structured Project Graph evidence pages. For narrative pages such as README, requirements, bugs, working-context, and handoff, use required section/placeholder signals instead of anchor absence. Keep thresholds conservative and file-type aware enough to avoid penalizing short but complete pages.
 
 - [ ] **Step 4: Build deterministic signals.** Implement `build_score_report(root)` with at least these signals:
 
@@ -164,7 +164,7 @@ fact_ids
 ## Validator 发现
 ```
 
-- [ ] **Step 8: Implement command runners.** Add `run_score_command(args)` and `run_report_command(args)`. `score` always returns 0. `report` returns the validator exit code and never fails because of score.
+- [ ] **Step 8: Implement command runners.** Add `run_score_command(args)` and `run_report_command(args)`. `score` always returns 0. `report` also always returns 0 because it is a consulting command; CI and project-finish must use `validate` for blocking behavior.
 
 - [ ] **Step 9: Run tests.**
 
@@ -172,7 +172,7 @@ fact_ids
 python -m unittest discover project-agent-copilot\project-develop-copilot\scripts\tests
 ```
 
-Expected: all doctor tests pass, including ERROR exit-code coverage for the four deterministic blocking checks.
+Expected: all doctor tests pass, including ERROR exit-code coverage for the four deterministic blocking checks and report exit-code 0 coverage.
 
 ## Task 4: Add The `llm-wiki-doctor` Child Skill
 
@@ -208,7 +208,7 @@ Default to read-only diagnosis. Use deterministic `validate` for hard validator 
 Human diagnosis:
 
 ```text
-python <doctor> report --root . --format text --fail-on error
+python <doctor> report --root . --format text
 ```
 
 Machine checks:
@@ -304,7 +304,7 @@ Chinese row:
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --all --format text --fail-on error
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
 python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
-python .llm-wiki/tools/llm_wiki_doctor.py report --root . --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py report --root . --format text
 python .llm-wiki/tools/llm_wiki_doctor.py score --root . --format json
 ```
 

@@ -121,13 +121,13 @@ llm-wiki doctor report
 |---|---|---|
 | `validate` | 只运行确定性 validator | `--fail-on error` 只对 validate 的 ERROR 生效 |
 | `score` | 只输出成熟度 signals、维度分和建议线索 | 永不影响退出码 |
-| `report` | 合并 validate + score，输出中文综合报告 | 默认人触发使用；score 不影响退出码 |
+| `report` | 合并 validate findings + score，输出中文综合报告 | 纯咨询命令，永远 exit 0，不用于 CI 门禁 |
 
 约束：
 
 - `validate` 的代码不得 import 或调用评分启发式。
 - pre-commit、CI、project-finish 只跑 `validate`。
-- `score` 永远不进入阻断路径。
+- `score` 永远不进入阻断路径。`report` 也永远不进入阻断路径，即使包含 validate ERROR 也返回 exit 0。
 - json 可以合并字段，但 `score` 字段缺失不得让 `validate` 失败。
 - `score_version` 必须出现在 score/report json 中；跨版本对比分数前先确认版本一致。
 
@@ -189,6 +189,24 @@ cross-refs/index.md
 `edges.md` 的 `from_project` / `to_project` 只用于 edge 是否解析和 Project Graph 结构校验，不作为 `unresolved-project-id` 的词表来源。否则刚引入一个新服务但还没登记词表时，所有新关系都会被误当成权威词表。
 
 `unresolved-project-id` 必须保持 WARN：它提醒补登记，不阻断提交。
+
+### `unresolved-project-id` 扫描范围
+
+`unresolved-project-id` 只能扫描结构化字段，不能扫描自由散文正文。
+
+允许扫描的范围：
+
+- `project-graph/edges.md` 表格中的 `from_project`、`to_project`、`remote_project`、`project_id`、`project` 等明确 project 字段。
+- `cross-refs/index.md` 表格中的 project 字段。
+- `Project Graph Evidence` 表格中的 `Edge`、`From`、`To`、`Project`、`Relation` 等列，但 `Relation` 只解析显式形态，例如 `` `project-id` ``, `project-id -> project-id`, `project: project-id`。
+- YAML/Markdown frontmatter 或列表中的显式 `project:`、`from_project:`、`to_project:`、`remote_project:` 字段。
+
+禁止扫描的范围：
+
+- 普通段落、设计说明、背景叙述、评论、日志散文。
+- 未带字段名的自然语言服务昵称或泛称，例如“上游网关”“媒体服务”“前端”。
+
+原因：未知 project-id 不可能从自由散文中可靠识别；对全文做未知匹配会把普通词误判为 unresolved。该检查的职责是发现结构化引用中写了一个没有登记到 committed 词表的项目 id。
 
 ## 成熟度评分
 
@@ -270,17 +288,33 @@ Project Graph / cross-refs 在以下条件下可标记为 not-applicable：
 
 Doctor 需要识别“文件存在但几乎没用”的情况。第一版使用轻量启发式：
 
-主信号满足任一即可视为 gap：
+空模板识别必须按页面类型选择主信号。
 
-- 模块页的 source-map、关键类或 API 锚点无法解析到真实源码。
-- 页面只有标题、目录、空表格或占位词。
-- 出现 `TODO`、`TBD`、`待补充`、`placeholder`、`coming soon` 等占位信号，且缺少可验证锚点。
+锚点解析主信号只适用于应该有锚点的页面：
+
+- 模块页：`modules/*/source-map.md`、`modules/*/architecture.md`、`modules/*/verification.md` 等。
+- source proxy：`.llm-wiki/sources/proxies/**/*.md`。
+- Project Graph evidence：包含 edge id、from/to project 或 source anchor 的结构化表格。
+
+叙述性页面不能因为“没有锚点”被判空壳：
+
+- `.llm-wiki/README.md`
+- `requirements/*.md`
+- `bugs/*.md`
+- `working-context/*.md`
+- `handoff/*.md`
+
+叙述性页面使用这些信号判断 gap：
+
+- 只有标题、目录、空表格或占位词。
+- 出现 `TODO`、`TBD`、`待补充`、`placeholder`、`coming soon` 等占位信号。
+- 缺少该页面类型应有的结构块，例如 requirement 没有目标/范围/证据，bug 没有现象/影响/验证，README 没有项目入口和导航。
 
 辅信号只提示、不单独定性：
 
 - 正文有效字符数过少，但阈值按文件类型区分。
 
-原则：短但 source-map 锚点全部解析的页面，不算空壳；长但没有任何可解析锚点的页面，仍算空壳。
+原则：短但应有锚点全部解析的模块/source 页面，不算空壳；长但没有任何可验证锚点的模块/source 页面，仍算空壳。叙述性页面按结构块和占位信号判断，不套用锚点规则。
 
 ## 中文报告模板
 
@@ -376,7 +410,7 @@ Doctor 需要识别“文件存在但几乎没用”的情况。第一版使用�
 2. 用户说“跑一下 LLM Wiki Doctor”时，router 能路由到 `llm-wiki-doctor`。
 3. `validate` 保持确定性，只输出 validator findings，现有 validator 测试继续通过。
 4. `score` 输出 `score_version`、signals、applicable/not-applicable 维度、分数线索和 next step signals，且永不影响退出码。
-5. `report` 输出中文 text 报告，包含关键结论、行动计划、分数、等级、validator 发现、成熟度缺口和 N/A 维度说明。
+5. `report` 输出中文 text 报告，包含关键结论、行动计划、分数、等级、validator 发现、成熟度缺口和 N/A 维度说明，并且永远 exit 0。
 6. json 输出包含 validate findings、score signals、dimensions、score_version、level、next_steps，便于 CI 或 dashboard 复用。
 7. 新增测试覆盖空壳 wiki、模块空 README、缺少 sources、Project Graph 只有空结构、单模块 Project Graph N/A、灌水但缺少锚点不提分等场景。
 8. README 中英文版说明安装后自带 skill 触发和 doctor 脚本能力。
