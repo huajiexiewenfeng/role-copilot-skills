@@ -892,11 +892,14 @@ Expected:
 - when root `pom.xml` declares enabled `<module>` entries, doctor compares them with `.llm-wiki/modules/<module>/` directories.
 - missing directories emit `missing-module-context` WARN.
 - existing directories missing `README.md`, `source-map.md`, `architecture.md`, `rules.md`, or `verification.md` emit `incomplete-module-context` WARN.
-- modules marked ready/source-backed/scoped-context-ready in `.llm-wiki/modules/index.md` but missing required context emit `contradictory-module-context` ERROR.
-- `score/report` include `pom_module_count`, `wiki_module_context_count`, `missing_module_context_count`, and `missing_module_context_modules`.
+- directories with all standard files but placeholder-only or very thin content emit `thin-module-context` WARN.
+- directories with all standard files but no source anchors or implementation evidence emit `missing-module-evidence` WARN.
+- modules marked ready/source-backed/scoped-context-ready in `.llm-wiki/modules/index.md` but missing required context, using placeholder content, or lacking source evidence emit `contradictory-module-context` ERROR.
+- `score/report` include `pom_module_count`, `wiki_module_context_count`, `ready_module_context_count`, `thin_module_context_count`, `missing_module_evidence_count`, `missing_module_context_count`, and module lists.
 
 Failure signals:
 
 - `modules/index.md` exists so doctor reports excellent health despite most root Maven modules lacking scoped context.
+- generated placeholder module directories are counted as ready module context.
 - commented-out Maven modules are treated as enabled.
 - non-Maven or single-module projects are penalized for missing Maven module context.

@@ -46,7 +46,8 @@ python <doctor> score --root . --format json
 - Treat `score` as directional maturity guidance, not a KPI.
 - Report `not-applicable` dimensions instead of penalizing simple projects.
 - Use script signals as evidence for semantic judgments. Do not invent project facts from the score.
-- Keep Project Graph and module-context findings visible: `missing-graph-evidence`, `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, `leaked-local-path`, `missing-module-context`, `incomplete-module-context`, and `contradictory-module-context`.
+- Keep Project Graph and module-context findings visible: `missing-graph-evidence`, `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, `leaked-local-path`, `missing-module-context`, `incomplete-module-context`, `thin-module-context`, `missing-module-evidence`, and `contradictory-module-context`.
+- Interpret module signals in two layers: `wiki_module_context_count` means the scoped directory exists; `ready_module_context_count` means required files are present, non-placeholder, and source-backed.
 
 ## Repair Boundary
 

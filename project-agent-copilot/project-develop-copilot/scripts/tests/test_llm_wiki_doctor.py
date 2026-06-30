@@ -68,6 +68,10 @@ class DoctorFixture:
             ),
         )
 
+    def write_complete_module_context(self, module: str, content: str):
+        for name in ["README.md", "source-map.md", "architecture.md", "rules.md", "verification.md"]:
+            self.write(f".llm-wiki/modules/{module}/{name}", content)
+
     def findings(self):
         doctor = load_doctor()
         return doctor.run_checks(self.root, paths=None)
@@ -281,6 +285,61 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual("WARN", finding.severity)
         self.assertIn("verification.md", finding.message)
 
+    def test_thin_module_context_warns_when_standard_files_are_only_placeholders(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context("stream", "# Placeholder\n\nTODO: fill this module context.\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("thin-module-context", ".llm-wiki/modules/stream"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "thin-module-context")
+        self.assertEqual("WARN", finding.severity)
+
+    def test_missing_module_evidence_warns_when_context_has_no_source_anchor(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context(
+            "stream",
+            "\n".join(
+                [
+                    "# Stream",
+                    "",
+                    "This module owns stream lifecycle decisions and coordinates upstream and frontend refresh behavior.",
+                    "It records the module responsibility, domain rules, verification intent, and known operational risks.",
+                    "The notes are intentionally descriptive enough to avoid being a placeholder-only skeleton.",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("missing-module-evidence", ".llm-wiki/modules/stream"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "missing-module-evidence")
+        self.assertEqual("WARN", finding.severity)
+
+    def test_source_backed_module_context_does_not_warn_for_thin_or_missing_evidence(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context(
+            "stream",
+            "\n".join(
+                [
+                    "# Stream",
+                    "",
+                    "Source anchors: src/main/java/com/example/StreamController.java, pom.xml, application.yml.",
+                    "StreamController exposes the stream search endpoint and delegates to StreamService for state lookup.",
+                    "Verification uses StreamControllerTest plus a manual ZLM hook replay against application.yml test config.",
+                    "Rules: payload online transitions must trigger a frontend refresh without rewriting unrelated stream URLs.",
+                ]
+            ),
+        )
+
+        checks = fixture.finding_checks()
+
+        self.assertNotIn("thin-module-context", checks)
+        self.assertNotIn("missing-module-evidence", checks)
+
     def test_contradictory_module_context_is_error_when_index_marks_ready_but_context_is_missing(self):
         fixture = self.with_fixture()
         fixture.write(
@@ -296,6 +355,22 @@ class LlmWikiDoctorTest(unittest.TestCase):
 
         self.assertIn(("contradictory-module-context", ".llm-wiki/modules/index.md"), fixture.finding_keys())
         self.assertEqual("ERROR", next(finding.severity for finding in findings if finding.check == "contradictory-module-context"))
+
+    def test_contradictory_module_context_is_error_when_ready_context_is_placeholder(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write(
+            ".llm-wiki/modules/index.md",
+            "| Module | Status |\n|---|---|\n| `stream` | scoped-context-ready |\n",
+        )
+        fixture.write_complete_module_context("stream", "# Stream\n\nTODO: fill this module context.\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("contradictory-module-context", ".llm-wiki/modules/index.md"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "contradictory-module-context")
+        self.assertEqual("ERROR", finding.severity)
+        self.assertIn("placeholder", finding.message)
 
     def test_module_context_checks_are_not_applicable_without_root_maven_modules(self):
         fixture = self.with_fixture()
@@ -412,6 +487,29 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual(2, payload["signals"]["missing_module_context_count"])
         self.assertEqual(["service", "worker"], payload["signals"]["missing_module_context_modules"])
         self.assertIn("module-context-coverage-incomplete", payload["signals"]["fact_ids"])
+        self.assertLess(payload["score"], 85)
+
+    def test_score_reports_module_context_readiness_not_only_directory_coverage(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "<project><modules><module>stream</module></modules></project>",
+        )
+        fixture.write(".llm-wiki/README.md", "# Wiki\n\nThis wiki has enough prose for orientation and status tracking.\n")
+        fixture.write(".llm-wiki/modules/index.md", "| Module | Status |\n|---|---|\n| stream | active |\n")
+        fixture.write(".llm-wiki/sources/registry.md", "| Source | Status |\n|---|---|\n| pom.xml | active |\n")
+        fixture.write_complete_module_context("stream", "# Stream\n\nTODO: fill this module context.\n")
+
+        result = run_doctor_cli(fixture.root, "score", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(1, payload["signals"]["pom_module_count"])
+        self.assertEqual(1, payload["signals"]["wiki_module_context_count"])
+        self.assertEqual(0, payload["signals"]["ready_module_context_count"])
+        self.assertEqual(1, payload["signals"]["thin_module_context_count"])
+        self.assertEqual(["stream"], payload["signals"]["thin_module_context_modules"])
+        self.assertIn("module-context-quality-incomplete", payload["signals"]["fact_ids"])
         self.assertLess(payload["score"], 85)
 
     def test_report_text_is_chinese_and_always_exits_zero(self):

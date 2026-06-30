@@ -62,6 +62,8 @@ WARN:
 - `unresolved-project-id`: structured project fields reference ids not found in committed `.llm-wiki/project-ids.json`.
 - `missing-module-context`: root `pom.xml` enables a Maven module but `.llm-wiki/modules/<module>/` is missing.
 - `incomplete-module-context`: `.llm-wiki/modules/<module>/` exists but is missing one or more standard scoped-context files.
+- `thin-module-context`: all standard module context files exist, but they are still placeholder-only or too thin to guide real work.
+- `missing-module-evidence`: all standard module context files exist, but they do not cite recognizable source anchors such as concrete files, classes, configs, endpoints, topics, tables, or tests.
 
 For Maven aggregator projects, `score` and `report` also emit module coverage signals:
 
@@ -69,6 +71,13 @@ For Maven aggregator projects, `score` and `report` also emit module coverage si
 - `wiki_module_context_count`
 - `missing_module_context_count`
 - `missing_module_context_modules`
+- `ready_module_context_count`
+- `ready_module_context_modules`
+- `thin_module_context_count`
+- `thin_module_context_modules`
+- `missing_module_evidence_count`
+- `missing_module_evidence_modules`
+- `module_context_ready_ratio`
 
 Projects without root `<modules>` in `pom.xml` treat module-context coverage as not applicable.
 
@@ -177,6 +186,17 @@ verification.md
 
 Do not auto-fill semantic content. Start with source-backed stub notes when needed, and keep unfinished modules marked as missing/discovered instead of ready.
 
+### thin-module-context / missing-module-evidence
+
+Replace placeholder module pages with real project knowledge. A ready module context should identify source anchors and describe:
+
+- responsibility and ownership boundary;
+- important entry points, APIs, listeners, scheduled jobs, configs, topics, tables, or tests;
+- module-specific rules and known risk;
+- how to verify changes in that module.
+
+The doctor deliberately does not auto-fill these facts because they are semantic project knowledge. It only points out which module needs human or source-backed completion.
+
 ### contradictory-module-context
 
-Either downgrade the module status in `.llm-wiki/modules/index.md`, or add the missing directory and standard files. This is an ERROR because the wiki currently claims a ready state that the file tree contradicts.
+Either downgrade the module status in `.llm-wiki/modules/index.md`, or add the missing directory, standard files, and real source-backed content. This is an ERROR because the wiki currently claims a ready state that the file tree or file content contradicts.

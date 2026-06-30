@@ -28,7 +28,7 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
 | `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, safety boundaries, and doctor findings. |
-| `llm-wiki-doctor` | Run or explain LLM Wiki Doctor validate/score/report output, including Chinese maturity reports, empty wiki skeleton detection, and Project Graph validator findings. |
+| `llm-wiki-doctor` | Run or explain LLM Wiki Doctor validate/score/report output, including Chinese maturity reports, empty wiki skeleton detection, placeholder module-context detection, and Project Graph validator findings. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories without treating the Base repo as a business project. |
 | `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates; it writes candidates and scan reports only, not confirmed edges or cross-ref pins. |
 | `project-graph-auto-edge` | Resolve candidates through Base Graph and local/remote source evidence into human-reviewable edge proposals. |
@@ -96,8 +96,9 @@ The current validators focus on machine-checkable hygiene:
 - `missing-graph-evidence`: docs that mention known project ids should carry a Project Graph Evidence / Gaps block when cross-project reasoning is involved.
 - `unresolved-project-id`: project ids are matched only against configured registry names and aliases, with word-boundary style matching and warning-level behavior.
 - `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, and `leaked-local-path`: deterministic ERROR checks for CI/pre-commit/project-finish.
-- `missing-module-context` and `incomplete-module-context`: WARN when root Maven modules lack `.llm-wiki/modules/<module>/` scoped context coverage.
-- `contradictory-module-context`: ERROR when the module index claims ready/source-backed context that the module files do not support.
+- `missing-module-context` and `incomplete-module-context`: WARN when root Maven modules lack `.llm-wiki/modules/<module>/` scoped context coverage or standard files.
+- `thin-module-context` and `missing-module-evidence`: WARN when the module directory exists but still contains placeholder/thin content or lacks source anchors.
+- `contradictory-module-context`: ERROR when the module index claims ready/source-backed context that the module files or content do not support.
 
 The expected rollout posture is P0 blocking in local pre-commit and CI for structural errors via `validate`, while `report` and `score` stay advisory and Chinese-first. See `scripts/README.llm-wiki-doctor.md` for commands, configuration, and scaffold examples.
 

@@ -32,7 +32,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接、安全边界和 doctor 发现。 |
-| `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别和 Project Graph validator 发现。 |
+| `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别、模块占位上下文识别和 Project Graph validator 发现。 |
 | `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用来协调多个项目本地 `.llm-wiki`，但不把 Base 仓库当成业务项目。 |
 | `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选；只写 candidates 和 scan report，不写 confirmed edge 或 cross-ref pin。 |
 | `project-graph-auto-edge` | 通过 Base Graph 和本地/远端源码证据，把 candidate 转成可人工确认的 edge proposal。 |
@@ -92,8 +92,9 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 - `missing-graph-evidence`：文档正文提到已知 project-id 且涉及跨项目推理时，应带 Project Graph Evidence / Gaps block。
 - `unresolved-project-id`：project-id 只匹配 registry 中配置的逻辑名和 alias，采用词边界风格匹配，并保持 warning 级别。
 - `invalid-edge-id`、`dangling-cross-ref`、`duplicate-edge-fingerprint`、`leaked-local-path`：面向 CI/pre-commit/project-finish 的确定性 ERROR 检查。
-- `missing-module-context`、`incomplete-module-context`：根 Maven module 缺少 `.llm-wiki/modules/<module>/` scoped context 覆盖时输出 WARN。
-- `contradictory-module-context`：modules index 声称模块 ready/source-backed，但实际目录或标准文件缺失时输出 ERROR。
+- `missing-module-context`、`incomplete-module-context`：根 Maven module 缺少 `.llm-wiki/modules/<module>/` scoped context 目录或标准文件时输出 WARN。
+- `thin-module-context`、`missing-module-evidence`：模块目录已经存在，但内容仍是占位/过薄，或缺少源码锚点时输出 WARN。
+- `contradictory-module-context`：modules index 声称模块 ready/source-backed，但实际目录、标准文件或内容质量不支持 ready 时输出 ERROR。
 
 推荐落地策略是：本地 pre-commit 和 CI 通过 `validate` 对结构性 P0 问题阻断；`report` 和 `score` 保持咨询性质，并以中文报告为主。命令、配置和 scaffold 示例见 `scripts/README.llm-wiki-doctor.md`。
 

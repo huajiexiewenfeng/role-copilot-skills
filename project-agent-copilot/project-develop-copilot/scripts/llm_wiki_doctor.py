@@ -37,6 +37,26 @@ ORIGINAL_PATH_RE = re.compile(r"^\s*-?\s*original_path\s*:\s*`?([^`\r\n]+?)`?\s*
 IGNORE_RE_TEMPLATE = r"<!--\s*llm-wiki-ignore:\s*{check}\s+reason\s*=\s*['\"][^'\"]+['\"]\s*-->"
 STANDARD_MODULE_CONTEXT_FILES = ("README.md", "source-map.md", "architecture.md", "rules.md", "verification.md")
 READY_MODULE_STATUSES = {"active", "ready", "source-backed", "scoped-context-ready", "complete", "completed"}
+MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH = 240
+MODULE_CONTEXT_PLACEHOLDER_RE = re.compile(
+    "|".join(
+        [
+            r"\b(TODO|TBD|placeholder|fill this|to be completed|not documented yet)\b",
+            "\u5f85\u8865\u5145",
+            "\u5f85\u5b8c\u5584",
+            "\u5360\u4f4d",
+            "\u540e\u7eed\u5b8c\u5584",
+            "\u8bf7\u8f93\u5165",
+        ]
+    ),
+    re.IGNORECASE,
+)
+MODULE_CONTEXT_EVIDENCE_RE = re.compile(
+    r"(?i)(src/(?:main|test)/|[\w./-]+\.(?:java|kt|xml|yml|yaml|properties|sql)|"
+    r"\b(?:pom\.xml|Dockerfile|application\.(?:yml|yaml|properties))\b|"
+    r"\b(?:Controller|Service|Mapper|Repository|Client|Handler|Listener|Config|Test)\b|"
+    r"@[A-Za-z]+|class\s+[A-Z][A-Za-z0-9_]+)"
+)
 
 
 @dataclass(frozen=True)
@@ -55,6 +75,14 @@ class ProjectRegistry:
     local_projects: set[str]
     aliases: dict[str, str]
     edge_ids: set[str]
+
+
+@dataclass(frozen=True)
+class ModuleContextQuality:
+    effective_length: int
+    placeholder_hits: int
+    has_source_evidence: bool
+    thin: bool
 
 
 SCORE_VERSION = 1
@@ -271,15 +299,64 @@ def ready_modules_from_index(root: Path) -> dict[str, int]:
     return ready
 
 
+def module_context_text(root: Path, module_name: str) -> str:
+    context_path = root / ".llm-wiki" / "modules" / module_name
+    texts: list[str] = []
+    for name in STANDARD_MODULE_CONTEXT_FILES:
+        text = read_text(context_path / name)
+        if text:
+            texts.append(text)
+    return "\n\n".join(texts)
+
+
+def module_context_quality(root: Path, module_name: str) -> ModuleContextQuality:
+    text = module_context_text(root, module_name)
+    effective_length = effective_markdown_length(text)
+    placeholder_hits = len(MODULE_CONTEXT_PLACEHOLDER_RE.findall(text))
+    has_source_evidence = bool(MODULE_CONTEXT_EVIDENCE_RE.search(text))
+    thin = effective_length < MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH or placeholder_hits >= 3
+    return ModuleContextQuality(
+        effective_length=effective_length,
+        placeholder_hits=placeholder_hits,
+        has_source_evidence=has_source_evidence,
+        thin=thin,
+    )
+
+
 def module_context_coverage(root: Path) -> dict[str, object]:
     pom_modules = parse_maven_modules(root)
     wiki_modules = list_wiki_module_contexts(root)
     missing_modules = [module for module in pom_modules if Path(module).name not in wiki_modules]
+    incomplete_modules: list[str] = []
+    thin_modules: list[str] = []
+    missing_evidence_modules: list[str] = []
+    ready_modules: list[str] = []
+    for module in pom_modules:
+        context_dir_name = Path(module).name
+        if context_dir_name not in wiki_modules:
+            continue
+        context_path = root / ".llm-wiki" / "modules" / context_dir_name
+        missing_files = [name for name in STANDARD_MODULE_CONTEXT_FILES if not (context_path / name).exists()]
+        if missing_files:
+            incomplete_modules.append(module)
+            continue
+        quality = module_context_quality(root, context_dir_name)
+        if quality.thin:
+            thin_modules.append(module)
+        if not quality.has_source_evidence:
+            missing_evidence_modules.append(module)
+        if not quality.thin and quality.has_source_evidence:
+            ready_modules.append(module)
     return {
         "pom_modules": pom_modules,
         "wiki_modules": sorted(wiki_modules),
         "missing_modules": missing_modules,
+        "incomplete_modules": incomplete_modules,
+        "thin_modules": thin_modules,
+        "missing_evidence_modules": missing_evidence_modules,
+        "ready_modules": ready_modules,
         "coverage_ratio": (len(pom_modules) - len(missing_modules)) / len(pom_modules) if pom_modules else None,
+        "ready_ratio": len(ready_modules) / len(pom_modules) if pom_modules else None,
     }
 
 
@@ -344,6 +421,49 @@ def check_module_context_coverage(root: Path) -> list[Finding]:
                     path=relative_context,
                     message=f"`{relative_context}/` is missing {', '.join(f'`{name}`' for name in missing_files)}.",
                     hint="Add the missing standard scoped-context files, even if their content starts as source-backed stub notes.",
+                )
+            )
+            continue
+
+        quality = module_context_quality(root, context_dir_name)
+        quality_issues: list[str] = []
+        if quality.thin:
+            quality_issues.append("placeholder or thin content")
+            findings.append(
+                Finding(
+                    check="thin-module-context",
+                    severity="WARN",
+                    path=relative_context,
+                    message=(
+                        f"`{relative_context}/` has all standard files, but the effective content is only "
+                        f"{quality.effective_length} characters or still contains placeholder text."
+                    ),
+                    hint="Replace placeholder text with source-backed module responsibility, entry points, rules, and verification notes.",
+                )
+            )
+        if not quality.has_source_evidence:
+            quality_issues.append("missing source evidence")
+            findings.append(
+                Finding(
+                    check="missing-module-evidence",
+                    severity="WARN",
+                    path=relative_context,
+                    message=f"`{relative_context}/` does not contain recognizable source anchors or implementation evidence.",
+                    hint="Reference concrete files, classes, configs, endpoints, topics, tables, or tests that support the module context.",
+                )
+            )
+        if ready_line and quality_issues:
+            findings.append(
+                Finding(
+                    check="contradictory-module-context",
+                    severity="ERROR",
+                    path=".llm-wiki/modules/index.md",
+                    line=ready_line,
+                    message=(
+                        f"Module index marks `{context_dir_name}` as ready, but `{relative_context}/` has "
+                        f"{' and '.join(quality_issues)}."
+                    ),
+                    hint="Downgrade the module index status until the scoped context contains real source-backed knowledge.",
                 )
             )
 
@@ -636,10 +756,7 @@ def exit_code(findings: list[Finding], fail_on: str) -> int:
     return 1 if any(finding.severity == "ERROR" for finding in findings) else 0
 
 
-PLACEHOLDER_RE = re.compile(
-    r"\b(TODO|TBD|placeholder|fill this|to be completed)\b|待补充|占位|稍后完善|请输入",
-    re.IGNORECASE,
-)
+PLACEHOLDER_RE = MODULE_CONTEXT_PLACEHOLDER_RE
 
 
 def effective_markdown_length(text: str) -> int:
@@ -693,7 +810,12 @@ def build_score_report(root: str | Path) -> ScoreReport:
     module_coverage = module_context_coverage(root_path)
     pom_modules = module_coverage["pom_modules"]
     missing_modules = module_coverage["missing_modules"]
+    incomplete_modules = module_coverage["incomplete_modules"]
+    thin_modules = module_coverage["thin_modules"]
+    missing_evidence_modules = module_coverage["missing_evidence_modules"]
+    ready_modules = module_coverage["ready_modules"]
     coverage_ratio = module_coverage["coverage_ratio"]
+    ready_ratio = module_coverage["ready_ratio"]
 
     readme_effective_length = effective_markdown_length(read_text(readme))
     module_index_exists = modules_index.exists()
@@ -726,13 +848,15 @@ def build_score_report(root: str | Path) -> ScoreReport:
         covered_module_count = len(pom_modules) - len(missing_modules)
         dimensions.append(
             ScoreDimension(
-                name="模块上下文覆盖率",
+                name="模块上下文成熟度",
                 max_score=20,
-                score=round(20 * coverage_ratio),
+                score=round(20 * (ready_ratio or 0)),
                 applicability="applicable",
                 source="root pom.xml and .llm-wiki/modules/",
                 message=(
                     f"Maven modules={len(pom_modules)}, wiki_module_contexts={covered_module_count}, "
+                    f"ready={len(ready_modules)}, thin={len(thin_modules)}, "
+                    f"missing_evidence={len(missing_evidence_modules)}, "
                     f"missing={len(missing_modules)}。"
                 ),
             )
@@ -806,6 +930,11 @@ def build_score_report(root: str | Path) -> ScoreReport:
     if coverage_ratio is not None and missing_modules:
         fact_ids.append("module-context-coverage-incomplete")
         next_steps.append("补齐 Maven module 对应的 .llm-wiki/modules/<module>/ scoped context，不要只依赖 modules/index.md。")
+    if coverage_ratio is not None and (incomplete_modules or thin_modules or missing_evidence_modules):
+        fact_ids.append("module-context-quality-incomplete")
+        next_steps.append(
+            "逐个补齐 .llm-wiki/modules/<module>/ 的真实源码锚点、职责边界、入口、规则和验证记录，目录占位不算 ready。"
+        )
     if not source_index_exists:
         fact_ids.append("sources-registry-missing")
         next_steps.append("补齐 .llm-wiki/sources/registry.md，登记已摄入的 PRD、设计、日志或源码代理。")
@@ -827,7 +956,16 @@ def build_score_report(root: str | Path) -> ScoreReport:
         "wiki_module_context_count": len(pom_modules) - len(missing_modules) if coverage_ratio is not None else None,
         "missing_module_context_count": len(missing_modules),
         "missing_module_context_modules": missing_modules,
+        "incomplete_module_context_count": len(incomplete_modules),
+        "incomplete_module_context_modules": incomplete_modules,
+        "ready_module_context_count": len(ready_modules) if ready_ratio is not None else None,
+        "ready_module_context_modules": ready_modules,
+        "thin_module_context_count": len(thin_modules),
+        "thin_module_context_modules": thin_modules,
+        "missing_module_evidence_count": len(missing_evidence_modules),
+        "missing_module_evidence_modules": missing_evidence_modules,
         "module_context_coverage_ratio": coverage_ratio,
+        "module_context_ready_ratio": ready_ratio,
         "source_index_exists": source_index_exists,
         "validator_errors": validator_errors,
         "validator_warnings": validator_warnings,
