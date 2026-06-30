@@ -752,6 +752,60 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual(1, payload["signals"]["stale_knowledge_unit_count"])
         self.assertEqual(1, payload["signals"]["missing_verified_commit_count"])
 
+    def test_edge_detail_unknown_edge_id_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/project-graph/details/edge-20260629-999.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: edge-detail-20260629-999",
+                    "kind: cross-service-contract",
+                    "origin: captured",
+                    "edge_id: edge-20260629-999",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("invalid-edge-detail-id", ".llm-wiki/project-graph/details/edge-20260629-999.md"), fixture.finding_keys())
+        self.assertEqual("ERROR", next(f.severity for f in findings if f.check == "invalid-edge-detail-id"))
+
+    def test_edge_detail_repeated_fact_field_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/project-graph/details/edge-20260623-001.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: edge-detail-20260623-001",
+                    "kind: cross-service-contract",
+                    "origin: captured",
+                    "edge_id: edge-20260623-001",
+                    "from_project: smart-go-device-mapping",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("duplicated-edge-detail-fact", ".llm-wiki/project-graph/details/edge-20260623-001.md"), fixture.finding_keys())
+
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
         doctor = load_doctor()

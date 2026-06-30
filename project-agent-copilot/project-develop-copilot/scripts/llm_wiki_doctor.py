@@ -22,6 +22,15 @@ from typing import Iterable
 TOKEN_LEFT = r"(?<![A-Za-z0-9_-])"
 TOKEN_RIGHT = r"(?![A-Za-z0-9_-])"
 EDGE_ID_RE = re.compile(r"edge-\d{8}-\d{3,}")
+EDGE_DETAIL_FORBIDDEN_FIELDS = {
+    "from_project",
+    "to_project",
+    "topic",
+    "path",
+    "endpoint",
+    "verification_status",
+    "fingerprint",
+}
 LOCAL_PATH_RE = re.compile(
     r"(?i)(?:[A-Z]:\\Users\\[^`\s|]+|/Users/[^`\s|]+|/home/[^`\s|]+|registry\.local\.json|scan-state\.local\.json)"
 )
@@ -1002,6 +1011,52 @@ def check_knowledge_unit_metadata(root: Path, phase: str) -> list[Finding]:
     return findings
 
 
+def check_edge_details(root: Path, registry: ProjectRegistry) -> list[Finding]:
+    findings: list[Finding] = []
+    for unit in collect_knowledge_units(root):
+        if not unit.relative_path.startswith(".llm-wiki/project-graph/details/"):
+            continue
+        if unit.data.get("kind") != "cross-service-contract":
+            continue
+        edge_id = str(unit.data.get("edge_id") or "").strip()
+        if not edge_id:
+            findings.append(
+                Finding(
+                    check="missing-edge-detail-id",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is a cross-service contract detail without edge_id.",
+                    hint="Set edge_id to the Project Graph edge this detail extends.",
+                )
+            )
+        elif edge_id not in registry.edge_ids:
+            findings.append(
+                Finding(
+                    check="invalid-edge-detail-id",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} references unknown Project Graph edge {edge_id}.",
+                    hint="Use an existing edge id from .llm-wiki/project-graph/edges.md.",
+                )
+            )
+
+        duplicated_fields = sorted(field for field in EDGE_DETAIL_FORBIDDEN_FIELDS if field in unit.data)
+        if duplicated_fields:
+            findings.append(
+                Finding(
+                    check="duplicated-edge-detail-fact",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=(
+                        f"{unit.relative_path} duplicates Project Graph fact field(s): "
+                        f"{', '.join(f'`{field}`' for field in duplicated_fields)}."
+                    ),
+                    hint="Keep fact fields in edges.md and use detail pages only for explanation and provenance.",
+                )
+            )
+    return findings
+
+
 def run_checks(root: str | Path, paths: list[str | Path] | None = None, phase: str = "normal") -> list[Finding]:
     root_path = Path(root).resolve()
     registry = load_registry(root_path)
@@ -1018,6 +1073,7 @@ def run_checks(root: str | Path, paths: list[str | Path] | None = None, phase: s
     findings.extend(check_unresolved_project_ids(root_path, candidate_paths, registry))
     findings.extend(check_module_context_coverage(root_path))
     findings.extend(check_knowledge_unit_metadata(root_path, phase))
+    findings.extend(check_edge_details(root_path, registry))
     return findings
 
 
