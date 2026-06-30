@@ -256,6 +256,13 @@ def collect_knowledge_units(root: Path) -> list[KnowledgeUnit]:
     return units
 
 
+def source_refs_for(unit: KnowledgeUnit) -> list[dict[str, object]]:
+    source_refs = unit.data.get("source_refs")
+    if isinstance(source_refs, list):
+        return [item for item in source_refs if isinstance(item, dict)]
+    return []
+
+
 def load_registry(root: Path) -> ProjectRegistry:
     project_ids: set[str] = set()
     local_projects: set[str] = set()
@@ -845,7 +852,72 @@ def check_unresolved_project_ids(root: Path, paths: list[Path], registry: Projec
     return findings
 
 
-def run_checks(root: str | Path, paths: list[str | Path] | None = None) -> list[Finding]:
+def check_knowledge_unit_metadata(root: Path, phase: str) -> list[Finding]:
+    findings: list[Finding] = []
+    for unit in collect_knowledge_units(root):
+        origin = str(unit.data.get("origin") or "").strip()
+        source_refs = source_refs_for(unit)
+        if not origin:
+            findings.append(
+                Finding(
+                    check="missing-origin",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} does not declare `origin`; treating it as legacy clue-only context.",
+                    hint="Set origin to captured, legacy, or imported.",
+                )
+            )
+            origin = "legacy"
+        if origin == "captured" and not source_refs:
+            findings.append(
+                Finding(
+                    check="missing-source-refs",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is a captured knowledge unit without source_refs.",
+                    hint="Add source_refs or downgrade the unit to legacy/imported clue-only context.",
+                )
+            )
+
+        for source_ref in source_refs:
+            verified_commit = str(source_ref.get("verified_commit") or "").strip()
+            if not verified_commit:
+                findings.append(
+                    Finding(
+                        check="missing-verified-commit",
+                        severity="ERROR" if origin == "captured" else "WARN",
+                        path=unit.relative_path,
+                        message=f"{unit.relative_path} has a source_ref without verified_commit.",
+                        hint="Resolve the source ref to a real commit; legacy/imported units remain clue-only until then.",
+                    )
+                )
+            if source_ref.get("needs_commit_resolution") is True:
+                findings.append(
+                    Finding(
+                        check="unresolved-dirty-capture",
+                        severity="ERROR" if phase == "finish" else "WARN",
+                        path=unit.relative_path,
+                        message=f"{unit.relative_path} still has source_refs[*].needs_commit_resolution=true.",
+                        hint="Run project-finish/post-commit resolution or keep the unit as provisional clue-only context.",
+                    )
+                )
+
+        confidence = str(unit.data.get("confidence") or "").strip()
+        confirmed_by = str(unit.data.get("confirmed_by") or "").strip()
+        if confidence == "human-confirmed" and confirmed_by != "human":
+            findings.append(
+                Finding(
+                    check="suspicious-confidence",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} claims human-confirmed confidence without confirmed_by: human.",
+                    hint="Add an explicit human confirmation record or lower the confidence.",
+                )
+            )
+    return findings
+
+
+def run_checks(root: str | Path, paths: list[str | Path] | None = None, phase: str = "normal") -> list[Finding]:
     root_path = Path(root).resolve()
     registry = load_registry(root_path)
     if paths is None:
@@ -860,6 +932,7 @@ def run_checks(root: str | Path, paths: list[str | Path] | None = None) -> list[
     findings.extend(check_leaked_local_paths(root_path, candidate_paths))
     findings.extend(check_unresolved_project_ids(root_path, candidate_paths, registry))
     findings.extend(check_module_context_coverage(root_path))
+    findings.extend(check_knowledge_unit_metadata(root_path, phase))
     return findings
 
 
@@ -1174,7 +1247,7 @@ def run_validate_command(args: argparse.Namespace) -> int:
     paths = None
     if args.changed or args.base:
         paths = collect_changed_paths(root, args.base)
-    findings = run_checks(root, paths)
+    findings = run_checks(root, paths, args.phase)
     if args.format == "json":
         print(json.dumps([asdict(finding) for finding in findings], ensure_ascii=False, indent=2))
     else:
@@ -1194,7 +1267,7 @@ def run_score_command(args: argparse.Namespace) -> int:
 def run_report_command(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     paths = collect_changed_paths(root, args.base) if args.changed or args.base else None
-    findings = run_checks(root, paths)
+    findings = run_checks(root, paths, args.phase)
     score_report = build_score_report(root)
     if args.format == "json":
         print(

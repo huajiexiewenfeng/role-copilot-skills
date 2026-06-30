@@ -585,6 +585,110 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual("knowledge-20260630-001", units[0].data["unit_id"])
         self.assertEqual("src/main/java/com/example/FooService.java", units[0].data["source_refs"][0]["path"])
 
+    def test_captured_unit_missing_verified_commit_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("missing-verified-commit", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+        self.assertEqual("ERROR", next(f.severity for f in findings if f.check == "missing-verified-commit"))
+
+    def test_imported_unit_missing_verified_commit_is_warn(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/legacy.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k2",
+                    "kind: dead-end",
+                    "origin: imported",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertEqual("WARN", next(f.severity for f in findings if f.check == "missing-verified-commit"))
+
+    def test_suspicious_confidence_warns_without_human_confirmation(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "confidence: human-confirmed",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("suspicious-confidence", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_finish_phase_unresolved_dirty_capture_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "    needs_commit_resolution: true",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        result = run_doctor_cli(fixture.root, "validate", "--all", "--phase", "finish", "--format", "json", "--fail-on", "error")
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("unresolved-dirty-capture", result.stdout)
+
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
         doctor = load_doctor()
