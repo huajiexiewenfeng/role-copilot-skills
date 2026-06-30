@@ -14,6 +14,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -42,6 +43,11 @@ KNOWLEDGE_UNIT_ROOTS = (
     ".llm-wiki/project-graph/details/",
     ".llm-wiki/requirements/",
 )
+DEFAULT_TTL_BY_KIND = {
+    "why-decision": 90,
+    "cross-service-contract": 180,
+}
+NO_CLOCK_TTL_KINDS = {"dead-end", "requirement-intent", "navigation", "derived-source-map"}
 MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH = 240
 MODULE_CONTEXT_PLACEHOLDER_RE = re.compile(
     "|".join(
@@ -261,6 +267,75 @@ def source_refs_for(unit: KnowledgeUnit) -> list[dict[str, object]]:
     if isinstance(source_refs, list):
         return [item for item in source_refs if isinstance(item, dict)]
     return []
+
+
+def ttl_days_for(unit: KnowledgeUnit) -> int | None:
+    explicit = unit.data.get("ttl_days")
+    if isinstance(explicit, int):
+        return explicit
+    kind = str(unit.data.get("kind") or "").strip()
+    if kind in NO_CLOCK_TTL_KINDS:
+        return None
+    return DEFAULT_TTL_BY_KIND.get(kind)
+
+
+def parse_iso_date(value: object) -> date | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
+        return None
+
+
+def unit_verified_at(unit: KnowledgeUnit) -> date | None:
+    verified_at = parse_iso_date(unit.data.get("verified_at"))
+    if verified_at:
+        return verified_at
+    for source_ref in source_refs_for(unit):
+        verified_at = parse_iso_date(source_ref.get("verified_at"))
+        if verified_at:
+            return verified_at
+    return None
+
+
+def unit_freshness_expired(unit: KnowledgeUnit, today: date | None = None) -> bool:
+    ttl_days = ttl_days_for(unit)
+    verified_at = unit_verified_at(unit)
+    if ttl_days is None or verified_at is None:
+        return False
+    today = today or date.today()
+    return verified_at + timedelta(days=ttl_days) < today
+
+
+def knowledge_unit_stats(root: Path) -> dict[str, int]:
+    units = collect_knowledge_units(root)
+    missing_verified_commit_count = 0
+    unresolved_dirty_capture_count = 0
+    stale_knowledge_unit_count = 0
+    fresh_knowledge_unit_count = 0
+    for unit in units:
+        unit_missing_commit = False
+        unit_dirty = False
+        for source_ref in source_refs_for(unit):
+            if not str(source_ref.get("verified_commit") or "").strip():
+                missing_verified_commit_count += 1
+                unit_missing_commit = True
+            if source_ref.get("needs_commit_resolution") is True:
+                unresolved_dirty_capture_count += 1
+                unit_dirty = True
+        unit_stale = unit_freshness_expired(unit)
+        if unit_stale:
+            stale_knowledge_unit_count += 1
+        if not unit_stale and not unit_missing_commit and not unit_dirty:
+            fresh_knowledge_unit_count += 1
+    return {
+        "knowledge_unit_count": len(units),
+        "fresh_knowledge_unit_count": fresh_knowledge_unit_count,
+        "stale_knowledge_unit_count": stale_knowledge_unit_count,
+        "missing_verified_commit_count": missing_verified_commit_count,
+        "unresolved_dirty_capture_count": unresolved_dirty_capture_count,
+    }
 
 
 def load_registry(root: Path) -> ProjectRegistry:
@@ -868,6 +943,16 @@ def check_knowledge_unit_metadata(root: Path, phase: str) -> list[Finding]:
                 )
             )
             origin = "legacy"
+        if unit_freshness_expired(unit):
+            findings.append(
+                Finding(
+                    check="freshness-expired",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is past its verified_at + ttl_days freshness window.",
+                    hint="Treat this unit as clue-only until the source refs are re-verified.",
+                )
+            )
         if origin == "captured" and not source_refs:
             findings.append(
                 Finding(
@@ -1006,6 +1091,7 @@ def build_score_report(root: str | Path) -> ScoreReport:
     graph_edges = wiki_root / "project-graph" / "edges.md"
     cross_refs = wiki_root / "cross-refs" / "index.md"
     module_coverage = module_context_coverage(root_path)
+    knowledge_stats = knowledge_unit_stats(root_path)
     pom_modules = module_coverage["pom_modules"]
     missing_modules = module_coverage["missing_modules"]
     incomplete_modules = module_coverage["incomplete_modules"]
@@ -1171,6 +1257,7 @@ def build_score_report(root: str | Path) -> ScoreReport:
         "graph_file_presence": graph_file_presence,
         "fact_ids": fact_ids,
     }
+    signals.update(knowledge_stats)
     return ScoreReport(
         score_version=SCORE_VERSION,
         score=total_score,

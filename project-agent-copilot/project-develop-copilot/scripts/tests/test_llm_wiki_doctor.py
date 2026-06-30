@@ -689,6 +689,69 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("unresolved-dirty-capture", result.stdout)
 
+    def test_freshness_expired_warns_when_verified_at_plus_ttl_is_past(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "verified_at: 2020-01-01",
+                    "ttl_days: 90",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("freshness-expired", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+        self.assertEqual("WARN", next(f.severity for f in findings if f.check == "freshness-expired"))
+
+    def test_score_reports_knowledge_unit_signals(self):
+        fixture = self.with_fixture()
+        fixture.write(".llm-wiki/README.md", "# Wiki\n\nThis wiki has enough prose for orientation and status tracking.\n")
+        fixture.write(".llm-wiki/modules/index.md", "| Module | Status |\n|---|---|\n| app | active |\n")
+        fixture.write(".llm-wiki/sources/registry.md", "| Source | Status |\n|---|---|\n| pom.xml | active |\n")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "verified_at: 2020-01-01",
+                    "ttl_days: 90",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        result = run_doctor_cli(fixture.root, "score", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(1, payload["signals"]["knowledge_unit_count"])
+        self.assertEqual(1, payload["signals"]["stale_knowledge_unit_count"])
+        self.assertEqual(1, payload["signals"]["missing_verified_commit_count"])
+
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
         doctor = load_doctor()
