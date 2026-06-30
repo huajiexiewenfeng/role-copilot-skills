@@ -69,6 +69,12 @@ Reference availability policy:
 - In degraded mode, require a minimal Bug Brief before edits: symptom, expected behavior, evidence, reproduction status, likely scope, fix plan, verification plan, and `bug_id` or `flow_id`.
 - Do not mark diagnosis, fix, or verification complete unless evidence exists.
 
+## Anti-Corruption Debugging Rule
+
+Historical bug notes, dead-end records, session digests, and wiki findings are useful clues, but stale or provisional notes cannot close root-cause analysis. Treat `freshness-expired`, `stale-source-anchor`, `coarse-stale-source-anchor`, `missing-verified-commit`, `unreachable-verified-commit`, `unverifiable-anchor`, `dirty_at_capture`, and `needs_commit_resolution` as clue-only signals.
+
+Confirm the suspected cause against current logs, source code, tests, configuration, or runtime evidence before using it as the reason for a fix. If current evidence contradicts the wiki, prefer current evidence and mark the wiki item for re-verification.
+
 Workflow:
 
 1. Resolve project root and Bug Brief.

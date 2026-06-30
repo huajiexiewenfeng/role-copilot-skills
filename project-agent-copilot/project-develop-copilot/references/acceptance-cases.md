@@ -903,3 +903,75 @@ Failure signals:
 - generated placeholder module directories are counted as ready module context.
 - commented-out Maven modules are treated as enabled.
 - non-Maven or single-module projects are penalized for missing Maven module context.
+
+### Case 34: Stale Wiki Knowledge Is Clue-Only
+
+Prompt:
+
+```text
+wiki 里说这个接口由 payload-service 负责，我可以直接按这个实现吗？
+```
+
+Fixture:
+
+- the relevant knowledge unit has one of `freshness-expired`, `stale-source-anchor`, `coarse-stale-source-anchor`, `missing-verified-commit`, `unreachable-verified-commit`, `unverifiable-anchor`, `dirty_at_capture`, or `needs_commit_resolution`.
+
+Expected:
+
+- `project-query`, `project-develop`, or `project-fix` downgrades the wiki item to clue-only.
+- the response states that current source, tests, configuration, runtime evidence, or source-verified Project Graph edges win.
+- implementation or fix decisions require fresh source verification before editing.
+- if the user accepts an assumption anyway, the assumption is recorded as risk, not verified truth.
+
+Failure signals:
+
+- stale or dirty-captured wiki text is presented as current fact.
+- implementation proceeds from stale/wiki-checked content without re-verification.
+- source conflict is hidden to preserve the wiki narrative.
+
+### Case 35: Finish Phase Blocks Dirty Captures
+
+Prompt:
+
+```text
+收尾同步一下这次改动，并把 wiki 状态标成完成。
+```
+
+Fixture:
+
+- a captured knowledge unit contains `source_refs[*].needs_commit_resolution: true` or unresolved dirty capture metadata.
+
+Expected:
+
+- `project-finish` runs `llm_wiki_doctor.py validate --root . --changed --phase finish --format text --fail-on error`.
+- doctor emits `unresolved-dirty-capture` as an ERROR in finish phase.
+- finish handoff reports the unresolved dirty capture and does not archive the captured unit as fresh/source-verified.
+
+Failure signals:
+
+- finish uses normal/advisory phase and misses the blocker.
+- dirty-captured content is archived as verified project knowledge.
+- the handoff omits the doctor command, exit code, or unresolved finding.
+
+### Case 36: Edge Detail Does Not Duplicate Edge Facts
+
+Prompt:
+
+```text
+给这个 Project Graph edge 补一份详细说明。
+```
+
+Fixture:
+
+- `.llm-wiki/project-graph/details/<edge-id>.md` has `kind: cross-service-contract`.
+
+Expected:
+
+- detail front matter includes an `edge_id` that resolves to `.llm-wiki/project-graph/edges.md`.
+- detail files do not duplicate edge table facts such as `from_project`, `to_project`, `topic`, `path`, `endpoint`, `verification_status`, or `fingerprint`.
+- doctor emits `missing-edge-detail-id`, `invalid-edge-detail-id`, or `duplicated-edge-detail-fact` as ERROR when violated.
+
+Failure signals:
+
+- detail files become a second source of truth for edge identity or status.
+- an invalid detail file passes `validate --fail-on error`.

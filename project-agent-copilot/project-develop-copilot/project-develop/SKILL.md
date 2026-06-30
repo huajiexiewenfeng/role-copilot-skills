@@ -130,6 +130,12 @@ Authority order:
 
 When Session Digests exist for the active discussion, treat them as recall context first. Use them to recover prior requirement discussion, design choices, acceptance criteria, scope decisions, and plan candidates, but do not treat them as source evidence or project truth unless selected items were explicitly promoted through Lifecycle Promotion.
 
+## Anti-Corruption Evidence Rule
+
+Before using a wiki knowledge unit to shape implementation, require it to be source-backed, fresh, directly relevant, and free of unresolved dirty capture. Treat `freshness-expired`, `stale-source-anchor`, `coarse-stale-source-anchor`, `missing-verified-commit`, `unreachable-verified-commit`, `unverifiable-anchor`, `dirty_at_capture`, and `needs_commit_resolution` as clue-only signals.
+
+Do not implement from stale, provisional, wiki-checked, or dirty-captured content. Re-read current source, tests, configuration, or runtime evidence before making implementation decisions. If the user accepts a stale or provisional assumption, record it as an explicit risk, not verified truth.
+
 Workflow:
 
 1. Resolve project root and output language when relevant.
