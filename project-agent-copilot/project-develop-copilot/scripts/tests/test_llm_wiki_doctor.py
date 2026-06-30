@@ -83,6 +83,18 @@ class DoctorFixture:
         return {finding.check for finding in self.findings()}
 
 
+def init_git_repo(root: Path):
+    subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+
+
+def git_commit_all(root: Path, message: str) -> str:
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, text=True, stdout=subprocess.PIPE, check=True).stdout.strip()
+
+
 class LlmWikiDoctorTest(unittest.TestCase):
     def with_fixture(self):
         temp = TemporaryDirectory()
@@ -805,6 +817,91 @@ class LlmWikiDoctorTest(unittest.TestCase):
         )
 
         self.assertIn(("duplicated-edge-detail-fact", ".llm-wiki/project-graph/details/edge-20260623-001.md"), fixture.finding_keys())
+
+    def test_unreachable_verified_commit_warns(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("unreachable-verified-commit", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_stale_source_anchor_warns_when_java_method_changes(self):
+        fixture = self.with_fixture()
+        init_git_repo(fixture.root)
+        fixture.write("src/main/java/Foo.java", "class Foo {\n  void bar() {\n    int x = 1;\n  }\n}\n")
+        verified_commit = git_commit_all(fixture.root, "initial")
+        fixture.write("src/main/java/Foo.java", "class Foo {\n  void bar() {\n    int x = 2;\n  }\n}\n")
+        git_commit_all(fixture.root, "change method")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    f"    verified_commit: {verified_commit}",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("stale-source-anchor", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_file_anchor_uses_coarse_staleness_signal_when_file_changed(self):
+        fixture = self.with_fixture()
+        init_git_repo(fixture.root)
+        fixture.write("src/main/java/Foo.java", "class Foo {}\n")
+        verified_commit = git_commit_all(fixture.root, "initial")
+        fixture.write("src/main/java/Foo.java", "class Foo { int x = 1; }\n")
+        git_commit_all(fixture.root, "change file")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: src/main/java/Foo.java",
+                    "    anchor_type: file",
+                    f"    verified_commit: {verified_commit}",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        checks = fixture.finding_checks()
+
+        self.assertIn("coarse-stale-source-anchor", checks)
+        self.assertNotIn("stale-source-anchor", checks)
 
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()

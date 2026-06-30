@@ -57,6 +57,8 @@ DEFAULT_TTL_BY_KIND = {
     "cross-service-contract": 180,
 }
 NO_CLOCK_TTL_KINDS = {"dead-end", "requirement-intent", "navigation", "derived-source-map"}
+SPAN_ANCHOR_TYPES = {"class", "method", "function"}
+COARSE_ANCHOR_TYPES = {"file", "config-key", "topic-string", "schema-field"}
 MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH = 240
 MODULE_CONTEXT_PLACEHOLDER_RE = re.compile(
     "|".join(
@@ -315,6 +317,146 @@ def unit_freshness_expired(unit: KnowledgeUnit, today: date | None = None) -> bo
         return False
     today = today or date.today()
     return verified_at + timedelta(days=ttl_days) < today
+
+
+def git_command(root: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(root), *args],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+
+def commit_is_reachable(root: Path, commit: str) -> bool:
+    result = git_command(root, ["cat-file", "-e", f"{commit}^{{commit}}"])
+    return result.returncode == 0
+
+
+def java_anchor_span(root: Path, source_path: str, anchor: str, anchor_type: str) -> tuple[int, int] | None:
+    path = root / normalize_path(source_path)
+    text = read_text(path)
+    if not text:
+        return None
+    lines = text.splitlines()
+    if anchor_type == "method":
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\b{re.escape(target)}\s*\(")
+    elif anchor_type == "class":
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\bclass\s+{re.escape(target)}\b")
+    else:
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\b{re.escape(target)}\s*\(")
+
+    for index, line in enumerate(lines, start=1):
+        if not pattern.search(line):
+            continue
+        balance = 0
+        seen_open = False
+        end = index
+        for nested_index in range(index, len(lines) + 1):
+            current = lines[nested_index - 1]
+            balance += current.count("{")
+            if "{" in current:
+                seen_open = True
+            balance -= current.count("}")
+            end = nested_index
+            if seen_open and balance <= 0:
+                break
+        return index, end
+    return None
+
+
+def check_source_ref_freshness(root: Path, unit: KnowledgeUnit, source_ref: dict[str, object]) -> list[Finding]:
+    verified_commit = str(source_ref.get("verified_commit") or "").strip()
+    if not verified_commit:
+        return []
+    if not commit_is_reachable(root, verified_commit):
+        return [
+            Finding(
+                check="unreachable-verified-commit",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} references unreachable verified_commit {verified_commit}.",
+                hint="Re-verify the source ref in the current repository history before using this unit as fact.",
+            )
+        ]
+
+    source_path = normalize_path(str(source_ref.get("path") or ""))
+    anchor = str(source_ref.get("anchor") or "").strip()
+    anchor_type = str(source_ref.get("anchor_type") or "").strip()
+    if not source_path or not anchor or not anchor_type:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} has an incomplete source_ref anchor.",
+                hint="Provide path, anchor, and anchor_type before using this unit as source-backed fact.",
+            )
+        ]
+
+    if anchor_type in COARSE_ANCHOR_TYPES:
+        result = git_command(root, ["log", f"{verified_commit}..HEAD", "--", source_path])
+        if result.stdout.strip():
+            return [
+                Finding(
+                    check="coarse-stale-source-anchor",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} has a coarse source ref whose file changed after verified_commit.",
+                    hint="Treat this as file-level stale risk, not precise anchor-level proof.",
+                )
+            ]
+        return []
+
+    if anchor_type not in SPAN_ANCHOR_TYPES:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} uses unsupported anchor_type `{anchor_type}`.",
+                hint="Use method, class, file, config-key, topic-string, or schema-field.",
+            )
+        ]
+
+    span = java_anchor_span(root, source_path, anchor, anchor_type)
+    if not span:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` could not be resolved in {source_path}.",
+                hint="Refresh the source ref or downgrade the unit to clue-only context.",
+            )
+        ]
+    start, end = span
+    result = git_command(root, ["log", f"{verified_commit}..HEAD", "-L", f"{start},{end}:{source_path}"])
+    if result.returncode != 0:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` could not be checked with git -L.",
+                hint="Refresh the source ref or use a supported anchor granularity.",
+            )
+        ]
+    if result.stdout.strip():
+        return [
+            Finding(
+                check="stale-source-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` changed after verified_commit.",
+                hint="Treat this unit as clue-only until the anchor is re-verified.",
+            )
+        ]
+    return []
 
 
 def knowledge_unit_stats(root: Path) -> dict[str, int]:
@@ -985,6 +1127,8 @@ def check_knowledge_unit_metadata(root: Path, phase: str) -> list[Finding]:
                         hint="Resolve the source ref to a real commit; legacy/imported units remain clue-only until then.",
                     )
                 )
+            else:
+                findings.extend(check_source_ref_freshness(root, unit, source_ref))
             if source_ref.get("needs_commit_resolution") is True:
                 findings.append(
                     Finding(
