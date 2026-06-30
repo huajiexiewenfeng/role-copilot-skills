@@ -1,0 +1,32 @@
+name: Project Develop Copilot CI
+
+on:
+  pull_request:
+    paths:
+      - "project-agent-copilot/project-develop-copilot/**"
+      - ".github/workflows/project-develop-copilot-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "project-agent-copilot/project-develop-copilot/**"
+      - ".github/workflows/project-develop-copilot-ci.yml"
+
+jobs:
+  llm-wiki-doctor:
+    name: LLM Wiki Doctor script and scaffold
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run doctor unit tests
+        run: python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
+
+      - name: Check scaffold drift
+        run: python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check

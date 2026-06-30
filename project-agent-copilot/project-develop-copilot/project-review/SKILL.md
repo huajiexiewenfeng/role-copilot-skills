@@ -110,6 +110,7 @@ For Project Develop Copilot lifecycle reviews, check:
 - Whether cross-service `.llm-wiki` artifacts include either `## Project Graph Evidence` with valid edge ids or `## Project Graph Gaps`.
 - Whether self-review distinguishes primary workflow, retrospective confirmation, and ideal workflow instead of overstating Project Graph usage.
 - Whether WARN findings from `.llm-wiki/tools/llm_wiki_doctor.py` have a visible outlet in handoff, job summary, or PR comment.
+- `report` output may be cited as advisory maturity evidence, but commit/PR/merge blocking must use `validate --fail-on error`.
 ## Mode / Entry Selection
 
 | Mode | Use when |

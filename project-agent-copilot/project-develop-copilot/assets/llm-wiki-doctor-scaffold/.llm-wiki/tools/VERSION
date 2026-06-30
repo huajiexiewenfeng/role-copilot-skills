@@ -1,0 +1,3 @@
+tool=llm_wiki_doctor
+source_path=project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py
+source_commit=be3a27d0e81c4b3f3ac1b24a471d3ca33317ae48

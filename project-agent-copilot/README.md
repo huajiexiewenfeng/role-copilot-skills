@@ -20,7 +20,7 @@ For `project-develop-copilot`, use `project-develop-copilot/references/north-sta
 
 | Collection | Contains |
 |---|---|
-| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-develop-copilot`, `project-init`, `project-ingest`, `project-query`, `project-develop`, `project-fix`, `project-finish`, `project-review`, `project-maintain`, `project-base-init`, `project-graph-candidates-scan`, `project-graph-auto-edge`, `project-graph-human-edge` |
+| [`project-develop-copilot`](./project-develop-copilot/README.md) | `project-develop-copilot`, `project-init`, `project-ingest`, `project-query`, `project-develop`, `project-fix`, `project-finish`, `project-review`, `project-maintain`, `llm-wiki-doctor`, `project-base-init`, `project-graph-candidates-scan`, `project-graph-auto-edge`, `project-graph-human-edge` |
 
 Planned collections:
 
@@ -56,6 +56,7 @@ project-agent-copilot/
     project-finish/
     project-review/
     project-maintain/
+    llm-wiki-doctor/
     project-base-init/
     project-graph-candidates-scan/
     project-graph-auto-edge/
@@ -64,7 +65,7 @@ project-agent-copilot/
 
 ## Project Graph Maintenance
 
-Use the Project Graph skills when cross-project relationships need explicit maintenance instead of ordinary read-only lookup. `project-graph-candidates-scan` updates only candidate findings, `project-graph-auto-edge` creates human-reviewable proposals through Base Graph/source evidence, and `project-graph-human-edge` is the only normal flow that writes confirmed edges and cross-ref pins. The collection also includes `scripts/llm_wiki_doctor.py` plus a reusable pre-commit hook so repositories can enforce wiki/graph hygiene at local commit, project finish, and CI/PR boundaries.
+Use the Project Graph skills when cross-project relationships need explicit maintenance instead of ordinary read-only lookup. `project-graph-candidates-scan` updates only candidate findings, `project-graph-auto-edge` creates human-reviewable proposals through Base Graph/source evidence, and `project-graph-human-edge` is the only normal flow that writes confirmed edges and cross-ref pins. The collection also includes `llm-wiki-doctor`, `scripts/llm_wiki_doctor.py`, and scaffold templates that `project-init` installs into consuming projects so repositories can enforce wiki/graph hygiene at local commit, project finish, and CI/PR boundaries.
 
 ## Read-Only Project Questions
 

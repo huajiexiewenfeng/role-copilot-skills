@@ -1036,9 +1036,89 @@ PASS: old manual pending candidate is preserved
 FAIL: manual pending candidate is auto-archived or deleted
 ```
 
+## Eval 29: LLM Wiki Doctor Routes To Dedicated Skill
+
+Input prompt:
+
+```text
+跑一下 LLM Wiki Doctor，看看这个 project init 后的 .llm-wiki 到底有没有用。
+```
+
+Expected route:
+
+```text
+mode: wiki-doctor
+primary_stage: llm-wiki-doctor
+```
+
+Required behavior:
+
+- Runs or proposes `llm_wiki_doctor.py report`.
+- Produces a Chinese-first report.
+- Keeps default behavior read-only.
+- Routes repairs to `project-maintain` only after user approval.
+
+Pass/fail:
+
+```text
+PASS: dedicated doctor route, Chinese report, no automatic semantic repair
+FAIL: routes directly to project-maintain repair or only runs broad source search
+```
+
+## Eval 30: Simple Project Does Not Lose Score For Project Graph N/A
+
+Input prompt:
+
+```text
+给这个单模块项目的 .llm-wiki 打分。
+```
+
+Required behavior:
+
+- Marks Project Graph / cross-refs as not-applicable when no external project or cross-service signal exists.
+- Re-normalizes score over applicable dimensions.
+- Explains that the score reflects suitability for this project, not absolute system size.
+
+Pass/fail:
+
+```text
+PASS: Project Graph is N/A and not counted as missing
+FAIL: subtracts Project Graph points from a simple project without cross-service signals
+```
+
+## Eval 31: Project Init Installs Doctor Scaffold Into Consuming Project
+
+Input prompt:
+
+```text
+初始化这个业务项目的 .llm-wiki，并把 LLM Wiki Doctor 的强约束也带上。
+```
+
+Expected route:
+
+```text
+mode: full-lifecycle
+primary_stage: project-init
+```
+
+Required behavior:
+
+- Installs or offers `.llm-wiki/tools/llm_wiki_doctor.py` and `.llm-wiki/tools/VERSION` inside the target business project.
+- Installs or offers `.pre-commit-config.yaml` and `.github/workflows/llm-wiki-doctor.yml` inside the target business project.
+- Does not create these files only in the skill-source repository.
+- Does not silently overwrite project-owned hook or workflow files.
+
+Pass/fail:
+
+```text
+PASS: consuming project receives the vendored doctor plus local/CI enforcement scaffold
+FAIL: scaffold exists only in role-copilot-skills or overwrites project-owned config without warning
+```
+
 ## Project Graph validator landing cases
 
 - Cross-service debug request: when the user asks why a relation from service A to service B did not work, the first project action should inspect `.llm-wiki/cross-refs/index.md` and `.llm-wiki/project-graph/edges.md` before broad source exploration.
-- Orphan design document: when an answer creates a requirement/design/bug/plan Markdown under `docs/plans`, `.llm-wiki/tools/llm_wiki_doctor.py --all` should emit `orphan-design-doc` unless the source has exact ingest/source proxy registration or explicit ignore with reason.
+- Orphan design document: when an answer creates a requirement/design/bug/plan Markdown under `docs/plans`, `.llm-wiki/tools/llm_wiki_doctor.py validate --all` should emit `orphan-design-doc` unless the source has exact ingest/source proxy registration or explicit ignore with reason.
 - Missing graph evidence: when a `.llm-wiki/requirements` page mentions a known external project id without `## Project Graph Evidence` or `## Project Graph Gaps`, doctor should emit `missing-graph-evidence` WARN.
+- Blocking graph/safety checks: `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, and `leaked-local-path` should be ERROR findings and fail `validate --fail-on error`.
 - Honest self-review: when a trace shows Project Graph was checked only after source reading, the response should label it as retrospective confirmation rather than primary workflow.

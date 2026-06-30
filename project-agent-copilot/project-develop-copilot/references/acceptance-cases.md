@@ -814,3 +814,67 @@ Failure signals:
 - manual edge writes `source = auto`.
 - remote project files are modified.
 - cross-ref pin is missing without explicit logged skip reason.
+
+### Case 30: LLM Wiki Doctor Dedicated Route And Advisory Report
+
+Prompt:
+
+```text
+跑一下 LLM Wiki Doctor，看看这个 project init 后的 .llm-wiki 到底有没有用。
+```
+
+Expected:
+
+- router selects `wiki-doctor` with primary stage `llm-wiki-doctor`.
+- agent runs or proposes `report --root . --format text` for human diagnosis.
+- output is Chinese-first and includes score, next steps, and validator findings.
+- default behavior is read-only.
+- repairs are routed to `project-maintain` only after user approval.
+
+Failure signals:
+
+- routes directly to broad `project-maintain` repair.
+- runs only source search and ignores `.llm-wiki` health signals.
+- auto-fills semantic wiki content such as module responsibilities or confirmed edges.
+
+### Case 31: Simple Project Graph Dimension Is Not Applicable
+
+Prompt:
+
+```text
+给这个单模块项目的 .llm-wiki 打分。
+```
+
+Expected:
+
+- `score --root . --format json` includes `score_version = 1`.
+- Project Graph / cross-refs dimension is `not-applicable` when no external project id or cross-service signal exists.
+- total score is re-normalized over applicable dimensions.
+- response explains that maturity reflects fitness for the project, not absolute project size.
+
+Failure signals:
+
+- subtracts Project Graph points from a simple project without cross-service signals.
+- treats N/A as zero.
+- presents the score as a KPI rather than directional guidance.
+
+### Case 32: Project Init Installs Consuming-Project Doctor Scaffold
+
+Prompt:
+
+```text
+初始化这个业务项目的 .llm-wiki，并把 LLM Wiki Doctor 的强约束也带上。
+```
+
+Expected:
+
+- `project-init` installs or offers `.llm-wiki/tools/llm_wiki_doctor.py` and `.llm-wiki/tools/VERSION` inside the target business project.
+- `project-init` installs or offers `.pre-commit-config.yaml` and `.github/workflows/llm-wiki-doctor.yml` inside the target business project.
+- existing project-owned hook or workflow files are preserved, merged safely, or accompanied by `.example` files plus manual merge instructions.
+- role-copilot-skills keeps only scaffold templates under `assets/llm-wiki-doctor-scaffold/`.
+
+Failure signals:
+
+- enforcement files are created only in the skill-source repository.
+- `project-init` finishes without giving the consuming project a path to pre-commit and CI validation.
+- project-owned hook or workflow files are overwritten silently.

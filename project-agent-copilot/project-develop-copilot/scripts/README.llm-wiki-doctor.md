@@ -1,63 +1,64 @@
 # LLM Wiki Doctor
 
-`llm_wiki_doctor.py` is the Project Develop Copilot validator for repo-local `.llm-wiki` artifacts.
+`llm_wiki_doctor.py` is the Project Develop Copilot validator, scorer, and Chinese-first report generator for repo-local `.llm-wiki` artifacts.
 
-It is distributed in the skill source repo under:
+The skill source script lives at:
 
 ```text
 project-agent-copilot/project-develop-copilot/scripts/llm_wiki_doctor.py
-project-agent-copilot/project-develop-copilot/scripts/tests/test_llm_wiki_doctor.py
-project-agent-copilot/project-develop-copilot/scripts/git-hooks/pre-commit-llm-wiki-doctor
 ```
 
-Business repos should vendor a fixed copy under:
+Consuming business projects should use the vendored copy installed by `project-init`:
 
 ```text
 .llm-wiki/tools/llm_wiki_doctor.py
 .llm-wiki/tools/VERSION
-.llm-wiki/tools/pre-commit-llm-wiki-doctor
+.pre-commit-config.yaml
+.github/workflows/llm-wiki-doctor.yml
 .llm-wiki/project-ids.json
 ```
 
+The source repo keeps the consuming-project templates under:
+
+```text
+project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/
+```
+
+## Commands
+
+Machine checks:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --all --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+```
+
+Human diagnosis:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py report --root . --format text
+python .llm-wiki/tools/llm_wiki_doctor.py score --root . --format json
+```
+
+`validate` is deterministic and may block on ERROR findings. `score` and `report` are advisory and always exit 0.
+
+Legacy no-subcommand invocations still map to `validate`, but new documentation and automation should use the explicit subcommand form.
+
 ## Checks
 
-- `orphan-design-doc`: warns when requirement, design, bug, or plan documents outside `.llm-wiki` are not registered by exact source path or `original_path`.
-- `missing-graph-evidence`: warns when cross-service `.llm-wiki` artifacts do not include `## Project Graph Evidence` or `## Project Graph Gaps`.
-- `invalid-graph-edge`: warns when `Project Graph Evidence` references an edge id that is not present in `.llm-wiki/project-graph/edges.md`.
+ERROR:
 
-Phase 1 is WARN-first. With `--fail-on error`, WARN findings remain visible but do not fail the command.
+- `leaked-local-path`: committed `.llm-wiki` Markdown contains workstation paths or local-only registry names.
+- `invalid-edge-id`: Project Graph Evidence references an edge id missing from `.llm-wiki/project-graph/edges.md`.
+- `dangling-cross-ref`: `cross-refs/index.md` pins an edge id missing from `.llm-wiki/project-graph/edges.md`.
+- `duplicate-edge-fingerprint`: confirmed edge fingerprints repeat.
 
-## Repo-local Usage
+WARN:
 
-Run all checks:
-
-```text
-python .llm-wiki/tools/llm_wiki_doctor.py --root . --all --format text --fail-on error
-```
-
-Run changed-file checks:
-
-```text
-python .llm-wiki/tools/llm_wiki_doctor.py --root . --changed --format text --fail-on error
-```
-
-Run PR/base checks:
-
-```text
-python .llm-wiki/tools/llm_wiki_doctor.py --root . --base origin/main --format json --fail-on error
-```
-
-Run unit tests from the skill source repo:
-
-```text
-python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
-```
-
-Run unit tests from a business repo after vendoring:
-
-```text
-python -m unittest discover .llm-wiki/tools/tests
-```
+- `orphan-design-doc`: requirement, design, bug, or plan documents outside `.llm-wiki` are not registered by exact source path or `original_path`.
+- `missing-graph-evidence`: cross-service `.llm-wiki` artifacts do not include `## Project Graph Evidence` or `## Project Graph Gaps`.
+- `unresolved-project-id`: structured project fields reference ids not found in committed `.llm-wiki/project-ids.json`.
 
 ## project-ids.json
 
@@ -83,6 +84,34 @@ Rules:
 - `local_projects` identifies projects that belong to the current repo and should not be treated as external just because their ids appear in text.
 - `aliases` normalize old names or runtime names to canonical ids.
 - Confirmed edges are used for edge-id validation only; do not derive project vocabulary from `edges.md`.
+- `unresolved-project-id` scans structured fields only; it does not scan free prose.
+
+## Scaffold Sync
+
+From the skill source repo, sync the source script into the consuming-project scaffold:
+
+```text
+python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py
+python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check
+```
+
+`--check` fails if the scaffolded doctor copy is stale or missing. Skill-source CI should run unit tests plus this drift check. Consuming-project CI should run the vendored `.llm-wiki/tools/llm_wiki_doctor.py validate` command.
+
+## pre-commit And CI
+
+The scaffolded `.pre-commit-config.yaml` runs:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
+```
+
+The scaffolded GitHub Actions workflow runs:
+
+```text
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+```
+
+WARN findings should remain visible in terminal output, job summaries, PR comments, or handoff text, but they do not block unless a future policy explicitly changes severity.
 
 ## Fixing Findings
 
@@ -120,24 +149,4 @@ Use a gap when no confirmed edge exists:
 - No confirmed edge records `<relation>` yet; source verification or candidate creation is required.
 ```
 
-Do not invent edge ids.
-
-## pre-commit Hook
-
-Business repos can copy the hook sample:
-
-```text
-cp .llm-wiki/tools/pre-commit-llm-wiki-doctor .git/hooks/pre-commit
-```
-
-The hook should run the repo-vendored doctor, not the installed skill copy.
-
-## CI
-
-CI should call the repo-vendored script:
-
-```text
-python .llm-wiki/tools/llm_wiki_doctor.py --root . --all --format json --fail-on error
-```
-
-Publish WARN findings to job summary or PR comments so Phase 1 measurements are visible even when exit code is zero.
+Do not invent edge ids or project ids.

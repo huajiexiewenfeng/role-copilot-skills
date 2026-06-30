@@ -26,6 +26,7 @@ Use this skill when the user asks for project development help from natural lang
 - Finishing work, syncing project knowledge, updating progress, preparing handoff, or checking done status.
 - Refreshing or updating the static project dashboard/progress page without claiming work is finished.
 - Checking, auditing, maintaining, or repairing project `.llm-wiki` structure, visibility, Flow Records, artifact registry entries, module backlinks, dashboard consistency, logs, links, or safety issues.
+- Running LLM Wiki Doctor, scoring `.llm-wiki` maturity, checking whether project-init produced a useful wiki, diagnosing empty wiki skeletons, or explaining doctor/pre-commit/CI findings.
 - Scanning Project Graph candidates through `project-graph-candidates-scan`.
 - Resolving candidates into evidence-backed edge proposals through `project-graph-auto-edge`.
 - Confirming, rejecting, manually registering, or pinning Project Graph edges through `project-graph-human-edge`.
@@ -122,6 +123,7 @@ Before doing project work:
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
 | User asks to initialize/adopt/refresh project context | full-lifecycle | `project-init` |
+| User asks to run LLM Wiki Doctor, score `.llm-wiki`, check whether project-init produced a useful wiki, or explain doctor/pre-commit/CI findings | wiki-doctor | `llm-wiki-doctor` |
 | User asks for a feature, requirement, plan, or implementation | full-lifecycle | `project-develop` |
 | User reports a bug, log, error, failed test, or incident | full-lifecycle | `project-fix` |
 | User asks to update, refresh, or sync the static dashboard/progress page only | dashboard-refresh | `project-query` |
@@ -138,7 +140,7 @@ If confidence is low, ask one minimal routing question. Do not start a long inta
 When multiple routes seem plausible, choose the least state-changing route that still satisfies the user:
 
 ```text
-lightweight-answer < read-only-query < dashboard-refresh < wiki-maintenance < full-lifecycle
+lightweight-answer < read-only-query < wiki-doctor < dashboard-refresh < wiki-maintenance < full-lifecycle
 ```
 
 Use this quick decision order:
@@ -147,13 +149,14 @@ Use this quick decision order:
 2. Project evidence needed, but read-only -> `read-only-query` / `project-query`.
    - If the evidence crosses another project through Project Graph pins/edges/candidates, use `cross-project-lookup` and keep remote scope read-only.
 3. Only visible dashboard/progress projection requested -> `dashboard-refresh` / `project-query`.
-4. Project Graph candidate scan requested (`graph-scan`, `candidates scan`, `自动扫描候选关系`, `扫一下 candidates`) -> `wiki-maintenance` / `project-graph-candidates-scan`.
-5. Project Graph auto proposal requested (`auto-edge`, `自动登记`, `生成 edge proposal`, `通过 base-graph 找项目类方法但先确认`) -> `wiki-maintenance` / `project-graph-auto-edge`.
-6. Project Graph human confirmation/manual edge requested (`human-edge`, `手动登记`, `确认 proposal`, `接受 proposal`, `拒绝 proposal`) -> `wiki-maintenance` / `project-graph-human-edge`.
-7. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph audit/repair, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
-8. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
-9. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
-10. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+4. LLM Wiki Doctor, wiki maturity score, empty wiki skeleton, or doctor/pre-commit/CI finding explanation requested -> `wiki-doctor` / `llm-wiki-doctor`.
+5. Project Graph candidate scan requested (`graph-scan`, `candidates scan`, `自动扫描候选关系`, `扫一下 candidates`) -> `wiki-maintenance` / `project-graph-candidates-scan`.
+6. Project Graph auto proposal requested (`auto-edge`, `自动登记`, `生成 edge proposal`, `通过 base-graph 找项目类方法但先确认`) -> `wiki-maintenance` / `project-graph-auto-edge`.
+7. Project Graph human confirmation/manual edge requested (`human-edge`, `手动登记`, `确认 proposal`, `接受 proposal`, `拒绝 proposal`) -> `wiki-maintenance` / `project-graph-human-edge`.
+8. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph audit/repair, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
+9. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
+10. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+11. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 
 Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
 
