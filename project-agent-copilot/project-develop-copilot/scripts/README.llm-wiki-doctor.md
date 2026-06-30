@@ -29,19 +29,26 @@ project-agent-copilot/project-develop-copilot/assets/llm-wiki-doctor-scaffold/
 Machine checks:
 
 ```text
-python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --all --format text --fail-on error
-python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
-python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --all --phase normal --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --phase normal --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --phase normal --format json --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --phase finish --format text --fail-on error
 ```
 
 Human diagnosis:
 
 ```text
-python .llm-wiki/tools/llm_wiki_doctor.py report --root . --format text
-python .llm-wiki/tools/llm_wiki_doctor.py score --root . --format json
+python .llm-wiki/tools/llm_wiki_doctor.py report --root . --phase advisory --format text
+python .llm-wiki/tools/llm_wiki_doctor.py score --root . --phase advisory --format json
 ```
 
 `validate` is deterministic and may block on ERROR findings. `score` and `report` are advisory and always exit 0.
+
+Use phases consistently:
+
+- `advisory`: human diagnosis and maturity reporting.
+- `normal`: pre-commit and CI blocking checks.
+- `finish`: project-finish checks before archiving captured knowledge or handoff state.
 
 Legacy no-subcommand invocations still map to `validate`, but new documentation and automation should use the explicit subcommand form.
 
@@ -54,12 +61,25 @@ ERROR:
 - `dangling-cross-ref`: `cross-refs/index.md` pins an edge id missing from `.llm-wiki/project-graph/edges.md`.
 - `duplicate-edge-fingerprint`: confirmed edge fingerprints repeat.
 - `contradictory-module-context`: `.llm-wiki/modules/index.md` marks a Maven module as ready/source-backed, but the scoped context directory or standard files are missing.
+- `missing-source-refs`: captured/current knowledge lacks source references.
+- `missing-verified-commit`: captured source references lack a verified commit.
+- `unresolved-dirty-capture`: finish phase found dirty-captured knowledge that has not been resolved to a clean verified commit.
+- `missing-edge-detail-id`: edge detail front matter lacks `edge_id`.
+- `invalid-edge-detail-id`: edge detail front matter points to an unknown edge id.
+- `duplicated-edge-detail-fact`: edge detail front matter duplicates canonical edge table facts such as project ids, topic, path, endpoint, verification status, or fingerprint.
 
 WARN:
 
 - `orphan-design-doc`: requirement, design, bug, or plan documents outside `.llm-wiki` are not registered by exact source path or `original_path`.
 - `missing-graph-evidence`: cross-service `.llm-wiki` artifacts do not include `## Project Graph Evidence` or `## Project Graph Gaps`.
 - `unresolved-project-id`: structured project fields reference ids not found in committed `.llm-wiki/project-ids.json`.
+- `missing-origin`: a knowledge unit lacks origin metadata.
+- `freshness-expired`: a knowledge unit has exceeded its kind-specific TTL.
+- `unreachable-verified-commit`: a source reference points to a commit not reachable from the current repo.
+- `stale-source-anchor`: a verified Java class/method/function span changed after the verified commit.
+- `coarse-stale-source-anchor`: a coarse file/module source reference changed after the verified commit.
+- `unverifiable-anchor`: a source reference is missing enough path/anchor metadata or uses an unsupported anchor type.
+- `suspicious-confidence`: metadata claims human-confirmed confidence without `confirmed_by: human`.
 - `missing-module-context`: root `pom.xml` enables a Maven module but `.llm-wiki/modules/<module>/` is missing.
 - `incomplete-module-context`: `.llm-wiki/modules/<module>/` exists but is missing one or more standard scoped-context files.
 - `thin-module-context`: all standard module context files exist, but they are still placeholder-only or too thin to guide real work.
@@ -123,13 +143,13 @@ python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --ch
 The scaffolded `.pre-commit-config.yaml` runs:
 
 ```text
-python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --phase normal --format text --fail-on error
 ```
 
 The scaffolded GitHub Actions workflow runs:
 
 ```text
-python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --phase normal --format json --fail-on error
 ```
 
 WARN findings should remain visible in terminal output, job summaries, PR comments, or handoff text, but they do not block unless a future policy explicitly changes severity.

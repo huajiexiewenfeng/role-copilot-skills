@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: llm-wiki-doctor-validate
         name: LLM Wiki Doctor validate
-        entry: python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --format text --fail-on error
+        entry: python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --changed --phase normal --format text --fail-on error
         language: system
         pass_filenames: false
         files: ^(.llm-wiki/|docs/).*[.]md$
