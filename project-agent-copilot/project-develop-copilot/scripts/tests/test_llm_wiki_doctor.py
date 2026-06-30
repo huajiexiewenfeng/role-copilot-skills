@@ -550,6 +550,41 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('"findings"', result.stdout)
 
+    def test_knowledge_unit_parser_scans_only_structured_paths(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: knowledge-20260630-001",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/com/example/FooService.java",
+                    "    anchor: FooService#save",
+                    "    anchor_type: method",
+                    "    verified_at: 2026-06-30",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                    "This is an explanation.",
+                ]
+            ),
+        )
+        fixture.write(
+            ".llm-wiki/modules/foo/README.md",
+            "---\nkind: why-decision\n---\nShould not be parsed as a knowledge unit.\n",
+        )
+        doctor = load_doctor()
+
+        units = doctor.collect_knowledge_units(fixture.root)
+
+        self.assertEqual(1, len(units))
+        self.assertEqual("knowledge-20260630-001", units[0].data["unit_id"])
+        self.assertEqual("src/main/java/com/example/FooService.java", units[0].data["source_refs"][0]["path"])
+
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
         doctor = load_doctor()

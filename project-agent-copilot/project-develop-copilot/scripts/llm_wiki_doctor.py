@@ -37,6 +37,11 @@ ORIGINAL_PATH_RE = re.compile(r"^\s*-?\s*original_path\s*:\s*`?([^`\r\n]+?)`?\s*
 IGNORE_RE_TEMPLATE = r"<!--\s*llm-wiki-ignore:\s*{check}\s+reason\s*=\s*['\"][^'\"]+['\"]\s*-->"
 STANDARD_MODULE_CONTEXT_FILES = ("README.md", "source-map.md", "architecture.md", "rules.md", "verification.md")
 READY_MODULE_STATUSES = {"active", "ready", "source-backed", "scoped-context-ready", "complete", "completed"}
+KNOWLEDGE_UNIT_ROOTS = (
+    ".llm-wiki/knowledge/",
+    ".llm-wiki/project-graph/details/",
+    ".llm-wiki/requirements/",
+)
 MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH = 240
 MODULE_CONTEXT_PLACEHOLDER_RE = re.compile(
     "|".join(
@@ -75,6 +80,14 @@ class ProjectRegistry:
     local_projects: set[str]
     aliases: dict[str, str]
     edge_ids: set[str]
+
+
+@dataclass(frozen=True)
+class KnowledgeUnit:
+    path: Path
+    relative_path: str
+    data: dict[str, object]
+    front_matter_lines: int
 
 
 @dataclass(frozen=True)
@@ -130,6 +143,117 @@ def read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         return ""
+
+
+def parse_front_matter_scalar(value: str) -> object:
+    value = value.strip()
+    if value in {"null", "Null", "NULL", "~"}:
+        return None
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    if re.fullmatch(r"-?\d+", value):
+        return int(value)
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return value[1:-1]
+    return value
+
+
+def parse_front_matter(text: str) -> tuple[dict[str, object], int] | None:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    end_index = None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return None
+
+    data: dict[str, object] = {}
+    front_matter = lines[1:end_index]
+    index = 0
+    while index < len(front_matter):
+        line = front_matter[index]
+        stripped = line.strip()
+        if not stripped or line.startswith(" "):
+            index += 1
+            continue
+        if ":" not in line:
+            index += 1
+            continue
+        key, raw_value = line.split(":", 1)
+        key = key.strip()
+        raw_value = raw_value.strip()
+        if raw_value:
+            data[key] = parse_front_matter_scalar(raw_value)
+            index += 1
+            continue
+
+        items: list[dict[str, object]] = []
+        index += 1
+        while index < len(front_matter):
+            item_line = front_matter[index]
+            if not item_line.startswith("  - "):
+                break
+            item: dict[str, object] = {}
+            item_text = item_line[4:].strip()
+            if ":" in item_text:
+                item_key, item_value = item_text.split(":", 1)
+                item[item_key.strip()] = parse_front_matter_scalar(item_value)
+            index += 1
+            while index < len(front_matter) and front_matter[index].startswith("    "):
+                nested_line = front_matter[index].strip()
+                if ":" in nested_line:
+                    nested_key, nested_value = nested_line.split(":", 1)
+                    item[nested_key.strip()] = parse_front_matter_scalar(nested_value)
+                index += 1
+            items.append(item)
+        data[key] = items
+    return data, end_index + 1
+
+
+def is_knowledge_unit_path(relative_path: str, data: dict[str, object]) -> bool:
+    if relative_path.startswith(".llm-wiki/knowledge/"):
+        return True
+    if relative_path.startswith(".llm-wiki/project-graph/details/"):
+        return True
+    if relative_path.startswith(".llm-wiki/requirements/"):
+        return data.get("kind") == "requirement-intent"
+    return False
+
+
+def collect_knowledge_units(root: Path) -> list[KnowledgeUnit]:
+    wiki_root = root / ".llm-wiki"
+    if not wiki_root.exists():
+        return []
+    candidate_roots = [
+        wiki_root / "knowledge",
+        wiki_root / "project-graph" / "details",
+        wiki_root / "requirements",
+    ]
+    units: list[KnowledgeUnit] = []
+    for candidate_root in candidate_roots:
+        if not candidate_root.exists():
+            continue
+        for path in sorted(candidate_root.rglob("*.md")):
+            relative_path = repo_relative(root, path)
+            parsed = parse_front_matter(read_text(path))
+            if not parsed:
+                continue
+            data, front_matter_lines = parsed
+            if is_knowledge_unit_path(relative_path, data):
+                units.append(
+                    KnowledgeUnit(
+                        path=path,
+                        relative_path=relative_path,
+                        data=data,
+                        front_matter_lines=front_matter_lines,
+                    )
+                )
+    return units
 
 
 def load_registry(root: Path) -> ProjectRegistry:
