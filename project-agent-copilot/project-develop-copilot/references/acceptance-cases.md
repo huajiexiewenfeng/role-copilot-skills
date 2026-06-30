@@ -878,3 +878,25 @@ Failure signals:
 - enforcement files are created only in the skill-source repository.
 - `project-init` finishes without giving the consuming project a path to pre-commit and CI validation.
 - project-owned hook or workflow files are overwritten silently.
+
+### Case 33: Doctor Detects Missing Maven Module Context
+
+Prompt:
+
+```text
+跑一下 LLM Wiki Doctor，这个 Maven 聚合项目的 modules 上下文是不是完整？
+```
+
+Expected:
+
+- when root `pom.xml` declares enabled `<module>` entries, doctor compares them with `.llm-wiki/modules/<module>/` directories.
+- missing directories emit `missing-module-context` WARN.
+- existing directories missing `README.md`, `source-map.md`, `architecture.md`, `rules.md`, or `verification.md` emit `incomplete-module-context` WARN.
+- modules marked ready/source-backed/scoped-context-ready in `.llm-wiki/modules/index.md` but missing required context emit `contradictory-module-context` ERROR.
+- `score/report` include `pom_module_count`, `wiki_module_context_count`, `missing_module_context_count`, and `missing_module_context_modules`.
+
+Failure signals:
+
+- `modules/index.md` exists so doctor reports excellent health despite most root Maven modules lacking scoped context.
+- commented-out Maven modules are treated as enabled.
+- non-Maven or single-module projects are penalized for missing Maven module context.

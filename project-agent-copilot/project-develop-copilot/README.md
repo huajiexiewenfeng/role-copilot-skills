@@ -96,6 +96,8 @@ The current validators focus on machine-checkable hygiene:
 - `missing-graph-evidence`: docs that mention known project ids should carry a Project Graph Evidence / Gaps block when cross-project reasoning is involved.
 - `unresolved-project-id`: project ids are matched only against configured registry names and aliases, with word-boundary style matching and warning-level behavior.
 - `invalid-edge-id`, `dangling-cross-ref`, `duplicate-edge-fingerprint`, and `leaked-local-path`: deterministic ERROR checks for CI/pre-commit/project-finish.
+- `missing-module-context` and `incomplete-module-context`: WARN when root Maven modules lack `.llm-wiki/modules/<module>/` scoped context coverage.
+- `contradictory-module-context`: ERROR when the module index claims ready/source-backed context that the module files do not support.
 
 The expected rollout posture is P0 blocking in local pre-commit and CI for structural errors via `validate`, while `report` and `score` stay advisory and Chinese-first. See `scripts/README.llm-wiki-doctor.md` for commands, configuration, and scaffold examples.
 
