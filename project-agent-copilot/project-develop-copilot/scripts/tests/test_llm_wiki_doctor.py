@@ -535,6 +535,21 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertIn("score", payload)
         self.assertEqual(1, payload["score"]["score_version"])
 
+    def test_validate_accepts_phase_argument(self):
+        fixture = self.with_fixture()
+
+        result = run_doctor_cli(fixture.root, "validate", "--all", "--phase", "normal", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_report_accepts_advisory_phase_and_exits_zero(self):
+        fixture = self.with_fixture()
+
+        result = run_doctor_cli(fixture.root, "report", "--phase", "advisory", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('"findings"', result.stdout)
+
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
         doctor = load_doctor()

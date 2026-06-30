@@ -86,6 +86,7 @@ class ModuleContextQuality:
 
 
 SCORE_VERSION = 1
+PHASES = ("advisory", "normal", "finish")
 
 
 @dataclass(frozen=True)
@@ -1037,6 +1038,11 @@ def add_validate_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base", help="Git base ref for changed scan")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     parser.add_argument("--fail-on", choices=["error", "warn"], default="error")
+    add_phase_argument(parser, "normal")
+
+
+def add_phase_argument(parser: argparse.ArgumentParser, default: str) -> None:
+    parser.add_argument("--phase", choices=PHASES, default=default, help="Lifecycle phase for severity policy")
 
 
 def run_validate_command(args: argparse.Namespace) -> int:
@@ -1093,6 +1099,7 @@ def main(argv: list[str] | None = None) -> int:
     score_parser = subparsers.add_parser("score", help="Score .llm-wiki maturity")
     score_parser.add_argument("--root", default=".", help="Repository root")
     score_parser.add_argument("--format", choices=["text", "json"], default="text")
+    add_phase_argument(score_parser, "advisory")
     score_parser.set_defaults(handler=run_score_command)
 
     report_parser = subparsers.add_parser("report", help="Generate advisory .llm-wiki report")
@@ -1101,6 +1108,7 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.add_argument("--changed", action="store_true", help="Scan changed Markdown files")
     report_parser.add_argument("--base", help="Git base ref for changed scan")
     report_parser.add_argument("--format", choices=["text", "json"], default="text")
+    add_phase_argument(report_parser, "advisory")
     report_parser.set_defaults(handler=run_report_command)
 
     args = parser.parse_args(normalize_argv(argv))
