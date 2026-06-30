@@ -92,6 +92,8 @@ Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它
 - `missing-graph-evidence`：文档正文提到已知 project-id 且涉及跨项目推理时，应带 Project Graph Evidence / Gaps block。
 - `unresolved-project-id`：project-id 只匹配 registry 中配置的逻辑名和 alias，采用词边界风格匹配，并保持 warning 级别。
 - `invalid-edge-id`、`dangling-cross-ref`、`duplicate-edge-fingerprint`、`leaked-local-path`：面向 CI/pre-commit/project-finish 的确定性 ERROR 检查。
+- `missing-module-context`、`incomplete-module-context`：根 Maven module 缺少 `.llm-wiki/modules/<module>/` scoped context 覆盖时输出 WARN。
+- `contradictory-module-context`：modules index 声称模块 ready/source-backed，但实际目录或标准文件缺失时输出 ERROR。
 
 推荐落地策略是：本地 pre-commit 和 CI 通过 `validate` 对结构性 P0 问题阻断；`report` 和 `score` 保持咨询性质，并以中文报告为主。命令、配置和 scaffold 示例见 `scripts/README.llm-wiki-doctor.md`。
 

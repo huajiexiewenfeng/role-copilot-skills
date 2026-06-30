@@ -12,6 +12,7 @@ import json
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
@@ -34,6 +35,8 @@ CROSS_SERVICE_RE = re.compile(
 DOC_SIGNAL_RE = re.compile(r"\b(design|requirement|bug|plan)\b|设计|需求|缺陷|方案|计划", re.IGNORECASE)
 ORIGINAL_PATH_RE = re.compile(r"^\s*-?\s*original_path\s*:\s*`?([^`\r\n]+?)`?\s*$", re.IGNORECASE | re.MULTILINE)
 IGNORE_RE_TEMPLATE = r"<!--\s*llm-wiki-ignore:\s*{check}\s+reason\s*=\s*['\"][^'\"]+['\"]\s*-->"
+STANDARD_MODULE_CONTEXT_FILES = ("README.md", "source-map.md", "architecture.md", "rules.md", "verification.md")
+READY_MODULE_STATUSES = {"active", "ready", "source-backed", "scoped-context-ready", "complete", "completed"}
 
 
 @dataclass(frozen=True)
@@ -226,6 +229,125 @@ def cell_by_header(headers: list[str], row: list[str], name: str) -> str:
     except ValueError:
         return ""
     return row[index].strip().strip("`") if index < len(row) else ""
+
+
+def parse_maven_modules(root: Path) -> list[str]:
+    pom = root / "pom.xml"
+    if not pom.exists():
+        return []
+    try:
+        document = ET.fromstring(read_text(pom))
+    except ET.ParseError:
+        return []
+
+    modules: list[str] = []
+    for element in document.iter():
+        if element.tag.split("}")[-1] != "module":
+            continue
+        module = (element.text or "").strip().strip("/\\")
+        if module:
+            modules.append(normalize_path(module))
+    return modules
+
+
+def list_wiki_module_contexts(root: Path) -> set[str]:
+    modules_root = root / ".llm-wiki" / "modules"
+    if not modules_root.exists():
+        return set()
+    return {path.name for path in modules_root.iterdir() if path.is_dir()}
+
+
+def ready_modules_from_index(root: Path) -> dict[str, int]:
+    index_path = root / ".llm-wiki" / "modules" / "index.md"
+    text = read_text(index_path)
+    ready: dict[str, int] = {}
+    if not text:
+        return ready
+    for headers, row, line in table_rows_with_header(text):
+        module = cell_by_header(headers, row, "module") or cell_by_header(headers, row, "name")
+        status = cell_by_header(headers, row, "status") or cell_by_header(headers, row, "state")
+        if module and status.strip().lower() in READY_MODULE_STATUSES:
+            ready[normalize_path(module)] = line
+    return ready
+
+
+def module_context_coverage(root: Path) -> dict[str, object]:
+    pom_modules = parse_maven_modules(root)
+    wiki_modules = list_wiki_module_contexts(root)
+    missing_modules = [module for module in pom_modules if Path(module).name not in wiki_modules]
+    return {
+        "pom_modules": pom_modules,
+        "wiki_modules": sorted(wiki_modules),
+        "missing_modules": missing_modules,
+        "coverage_ratio": (len(pom_modules) - len(missing_modules)) / len(pom_modules) if pom_modules else None,
+    }
+
+
+def check_module_context_coverage(root: Path) -> list[Finding]:
+    pom_modules = parse_maven_modules(root)
+    if not pom_modules:
+        return []
+
+    wiki_modules = list_wiki_module_contexts(root)
+    ready_modules = ready_modules_from_index(root)
+    findings: list[Finding] = []
+
+    for module in pom_modules:
+        context_dir_name = Path(module).name
+        context_path = root / ".llm-wiki" / "modules" / context_dir_name
+        relative_context = f".llm-wiki/modules/{context_dir_name}"
+        missing_files = [name for name in STANDARD_MODULE_CONTEXT_FILES if not (context_path / name).exists()]
+        ready_line = ready_modules.get(context_dir_name) or ready_modules.get(module)
+
+        if context_dir_name not in wiki_modules:
+            if ready_line:
+                findings.append(
+                    Finding(
+                        check="contradictory-module-context",
+                        severity="ERROR",
+                        path=".llm-wiki/modules/index.md",
+                        line=ready_line,
+                        message=f"Module index marks `{context_dir_name}` as ready, but `{relative_context}/` is missing.",
+                        hint="Downgrade the module index status or create the missing scoped context files.",
+                    )
+                )
+            findings.append(
+                Finding(
+                    check="missing-module-context",
+                    severity="WARN",
+                    path=relative_context,
+                    message=f"Enabled Maven module `{module}` has no `{relative_context}/` scoped context.",
+                    hint="Create the module scoped context skeleton or explicitly document why this module is intentionally out of scope.",
+                )
+            )
+            continue
+
+        if missing_files:
+            if ready_line:
+                findings.append(
+                    Finding(
+                        check="contradictory-module-context",
+                        severity="ERROR",
+                        path=".llm-wiki/modules/index.md",
+                        line=ready_line,
+                        message=(
+                            f"Module index marks `{context_dir_name}` as ready, but `{relative_context}/` "
+                            f"is missing {', '.join(f'`{name}`' for name in missing_files)}."
+                        ),
+                        hint="Downgrade the module index status or add the missing standard scoped-context files.",
+                    )
+                )
+            findings.append(
+                Finding(
+                    check="incomplete-module-context",
+                    severity="WARN",
+                    path=relative_context,
+                    message=f"`{relative_context}/` is missing {', '.join(f'`{name}`' for name in missing_files)}.",
+                    hint="Add the missing standard scoped-context files, even if their content starts as source-backed stub notes.",
+                )
+            )
+
+    return findings
 
 
 def registered_source_paths(root: Path) -> set[str]:
@@ -492,6 +614,7 @@ def run_checks(root: str | Path, paths: list[str | Path] | None = None) -> list[
     findings.extend(check_duplicate_edge_fingerprints(root_path))
     findings.extend(check_leaked_local_paths(root_path, candidate_paths))
     findings.extend(check_unresolved_project_ids(root_path, candidate_paths, registry))
+    findings.extend(check_module_context_coverage(root_path))
     return findings
 
 
@@ -567,6 +690,10 @@ def build_score_report(root: str | Path) -> ScoreReport:
     source_index = wiki_root / "sources" / "registry.md"
     graph_edges = wiki_root / "project-graph" / "edges.md"
     cross_refs = wiki_root / "cross-refs" / "index.md"
+    module_coverage = module_context_coverage(root_path)
+    pom_modules = module_coverage["pom_modules"]
+    missing_modules = module_coverage["missing_modules"]
+    coverage_ratio = module_coverage["coverage_ratio"]
 
     readme_effective_length = effective_markdown_length(read_text(readme))
     module_index_exists = modules_index.exists()
@@ -594,6 +721,22 @@ def build_score_report(root: str | Path) -> ScoreReport:
             message="检查 README、modules index 和 sources registry 是否存在。",
         )
     )
+
+    if coverage_ratio is not None:
+        covered_module_count = len(pom_modules) - len(missing_modules)
+        dimensions.append(
+            ScoreDimension(
+                name="模块上下文覆盖率",
+                max_score=20,
+                score=round(20 * coverage_ratio),
+                applicability="applicable",
+                source="root pom.xml and .llm-wiki/modules/",
+                message=(
+                    f"Maven modules={len(pom_modules)}, wiki_module_contexts={covered_module_count}, "
+                    f"missing={len(missing_modules)}。"
+                ),
+            )
+        )
 
     content_score = 30 if readme_effective_length >= 120 else 15 if readme_effective_length >= 40 else 0
     dimensions.append(
@@ -660,6 +803,9 @@ def build_score_report(root: str | Path) -> ScoreReport:
     if not module_index_exists:
         fact_ids.append("modules-index-missing")
         next_steps.append("补齐 .llm-wiki/modules/index.md，用源码证据列出当前活跃模块。")
+    if coverage_ratio is not None and missing_modules:
+        fact_ids.append("module-context-coverage-incomplete")
+        next_steps.append("补齐 Maven module 对应的 .llm-wiki/modules/<module>/ scoped context，不要只依赖 modules/index.md。")
     if not source_index_exists:
         fact_ids.append("sources-registry-missing")
         next_steps.append("补齐 .llm-wiki/sources/registry.md，登记已摄入的 PRD、设计、日志或源码代理。")
@@ -677,6 +823,11 @@ def build_score_report(root: str | Path) -> ScoreReport:
         "wiki_exists": wiki_exists,
         "readme_effective_length": readme_effective_length,
         "module_index_exists": module_index_exists,
+        "pom_module_count": len(pom_modules),
+        "wiki_module_context_count": len(pom_modules) - len(missing_modules) if coverage_ratio is not None else None,
+        "missing_module_context_count": len(missing_modules),
+        "missing_module_context_modules": missing_modules,
+        "module_context_coverage_ratio": coverage_ratio,
         "source_index_exists": source_index_exists,
         "validator_errors": validator_errors,
         "validator_warnings": validator_warnings,

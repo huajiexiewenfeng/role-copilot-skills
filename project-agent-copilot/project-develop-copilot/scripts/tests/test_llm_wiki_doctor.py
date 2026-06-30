@@ -239,6 +239,74 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertIn(("duplicate-edge-fingerprint", ".llm-wiki/project-graph/edges.md"), fixture.finding_keys())
         self.assertEqual("ERROR", next(finding.severity for finding in findings if finding.check == "duplicate-edge-fingerprint"))
 
+    def test_missing_module_context_warns_for_enabled_maven_modules_without_wiki_dirs(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "\n".join(
+                [
+                    "<project>",
+                    "  <modules>",
+                    "    <module>api</module>",
+                    "    <module>service</module>",
+                    "    <module>worker</module>",
+                    "  </modules>",
+                    "</project>",
+                ]
+            ),
+        )
+        fixture.write(".llm-wiki/modules/api/README.md", "# API\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("missing-module-context", ".llm-wiki/modules/service"), fixture.finding_keys())
+        self.assertIn(("missing-module-context", ".llm-wiki/modules/worker"), fixture.finding_keys())
+        self.assertEqual("WARN", next(finding.severity for finding in findings if finding.check == "missing-module-context"))
+
+    def test_incomplete_module_context_warns_when_standard_files_are_missing(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "<project><modules><module>stream</module></modules></project>",
+        )
+        fixture.write(".llm-wiki/modules/stream/README.md", "# Stream\n")
+        fixture.write(".llm-wiki/modules/stream/source-map.md", "# Source Map\n")
+        fixture.write(".llm-wiki/modules/stream/architecture.md", "# Architecture\n")
+        fixture.write(".llm-wiki/modules/stream/rules.md", "# Rules\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("incomplete-module-context", ".llm-wiki/modules/stream"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "incomplete-module-context")
+        self.assertEqual("WARN", finding.severity)
+        self.assertIn("verification.md", finding.message)
+
+    def test_contradictory_module_context_is_error_when_index_marks_ready_but_context_is_missing(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "<project><modules><module>base-service</module></modules></project>",
+        )
+        fixture.write(
+            ".llm-wiki/modules/index.md",
+            "| Module | Status |\n|---|---|\n| `base-service` | scoped-context-ready |\n",
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("contradictory-module-context", ".llm-wiki/modules/index.md"), fixture.finding_keys())
+        self.assertEqual("ERROR", next(finding.severity for finding in findings if finding.check == "contradictory-module-context"))
+
+    def test_module_context_checks_are_not_applicable_without_root_maven_modules(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><artifactId>single</artifactId></project>")
+
+        checks = fixture.finding_checks()
+
+        self.assertNotIn("missing-module-context", checks)
+        self.assertNotIn("incomplete-module-context", checks)
+        self.assertNotIn("contradictory-module-context", checks)
+
     def test_leaked_local_path_is_error(self):
         fixture = self.with_fixture()
         fixture.write(".llm-wiki/requirements/foo.md", "# Requirement\n\nSee C:\\Users\\admin\\secret\\note.md\n")
@@ -313,6 +381,38 @@ class LlmWikiDoctorTest(unittest.TestCase):
             graph_dimension = next(item for item in payload["dimensions"] if item["name"] == "Project Graph / cross-refs")
             self.assertEqual("not-applicable", graph_dimension["applicability"])
             self.assertIsNone(graph_dimension["score"])
+
+    def test_score_reports_module_context_coverage_signals(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "\n".join(
+                [
+                    "<project>",
+                    "  <modules>",
+                    "    <module>api</module>",
+                    "    <module>service</module>",
+                    "    <module>worker</module>",
+                    "  </modules>",
+                    "</project>",
+                ]
+            ),
+        )
+        fixture.write(".llm-wiki/README.md", "# Wiki\n\nThis wiki has enough prose for orientation and status tracking.\n")
+        fixture.write(".llm-wiki/modules/index.md", "| Module | Status |\n|---|---|\n| api | source-backed |\n")
+        fixture.write(".llm-wiki/sources/registry.md", "| Source | Status |\n|---|---|\n| pom.xml | active |\n")
+        fixture.write(".llm-wiki/modules/api/README.md", "# API\n")
+
+        result = run_doctor_cli(fixture.root, "score", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(3, payload["signals"]["pom_module_count"])
+        self.assertEqual(1, payload["signals"]["wiki_module_context_count"])
+        self.assertEqual(2, payload["signals"]["missing_module_context_count"])
+        self.assertEqual(["service", "worker"], payload["signals"]["missing_module_context_modules"])
+        self.assertIn("module-context-coverage-incomplete", payload["signals"]["fact_ids"])
+        self.assertLess(payload["score"], 85)
 
     def test_report_text_is_chinese_and_always_exits_zero(self):
         fixture = self.with_fixture()

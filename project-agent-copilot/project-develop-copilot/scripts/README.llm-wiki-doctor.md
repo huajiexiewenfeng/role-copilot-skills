@@ -53,12 +53,24 @@ ERROR:
 - `invalid-edge-id`: Project Graph Evidence references an edge id missing from `.llm-wiki/project-graph/edges.md`.
 - `dangling-cross-ref`: `cross-refs/index.md` pins an edge id missing from `.llm-wiki/project-graph/edges.md`.
 - `duplicate-edge-fingerprint`: confirmed edge fingerprints repeat.
+- `contradictory-module-context`: `.llm-wiki/modules/index.md` marks a Maven module as ready/source-backed, but the scoped context directory or standard files are missing.
 
 WARN:
 
 - `orphan-design-doc`: requirement, design, bug, or plan documents outside `.llm-wiki` are not registered by exact source path or `original_path`.
 - `missing-graph-evidence`: cross-service `.llm-wiki` artifacts do not include `## Project Graph Evidence` or `## Project Graph Gaps`.
 - `unresolved-project-id`: structured project fields reference ids not found in committed `.llm-wiki/project-ids.json`.
+- `missing-module-context`: root `pom.xml` enables a Maven module but `.llm-wiki/modules/<module>/` is missing.
+- `incomplete-module-context`: `.llm-wiki/modules/<module>/` exists but is missing one or more standard scoped-context files.
+
+For Maven aggregator projects, `score` and `report` also emit module coverage signals:
+
+- `pom_module_count`
+- `wiki_module_context_count`
+- `missing_module_context_count`
+- `missing_module_context_modules`
+
+Projects without root `<modules>` in `pom.xml` treat module-context coverage as not applicable.
 
 ## project-ids.json
 
@@ -150,3 +162,21 @@ Use a gap when no confirmed edge exists:
 ```
 
 Do not invent edge ids or project ids.
+
+### missing-module-context / incomplete-module-context
+
+Create a source-backed module context under `.llm-wiki/modules/<module>/` with the standard scoped-context files:
+
+```text
+README.md
+source-map.md
+architecture.md
+rules.md
+verification.md
+```
+
+Do not auto-fill semantic content. Start with source-backed stub notes when needed, and keep unfinished modules marked as missing/discovered instead of ready.
+
+### contradictory-module-context
+
+Either downgrade the module status in `.llm-wiki/modules/index.md`, or add the missing directory and standard files. This is an ERROR because the wiki currently claims a ready state that the file tree contradicts.
