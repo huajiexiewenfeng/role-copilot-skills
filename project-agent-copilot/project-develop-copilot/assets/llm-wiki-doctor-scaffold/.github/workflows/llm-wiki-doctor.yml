@@ -20,4 +20,4 @@ jobs:
           python-version: "3.x"
 
       - name: Validate LLM Wiki
-        run: python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --format json --fail-on error
+        run: python .llm-wiki/tools/llm_wiki_doctor.py validate --root . --base origin/main --phase normal --format json --fail-on error

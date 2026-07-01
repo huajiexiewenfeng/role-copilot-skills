@@ -14,6 +14,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -21,6 +22,15 @@ from typing import Iterable
 TOKEN_LEFT = r"(?<![A-Za-z0-9_-])"
 TOKEN_RIGHT = r"(?![A-Za-z0-9_-])"
 EDGE_ID_RE = re.compile(r"edge-\d{8}-\d{3,}")
+EDGE_DETAIL_FORBIDDEN_FIELDS = {
+    "from_project",
+    "to_project",
+    "topic",
+    "path",
+    "endpoint",
+    "verification_status",
+    "fingerprint",
+}
 LOCAL_PATH_RE = re.compile(
     r"(?i)(?:[A-Z]:\\Users\\[^`\s|]+|/Users/[^`\s|]+|/home/[^`\s|]+|registry\.local\.json|scan-state\.local\.json)"
 )
@@ -37,6 +47,38 @@ ORIGINAL_PATH_RE = re.compile(r"^\s*-?\s*original_path\s*:\s*`?([^`\r\n]+?)`?\s*
 IGNORE_RE_TEMPLATE = r"<!--\s*llm-wiki-ignore:\s*{check}\s+reason\s*=\s*['\"][^'\"]+['\"]\s*-->"
 STANDARD_MODULE_CONTEXT_FILES = ("README.md", "source-map.md", "architecture.md", "rules.md", "verification.md")
 READY_MODULE_STATUSES = {"active", "ready", "source-backed", "scoped-context-ready", "complete", "completed"}
+KNOWLEDGE_UNIT_ROOTS = (
+    ".llm-wiki/knowledge/",
+    ".llm-wiki/project-graph/details/",
+    ".llm-wiki/requirements/",
+)
+DEFAULT_TTL_BY_KIND = {
+    "why-decision": 90,
+    "cross-service-contract": 180,
+}
+NO_CLOCK_TTL_KINDS = {"dead-end", "requirement-intent", "navigation", "derived-source-map"}
+SPAN_ANCHOR_TYPES = {"class", "method", "function"}
+COARSE_ANCHOR_TYPES = {"file", "config-key", "topic-string", "schema-field"}
+MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH = 240
+MODULE_CONTEXT_PLACEHOLDER_RE = re.compile(
+    "|".join(
+        [
+            r"\b(TODO|TBD|placeholder|fill this|to be completed|not documented yet)\b",
+            "\u5f85\u8865\u5145",
+            "\u5f85\u5b8c\u5584",
+            "\u5360\u4f4d",
+            "\u540e\u7eed\u5b8c\u5584",
+            "\u8bf7\u8f93\u5165",
+        ]
+    ),
+    re.IGNORECASE,
+)
+MODULE_CONTEXT_EVIDENCE_RE = re.compile(
+    r"(?i)(src/(?:main|test)/|[\w./-]+\.(?:java|kt|xml|yml|yaml|properties|sql)|"
+    r"\b(?:pom\.xml|Dockerfile|application\.(?:yml|yaml|properties))\b|"
+    r"\b(?:Controller|Service|Mapper|Repository|Client|Handler|Listener|Config|Test)\b|"
+    r"@[A-Za-z]+|class\s+[A-Z][A-Za-z0-9_]+)"
+)
 
 
 @dataclass(frozen=True)
@@ -57,7 +99,24 @@ class ProjectRegistry:
     edge_ids: set[str]
 
 
+@dataclass(frozen=True)
+class KnowledgeUnit:
+    path: Path
+    relative_path: str
+    data: dict[str, object]
+    front_matter_lines: int
+
+
+@dataclass(frozen=True)
+class ModuleContextQuality:
+    effective_length: int
+    placeholder_hits: int
+    has_source_evidence: bool
+    thin: bool
+
+
 SCORE_VERSION = 1
+PHASES = ("advisory", "normal", "finish")
 
 
 @dataclass(frozen=True)
@@ -101,6 +160,333 @@ def read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         return ""
+
+
+def parse_front_matter_scalar(value: str) -> object:
+    value = value.strip()
+    if value in {"null", "Null", "NULL", "~"}:
+        return None
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    if re.fullmatch(r"-?\d+", value):
+        return int(value)
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return value[1:-1]
+    return value
+
+
+def parse_front_matter(text: str) -> tuple[dict[str, object], int] | None:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    end_index = None
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            end_index = index
+            break
+    if end_index is None:
+        return None
+
+    data: dict[str, object] = {}
+    front_matter = lines[1:end_index]
+    index = 0
+    while index < len(front_matter):
+        line = front_matter[index]
+        stripped = line.strip()
+        if not stripped or line.startswith(" "):
+            index += 1
+            continue
+        if ":" not in line:
+            index += 1
+            continue
+        key, raw_value = line.split(":", 1)
+        key = key.strip()
+        raw_value = raw_value.strip()
+        if raw_value:
+            data[key] = parse_front_matter_scalar(raw_value)
+            index += 1
+            continue
+
+        items: list[dict[str, object]] = []
+        index += 1
+        while index < len(front_matter):
+            item_line = front_matter[index]
+            if not item_line.startswith("  - "):
+                break
+            item: dict[str, object] = {}
+            item_text = item_line[4:].strip()
+            if ":" in item_text:
+                item_key, item_value = item_text.split(":", 1)
+                item[item_key.strip()] = parse_front_matter_scalar(item_value)
+            index += 1
+            while index < len(front_matter) and front_matter[index].startswith("    "):
+                nested_line = front_matter[index].strip()
+                if ":" in nested_line:
+                    nested_key, nested_value = nested_line.split(":", 1)
+                    item[nested_key.strip()] = parse_front_matter_scalar(nested_value)
+                index += 1
+            items.append(item)
+        data[key] = items
+    return data, end_index + 1
+
+
+def is_knowledge_unit_path(relative_path: str, data: dict[str, object]) -> bool:
+    if relative_path.startswith(".llm-wiki/knowledge/"):
+        return True
+    if relative_path.startswith(".llm-wiki/project-graph/details/"):
+        return True
+    if relative_path.startswith(".llm-wiki/requirements/"):
+        return data.get("kind") == "requirement-intent"
+    return False
+
+
+def collect_knowledge_units(root: Path) -> list[KnowledgeUnit]:
+    wiki_root = root / ".llm-wiki"
+    if not wiki_root.exists():
+        return []
+    candidate_roots = [
+        wiki_root / "knowledge",
+        wiki_root / "project-graph" / "details",
+        wiki_root / "requirements",
+    ]
+    units: list[KnowledgeUnit] = []
+    for candidate_root in candidate_roots:
+        if not candidate_root.exists():
+            continue
+        for path in sorted(candidate_root.rglob("*.md")):
+            relative_path = repo_relative(root, path)
+            parsed = parse_front_matter(read_text(path))
+            if not parsed:
+                continue
+            data, front_matter_lines = parsed
+            if is_knowledge_unit_path(relative_path, data):
+                units.append(
+                    KnowledgeUnit(
+                        path=path,
+                        relative_path=relative_path,
+                        data=data,
+                        front_matter_lines=front_matter_lines,
+                    )
+                )
+    return units
+
+
+def source_refs_for(unit: KnowledgeUnit) -> list[dict[str, object]]:
+    source_refs = unit.data.get("source_refs")
+    if isinstance(source_refs, list):
+        return [item for item in source_refs if isinstance(item, dict)]
+    return []
+
+
+def ttl_days_for(unit: KnowledgeUnit) -> int | None:
+    explicit = unit.data.get("ttl_days")
+    if isinstance(explicit, int):
+        return explicit
+    kind = str(unit.data.get("kind") or "").strip()
+    if kind in NO_CLOCK_TTL_KINDS:
+        return None
+    return DEFAULT_TTL_BY_KIND.get(kind)
+
+
+def parse_iso_date(value: object) -> date | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
+        return None
+
+
+def unit_verified_at(unit: KnowledgeUnit) -> date | None:
+    verified_at = parse_iso_date(unit.data.get("verified_at"))
+    if verified_at:
+        return verified_at
+    for source_ref in source_refs_for(unit):
+        verified_at = parse_iso_date(source_ref.get("verified_at"))
+        if verified_at:
+            return verified_at
+    return None
+
+
+def unit_freshness_expired(unit: KnowledgeUnit, today: date | None = None) -> bool:
+    ttl_days = ttl_days_for(unit)
+    verified_at = unit_verified_at(unit)
+    if ttl_days is None or verified_at is None:
+        return False
+    today = today or date.today()
+    return verified_at + timedelta(days=ttl_days) < today
+
+
+def git_command(root: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(root), *args],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+
+def commit_is_reachable(root: Path, commit: str) -> bool:
+    result = git_command(root, ["cat-file", "-e", f"{commit}^{{commit}}"])
+    return result.returncode == 0
+
+
+def java_anchor_span(root: Path, source_path: str, anchor: str, anchor_type: str) -> tuple[int, int] | None:
+    path = root / normalize_path(source_path)
+    text = read_text(path)
+    if not text:
+        return None
+    lines = text.splitlines()
+    if anchor_type == "method":
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\b{re.escape(target)}\s*\(")
+    elif anchor_type == "class":
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\bclass\s+{re.escape(target)}\b")
+    else:
+        target = anchor.split("#")[-1].strip()
+        pattern = re.compile(rf"\b{re.escape(target)}\s*\(")
+
+    for index, line in enumerate(lines, start=1):
+        if not pattern.search(line):
+            continue
+        balance = 0
+        seen_open = False
+        end = index
+        for nested_index in range(index, len(lines) + 1):
+            current = lines[nested_index - 1]
+            balance += current.count("{")
+            if "{" in current:
+                seen_open = True
+            balance -= current.count("}")
+            end = nested_index
+            if seen_open and balance <= 0:
+                break
+        return index, end
+    return None
+
+
+def check_source_ref_freshness(root: Path, unit: KnowledgeUnit, source_ref: dict[str, object]) -> list[Finding]:
+    verified_commit = str(source_ref.get("verified_commit") or "").strip()
+    if not verified_commit:
+        return []
+    if not commit_is_reachable(root, verified_commit):
+        return [
+            Finding(
+                check="unreachable-verified-commit",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} references unreachable verified_commit {verified_commit}.",
+                hint="Re-verify the source ref in the current repository history before using this unit as fact.",
+            )
+        ]
+
+    source_path = normalize_path(str(source_ref.get("path") or ""))
+    anchor = str(source_ref.get("anchor") or "").strip()
+    anchor_type = str(source_ref.get("anchor_type") or "").strip()
+    if not source_path or not anchor or not anchor_type:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} has an incomplete source_ref anchor.",
+                hint="Provide path, anchor, and anchor_type before using this unit as source-backed fact.",
+            )
+        ]
+
+    if anchor_type in COARSE_ANCHOR_TYPES:
+        result = git_command(root, ["log", f"{verified_commit}..HEAD", "--", source_path])
+        if result.stdout.strip():
+            return [
+                Finding(
+                    check="coarse-stale-source-anchor",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} has a coarse source ref whose file changed after verified_commit.",
+                    hint="Treat this as file-level stale risk, not precise anchor-level proof.",
+                )
+            ]
+        return []
+
+    if anchor_type not in SPAN_ANCHOR_TYPES:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} uses unsupported anchor_type `{anchor_type}`.",
+                hint="Use method, class, file, config-key, topic-string, or schema-field.",
+            )
+        ]
+
+    span = java_anchor_span(root, source_path, anchor, anchor_type)
+    if not span:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` could not be resolved in {source_path}.",
+                hint="Refresh the source ref or downgrade the unit to clue-only context.",
+            )
+        ]
+    start, end = span
+    result = git_command(root, ["log", f"{verified_commit}..HEAD", "-L", f"{start},{end}:{source_path}"])
+    if result.returncode != 0:
+        return [
+            Finding(
+                check="unverifiable-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` could not be checked with git -L.",
+                hint="Refresh the source ref or use a supported anchor granularity.",
+            )
+        ]
+    if result.stdout.strip():
+        return [
+            Finding(
+                check="stale-source-anchor",
+                severity="WARN",
+                path=unit.relative_path,
+                message=f"{unit.relative_path} anchor `{anchor}` changed after verified_commit.",
+                hint="Treat this unit as clue-only until the anchor is re-verified.",
+            )
+        ]
+    return []
+
+
+def knowledge_unit_stats(root: Path) -> dict[str, int]:
+    units = collect_knowledge_units(root)
+    missing_verified_commit_count = 0
+    unresolved_dirty_capture_count = 0
+    stale_knowledge_unit_count = 0
+    fresh_knowledge_unit_count = 0
+    for unit in units:
+        unit_missing_commit = False
+        unit_dirty = False
+        for source_ref in source_refs_for(unit):
+            if not str(source_ref.get("verified_commit") or "").strip():
+                missing_verified_commit_count += 1
+                unit_missing_commit = True
+            if source_ref.get("needs_commit_resolution") is True:
+                unresolved_dirty_capture_count += 1
+                unit_dirty = True
+        unit_stale = unit_freshness_expired(unit)
+        if unit_stale:
+            stale_knowledge_unit_count += 1
+        if not unit_stale and not unit_missing_commit and not unit_dirty:
+            fresh_knowledge_unit_count += 1
+    return {
+        "knowledge_unit_count": len(units),
+        "fresh_knowledge_unit_count": fresh_knowledge_unit_count,
+        "stale_knowledge_unit_count": stale_knowledge_unit_count,
+        "missing_verified_commit_count": missing_verified_commit_count,
+        "unresolved_dirty_capture_count": unresolved_dirty_capture_count,
+    }
 
 
 def load_registry(root: Path) -> ProjectRegistry:
@@ -271,15 +657,64 @@ def ready_modules_from_index(root: Path) -> dict[str, int]:
     return ready
 
 
+def module_context_text(root: Path, module_name: str) -> str:
+    context_path = root / ".llm-wiki" / "modules" / module_name
+    texts: list[str] = []
+    for name in STANDARD_MODULE_CONTEXT_FILES:
+        text = read_text(context_path / name)
+        if text:
+            texts.append(text)
+    return "\n\n".join(texts)
+
+
+def module_context_quality(root: Path, module_name: str) -> ModuleContextQuality:
+    text = module_context_text(root, module_name)
+    effective_length = effective_markdown_length(text)
+    placeholder_hits = len(MODULE_CONTEXT_PLACEHOLDER_RE.findall(text))
+    has_source_evidence = bool(MODULE_CONTEXT_EVIDENCE_RE.search(text))
+    thin = effective_length < MODULE_CONTEXT_MIN_EFFECTIVE_LENGTH or placeholder_hits >= 3
+    return ModuleContextQuality(
+        effective_length=effective_length,
+        placeholder_hits=placeholder_hits,
+        has_source_evidence=has_source_evidence,
+        thin=thin,
+    )
+
+
 def module_context_coverage(root: Path) -> dict[str, object]:
     pom_modules = parse_maven_modules(root)
     wiki_modules = list_wiki_module_contexts(root)
     missing_modules = [module for module in pom_modules if Path(module).name not in wiki_modules]
+    incomplete_modules: list[str] = []
+    thin_modules: list[str] = []
+    missing_evidence_modules: list[str] = []
+    ready_modules: list[str] = []
+    for module in pom_modules:
+        context_dir_name = Path(module).name
+        if context_dir_name not in wiki_modules:
+            continue
+        context_path = root / ".llm-wiki" / "modules" / context_dir_name
+        missing_files = [name for name in STANDARD_MODULE_CONTEXT_FILES if not (context_path / name).exists()]
+        if missing_files:
+            incomplete_modules.append(module)
+            continue
+        quality = module_context_quality(root, context_dir_name)
+        if quality.thin:
+            thin_modules.append(module)
+        if not quality.has_source_evidence:
+            missing_evidence_modules.append(module)
+        if not quality.thin and quality.has_source_evidence:
+            ready_modules.append(module)
     return {
         "pom_modules": pom_modules,
         "wiki_modules": sorted(wiki_modules),
         "missing_modules": missing_modules,
+        "incomplete_modules": incomplete_modules,
+        "thin_modules": thin_modules,
+        "missing_evidence_modules": missing_evidence_modules,
+        "ready_modules": ready_modules,
         "coverage_ratio": (len(pom_modules) - len(missing_modules)) / len(pom_modules) if pom_modules else None,
+        "ready_ratio": len(ready_modules) / len(pom_modules) if pom_modules else None,
     }
 
 
@@ -344,6 +779,49 @@ def check_module_context_coverage(root: Path) -> list[Finding]:
                     path=relative_context,
                     message=f"`{relative_context}/` is missing {', '.join(f'`{name}`' for name in missing_files)}.",
                     hint="Add the missing standard scoped-context files, even if their content starts as source-backed stub notes.",
+                )
+            )
+            continue
+
+        quality = module_context_quality(root, context_dir_name)
+        quality_issues: list[str] = []
+        if quality.thin:
+            quality_issues.append("placeholder or thin content")
+            findings.append(
+                Finding(
+                    check="thin-module-context",
+                    severity="WARN",
+                    path=relative_context,
+                    message=(
+                        f"`{relative_context}/` has all standard files, but the effective content is only "
+                        f"{quality.effective_length} characters or still contains placeholder text."
+                    ),
+                    hint="Replace placeholder text with source-backed module responsibility, entry points, rules, and verification notes.",
+                )
+            )
+        if not quality.has_source_evidence:
+            quality_issues.append("missing source evidence")
+            findings.append(
+                Finding(
+                    check="missing-module-evidence",
+                    severity="WARN",
+                    path=relative_context,
+                    message=f"`{relative_context}/` does not contain recognizable source anchors or implementation evidence.",
+                    hint="Reference concrete files, classes, configs, endpoints, topics, tables, or tests that support the module context.",
+                )
+            )
+        if ready_line and quality_issues:
+            findings.append(
+                Finding(
+                    check="contradictory-module-context",
+                    severity="ERROR",
+                    path=".llm-wiki/modules/index.md",
+                    line=ready_line,
+                    message=(
+                        f"Module index marks `{context_dir_name}` as ready, but `{relative_context}/` has "
+                        f"{' and '.join(quality_issues)}."
+                    ),
+                    hint="Downgrade the module index status until the scoped context contains real source-backed knowledge.",
                 )
             )
 
@@ -600,7 +1078,130 @@ def check_unresolved_project_ids(root: Path, paths: list[Path], registry: Projec
     return findings
 
 
-def run_checks(root: str | Path, paths: list[str | Path] | None = None) -> list[Finding]:
+def check_knowledge_unit_metadata(root: Path, phase: str) -> list[Finding]:
+    findings: list[Finding] = []
+    for unit in collect_knowledge_units(root):
+        origin = str(unit.data.get("origin") or "").strip()
+        source_refs = source_refs_for(unit)
+        if not origin:
+            findings.append(
+                Finding(
+                    check="missing-origin",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} does not declare `origin`; treating it as legacy clue-only context.",
+                    hint="Set origin to captured, legacy, or imported.",
+                )
+            )
+            origin = "legacy"
+        if unit_freshness_expired(unit):
+            findings.append(
+                Finding(
+                    check="freshness-expired",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is past its verified_at + ttl_days freshness window.",
+                    hint="Treat this unit as clue-only until the source refs are re-verified.",
+                )
+            )
+        if origin == "captured" and not source_refs:
+            findings.append(
+                Finding(
+                    check="missing-source-refs",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is a captured knowledge unit without source_refs.",
+                    hint="Add source_refs or downgrade the unit to legacy/imported clue-only context.",
+                )
+            )
+
+        for source_ref in source_refs:
+            verified_commit = str(source_ref.get("verified_commit") or "").strip()
+            if not verified_commit:
+                findings.append(
+                    Finding(
+                        check="missing-verified-commit",
+                        severity="ERROR" if origin == "captured" else "WARN",
+                        path=unit.relative_path,
+                        message=f"{unit.relative_path} has a source_ref without verified_commit.",
+                        hint="Resolve the source ref to a real commit; legacy/imported units remain clue-only until then.",
+                    )
+                )
+            else:
+                findings.extend(check_source_ref_freshness(root, unit, source_ref))
+            if source_ref.get("needs_commit_resolution") is True:
+                findings.append(
+                    Finding(
+                        check="unresolved-dirty-capture",
+                        severity="ERROR" if phase == "finish" else "WARN",
+                        path=unit.relative_path,
+                        message=f"{unit.relative_path} still has source_refs[*].needs_commit_resolution=true.",
+                        hint="Run project-finish/post-commit resolution or keep the unit as provisional clue-only context.",
+                    )
+                )
+
+        confidence = str(unit.data.get("confidence") or "").strip()
+        confirmed_by = str(unit.data.get("confirmed_by") or "").strip()
+        if confidence == "human-confirmed" and confirmed_by != "human":
+            findings.append(
+                Finding(
+                    check="suspicious-confidence",
+                    severity="WARN",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} claims human-confirmed confidence without confirmed_by: human.",
+                    hint="Add an explicit human confirmation record or lower the confidence.",
+                )
+            )
+    return findings
+
+
+def check_edge_details(root: Path, registry: ProjectRegistry) -> list[Finding]:
+    findings: list[Finding] = []
+    for unit in collect_knowledge_units(root):
+        if not unit.relative_path.startswith(".llm-wiki/project-graph/details/"):
+            continue
+        if unit.data.get("kind") != "cross-service-contract":
+            continue
+        edge_id = str(unit.data.get("edge_id") or "").strip()
+        if not edge_id:
+            findings.append(
+                Finding(
+                    check="missing-edge-detail-id",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} is a cross-service contract detail without edge_id.",
+                    hint="Set edge_id to the Project Graph edge this detail extends.",
+                )
+            )
+        elif edge_id not in registry.edge_ids:
+            findings.append(
+                Finding(
+                    check="invalid-edge-detail-id",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=f"{unit.relative_path} references unknown Project Graph edge {edge_id}.",
+                    hint="Use an existing edge id from .llm-wiki/project-graph/edges.md.",
+                )
+            )
+
+        duplicated_fields = sorted(field for field in EDGE_DETAIL_FORBIDDEN_FIELDS if field in unit.data)
+        if duplicated_fields:
+            findings.append(
+                Finding(
+                    check="duplicated-edge-detail-fact",
+                    severity="ERROR",
+                    path=unit.relative_path,
+                    message=(
+                        f"{unit.relative_path} duplicates Project Graph fact field(s): "
+                        f"{', '.join(f'`{field}`' for field in duplicated_fields)}."
+                    ),
+                    hint="Keep fact fields in edges.md and use detail pages only for explanation and provenance.",
+                )
+            )
+    return findings
+
+
+def run_checks(root: str | Path, paths: list[str | Path] | None = None, phase: str = "normal") -> list[Finding]:
     root_path = Path(root).resolve()
     registry = load_registry(root_path)
     if paths is None:
@@ -615,6 +1216,8 @@ def run_checks(root: str | Path, paths: list[str | Path] | None = None) -> list[
     findings.extend(check_leaked_local_paths(root_path, candidate_paths))
     findings.extend(check_unresolved_project_ids(root_path, candidate_paths, registry))
     findings.extend(check_module_context_coverage(root_path))
+    findings.extend(check_knowledge_unit_metadata(root_path, phase))
+    findings.extend(check_edge_details(root_path, registry))
     return findings
 
 
@@ -636,10 +1239,7 @@ def exit_code(findings: list[Finding], fail_on: str) -> int:
     return 1 if any(finding.severity == "ERROR" for finding in findings) else 0
 
 
-PLACEHOLDER_RE = re.compile(
-    r"\b(TODO|TBD|placeholder|fill this|to be completed)\b|待补充|占位|稍后完善|请输入",
-    re.IGNORECASE,
-)
+PLACEHOLDER_RE = MODULE_CONTEXT_PLACEHOLDER_RE
 
 
 def effective_markdown_length(text: str) -> int:
@@ -691,9 +1291,15 @@ def build_score_report(root: str | Path) -> ScoreReport:
     graph_edges = wiki_root / "project-graph" / "edges.md"
     cross_refs = wiki_root / "cross-refs" / "index.md"
     module_coverage = module_context_coverage(root_path)
+    knowledge_stats = knowledge_unit_stats(root_path)
     pom_modules = module_coverage["pom_modules"]
     missing_modules = module_coverage["missing_modules"]
+    incomplete_modules = module_coverage["incomplete_modules"]
+    thin_modules = module_coverage["thin_modules"]
+    missing_evidence_modules = module_coverage["missing_evidence_modules"]
+    ready_modules = module_coverage["ready_modules"]
     coverage_ratio = module_coverage["coverage_ratio"]
+    ready_ratio = module_coverage["ready_ratio"]
 
     readme_effective_length = effective_markdown_length(read_text(readme))
     module_index_exists = modules_index.exists()
@@ -726,13 +1332,15 @@ def build_score_report(root: str | Path) -> ScoreReport:
         covered_module_count = len(pom_modules) - len(missing_modules)
         dimensions.append(
             ScoreDimension(
-                name="模块上下文覆盖率",
+                name="模块上下文成熟度",
                 max_score=20,
-                score=round(20 * coverage_ratio),
+                score=round(20 * (ready_ratio or 0)),
                 applicability="applicable",
                 source="root pom.xml and .llm-wiki/modules/",
                 message=(
                     f"Maven modules={len(pom_modules)}, wiki_module_contexts={covered_module_count}, "
+                    f"ready={len(ready_modules)}, thin={len(thin_modules)}, "
+                    f"missing_evidence={len(missing_evidence_modules)}, "
                     f"missing={len(missing_modules)}。"
                 ),
             )
@@ -806,6 +1414,11 @@ def build_score_report(root: str | Path) -> ScoreReport:
     if coverage_ratio is not None and missing_modules:
         fact_ids.append("module-context-coverage-incomplete")
         next_steps.append("补齐 Maven module 对应的 .llm-wiki/modules/<module>/ scoped context，不要只依赖 modules/index.md。")
+    if coverage_ratio is not None and (incomplete_modules or thin_modules or missing_evidence_modules):
+        fact_ids.append("module-context-quality-incomplete")
+        next_steps.append(
+            "逐个补齐 .llm-wiki/modules/<module>/ 的真实源码锚点、职责边界、入口、规则和验证记录，目录占位不算 ready。"
+        )
     if not source_index_exists:
         fact_ids.append("sources-registry-missing")
         next_steps.append("补齐 .llm-wiki/sources/registry.md，登记已摄入的 PRD、设计、日志或源码代理。")
@@ -827,7 +1440,16 @@ def build_score_report(root: str | Path) -> ScoreReport:
         "wiki_module_context_count": len(pom_modules) - len(missing_modules) if coverage_ratio is not None else None,
         "missing_module_context_count": len(missing_modules),
         "missing_module_context_modules": missing_modules,
+        "incomplete_module_context_count": len(incomplete_modules),
+        "incomplete_module_context_modules": incomplete_modules,
+        "ready_module_context_count": len(ready_modules) if ready_ratio is not None else None,
+        "ready_module_context_modules": ready_modules,
+        "thin_module_context_count": len(thin_modules),
+        "thin_module_context_modules": thin_modules,
+        "missing_module_evidence_count": len(missing_evidence_modules),
+        "missing_module_evidence_modules": missing_evidence_modules,
         "module_context_coverage_ratio": coverage_ratio,
+        "module_context_ready_ratio": ready_ratio,
         "source_index_exists": source_index_exists,
         "validator_errors": validator_errors,
         "validator_warnings": validator_warnings,
@@ -835,6 +1457,7 @@ def build_score_report(root: str | Path) -> ScoreReport:
         "graph_file_presence": graph_file_presence,
         "fact_ids": fact_ids,
     }
+    signals.update(knowledge_stats)
     return ScoreReport(
         score_version=SCORE_VERSION,
         score=total_score,
@@ -899,6 +1522,11 @@ def add_validate_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base", help="Git base ref for changed scan")
     parser.add_argument("--format", choices=["text", "json"], default="text")
     parser.add_argument("--fail-on", choices=["error", "warn"], default="error")
+    add_phase_argument(parser, "normal")
+
+
+def add_phase_argument(parser: argparse.ArgumentParser, default: str) -> None:
+    parser.add_argument("--phase", choices=PHASES, default=default, help="Lifecycle phase for severity policy")
 
 
 def run_validate_command(args: argparse.Namespace) -> int:
@@ -906,7 +1534,7 @@ def run_validate_command(args: argparse.Namespace) -> int:
     paths = None
     if args.changed or args.base:
         paths = collect_changed_paths(root, args.base)
-    findings = run_checks(root, paths)
+    findings = run_checks(root, paths, args.phase)
     if args.format == "json":
         print(json.dumps([asdict(finding) for finding in findings], ensure_ascii=False, indent=2))
     else:
@@ -926,7 +1554,7 @@ def run_score_command(args: argparse.Namespace) -> int:
 def run_report_command(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     paths = collect_changed_paths(root, args.base) if args.changed or args.base else None
-    findings = run_checks(root, paths)
+    findings = run_checks(root, paths, args.phase)
     score_report = build_score_report(root)
     if args.format == "json":
         print(
@@ -955,6 +1583,7 @@ def main(argv: list[str] | None = None) -> int:
     score_parser = subparsers.add_parser("score", help="Score .llm-wiki maturity")
     score_parser.add_argument("--root", default=".", help="Repository root")
     score_parser.add_argument("--format", choices=["text", "json"], default="text")
+    add_phase_argument(score_parser, "advisory")
     score_parser.set_defaults(handler=run_score_command)
 
     report_parser = subparsers.add_parser("report", help="Generate advisory .llm-wiki report")
@@ -963,6 +1592,7 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.add_argument("--changed", action="store_true", help="Scan changed Markdown files")
     report_parser.add_argument("--base", help="Git base ref for changed scan")
     report_parser.add_argument("--format", choices=["text", "json"], default="text")
+    add_phase_argument(report_parser, "advisory")
     report_parser.set_defaults(handler=run_report_command)
 
     args = parser.parse_args(normalize_argv(argv))

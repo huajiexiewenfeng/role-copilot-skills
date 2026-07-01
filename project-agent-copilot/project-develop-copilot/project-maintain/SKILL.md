@@ -143,6 +143,13 @@ A missing link is not always an error. Classify it by impact:
 | `project-graph-audit` | The user asks to check Project Graph edges/candidates, cross-project refs, remote anchors, registry mappings, cross-service links, or stale external contract verification. |
 | `base-graph-audit` | The user asks to check every project registered in a Base Graph, audit multi-project graph completeness, or verify whether project graphs can route across repositories. |
 | `project-graph-audit-all` | Alias for `base-graph-audit`. |
+| `wiki-prune` | Doctor reports stale, unreachable, unverifiable, low-value mirror, or unresolved dirty capture findings and the user wants a re-verify/prune plan. |
+
+### Wiki Prune Mode
+
+Use `wiki-prune` when LLM Wiki Doctor reports `freshness-expired`, `stale-source-anchor`, `coarse-stale-source-anchor`, `missing-verified-commit`, `unreachable-verified-commit`, `unverifiable-anchor`, `unresolved-dirty-capture`, low-value mirror content, or repeated placeholder context.
+
+Produce a re-verification list, downgrade stale evidence to clue-only, and suggest archive or prune actions. Do not automatically delete why/intent/dead-end knowledge. Do not rewrite semantic facts such as module responsibility, requirement scope, bug root cause, or Project Graph contracts without current source evidence and explicit approval.
 
 ## Delegated Project Graph Write Modes
 

@@ -134,6 +134,21 @@ Workflow:
 10. Before reporting a dashboard refresh complete, run the Progress Dashboard consistency checks: every distinct `flow_id` and `parent_flow_id`/child Flow Record discovered from `.llm-wiki` must have visible board cards for each eligible Flow Record row, matching `dashboardData.flowRecords` entries, and correct lane counts. Fix drift before returning.
 11. Offer upgrade routes only when useful: develop, fix, ingest, finish, review, evaluator, or Dolores.
 
+## Anti-Corruption Read Discipline
+
+Before using `.llm-wiki` content as project fact, downgrade any item with these signals to clue-only status:
+
+- `freshness-expired`
+- `stale-source-anchor`
+- `coarse-stale-source-anchor`
+- `missing-verified-commit`
+- `unreachable-verified-commit`
+- `unverifiable-anchor`
+- `source_refs[*].dirty_at_capture`
+- `source_refs[*].needs_commit_resolution`
+
+Clue-only content may guide where to look next, but it must not be presented as current fact. Prefer current source code, tests, configuration, runtime evidence, and source-verified Project Graph edges. If wiki content conflicts with current source evidence, state that source wins and that the wiki item needs re-verification.
+
 ## Mode / Entry Selection
 
 | Mode | Use when |

@@ -68,6 +68,10 @@ class DoctorFixture:
             ),
         )
 
+    def write_complete_module_context(self, module: str, content: str):
+        for name in ["README.md", "source-map.md", "architecture.md", "rules.md", "verification.md"]:
+            self.write(f".llm-wiki/modules/{module}/{name}", content)
+
     def findings(self):
         doctor = load_doctor()
         return doctor.run_checks(self.root, paths=None)
@@ -77,6 +81,18 @@ class DoctorFixture:
 
     def finding_checks(self):
         return {finding.check for finding in self.findings()}
+
+
+def init_git_repo(root: Path):
+    subprocess.run(["git", "init"], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+
+
+def git_commit_all(root: Path, message: str) -> str:
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, text=True, stdout=subprocess.PIPE, check=True).stdout.strip()
 
 
 class LlmWikiDoctorTest(unittest.TestCase):
@@ -281,6 +297,61 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertEqual("WARN", finding.severity)
         self.assertIn("verification.md", finding.message)
 
+    def test_thin_module_context_warns_when_standard_files_are_only_placeholders(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context("stream", "# Placeholder\n\nTODO: fill this module context.\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("thin-module-context", ".llm-wiki/modules/stream"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "thin-module-context")
+        self.assertEqual("WARN", finding.severity)
+
+    def test_missing_module_evidence_warns_when_context_has_no_source_anchor(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context(
+            "stream",
+            "\n".join(
+                [
+                    "# Stream",
+                    "",
+                    "This module owns stream lifecycle decisions and coordinates upstream and frontend refresh behavior.",
+                    "It records the module responsibility, domain rules, verification intent, and known operational risks.",
+                    "The notes are intentionally descriptive enough to avoid being a placeholder-only skeleton.",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("missing-module-evidence", ".llm-wiki/modules/stream"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "missing-module-evidence")
+        self.assertEqual("WARN", finding.severity)
+
+    def test_source_backed_module_context_does_not_warn_for_thin_or_missing_evidence(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write_complete_module_context(
+            "stream",
+            "\n".join(
+                [
+                    "# Stream",
+                    "",
+                    "Source anchors: src/main/java/com/example/StreamController.java, pom.xml, application.yml.",
+                    "StreamController exposes the stream search endpoint and delegates to StreamService for state lookup.",
+                    "Verification uses StreamControllerTest plus a manual ZLM hook replay against application.yml test config.",
+                    "Rules: payload online transitions must trigger a frontend refresh without rewriting unrelated stream URLs.",
+                ]
+            ),
+        )
+
+        checks = fixture.finding_checks()
+
+        self.assertNotIn("thin-module-context", checks)
+        self.assertNotIn("missing-module-evidence", checks)
+
     def test_contradictory_module_context_is_error_when_index_marks_ready_but_context_is_missing(self):
         fixture = self.with_fixture()
         fixture.write(
@@ -296,6 +367,22 @@ class LlmWikiDoctorTest(unittest.TestCase):
 
         self.assertIn(("contradictory-module-context", ".llm-wiki/modules/index.md"), fixture.finding_keys())
         self.assertEqual("ERROR", next(finding.severity for finding in findings if finding.check == "contradictory-module-context"))
+
+    def test_contradictory_module_context_is_error_when_ready_context_is_placeholder(self):
+        fixture = self.with_fixture()
+        fixture.write("pom.xml", "<project><modules><module>stream</module></modules></project>")
+        fixture.write(
+            ".llm-wiki/modules/index.md",
+            "| Module | Status |\n|---|---|\n| `stream` | scoped-context-ready |\n",
+        )
+        fixture.write_complete_module_context("stream", "# Stream\n\nTODO: fill this module context.\n")
+
+        findings = fixture.findings()
+
+        self.assertIn(("contradictory-module-context", ".llm-wiki/modules/index.md"), fixture.finding_keys())
+        finding = next(finding for finding in findings if finding.check == "contradictory-module-context")
+        self.assertEqual("ERROR", finding.severity)
+        self.assertIn("placeholder", finding.message)
 
     def test_module_context_checks_are_not_applicable_without_root_maven_modules(self):
         fixture = self.with_fixture()
@@ -414,6 +501,29 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertIn("module-context-coverage-incomplete", payload["signals"]["fact_ids"])
         self.assertLess(payload["score"], 85)
 
+    def test_score_reports_module_context_readiness_not_only_directory_coverage(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            "pom.xml",
+            "<project><modules><module>stream</module></modules></project>",
+        )
+        fixture.write(".llm-wiki/README.md", "# Wiki\n\nThis wiki has enough prose for orientation and status tracking.\n")
+        fixture.write(".llm-wiki/modules/index.md", "| Module | Status |\n|---|---|\n| stream | active |\n")
+        fixture.write(".llm-wiki/sources/registry.md", "| Source | Status |\n|---|---|\n| pom.xml | active |\n")
+        fixture.write_complete_module_context("stream", "# Stream\n\nTODO: fill this module context.\n")
+
+        result = run_doctor_cli(fixture.root, "score", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(1, payload["signals"]["pom_module_count"])
+        self.assertEqual(1, payload["signals"]["wiki_module_context_count"])
+        self.assertEqual(0, payload["signals"]["ready_module_context_count"])
+        self.assertEqual(1, payload["signals"]["thin_module_context_count"])
+        self.assertEqual(["stream"], payload["signals"]["thin_module_context_modules"])
+        self.assertIn("module-context-quality-incomplete", payload["signals"]["fact_ids"])
+        self.assertLess(payload["score"], 85)
+
     def test_report_text_is_chinese_and_always_exits_zero(self):
         fixture = self.with_fixture()
         fixture.write(".llm-wiki/requirements/foo.md", "# Requirement\n\nSee C:\\Users\\admin\\secret\\note.md\n")
@@ -436,6 +546,362 @@ class LlmWikiDoctorTest(unittest.TestCase):
         self.assertIn("findings", payload)
         self.assertIn("score", payload)
         self.assertEqual(1, payload["score"]["score_version"])
+
+    def test_validate_accepts_phase_argument(self):
+        fixture = self.with_fixture()
+
+        result = run_doctor_cli(fixture.root, "validate", "--all", "--phase", "normal", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_report_accepts_advisory_phase_and_exits_zero(self):
+        fixture = self.with_fixture()
+
+        result = run_doctor_cli(fixture.root, "report", "--phase", "advisory", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('"findings"', result.stdout)
+
+    def test_knowledge_unit_parser_scans_only_structured_paths(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: knowledge-20260630-001",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/com/example/FooService.java",
+                    "    anchor: FooService#save",
+                    "    anchor_type: method",
+                    "    verified_at: 2026-06-30",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                    "This is an explanation.",
+                ]
+            ),
+        )
+        fixture.write(
+            ".llm-wiki/modules/foo/README.md",
+            "---\nkind: why-decision\n---\nShould not be parsed as a knowledge unit.\n",
+        )
+        doctor = load_doctor()
+
+        units = doctor.collect_knowledge_units(fixture.root)
+
+        self.assertEqual(1, len(units))
+        self.assertEqual("knowledge-20260630-001", units[0].data["unit_id"])
+        self.assertEqual("src/main/java/com/example/FooService.java", units[0].data["source_refs"][0]["path"])
+
+    def test_captured_unit_missing_verified_commit_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("missing-verified-commit", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+        self.assertEqual("ERROR", next(f.severity for f in findings if f.check == "missing-verified-commit"))
+
+    def test_imported_unit_missing_verified_commit_is_warn(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/legacy.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k2",
+                    "kind: dead-end",
+                    "origin: imported",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertEqual("WARN", next(f.severity for f in findings if f.check == "missing-verified-commit"))
+
+    def test_suspicious_confidence_warns_without_human_confirmation(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "confidence: human-confirmed",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("suspicious-confidence", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_finish_phase_unresolved_dirty_capture_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "    needs_commit_resolution: true",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        result = run_doctor_cli(fixture.root, "validate", "--all", "--phase", "finish", "--format", "json", "--fail-on", "error")
+
+        self.assertEqual(1, result.returncode)
+        self.assertIn("unresolved-dirty-capture", result.stdout)
+
+    def test_freshness_expired_warns_when_verified_at_plus_ttl_is_past(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "verified_at: 2020-01-01",
+                    "ttl_days: 90",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("freshness-expired", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+        self.assertEqual("WARN", next(f.severity for f in findings if f.check == "freshness-expired"))
+
+    def test_score_reports_knowledge_unit_signals(self):
+        fixture = self.with_fixture()
+        fixture.write(".llm-wiki/README.md", "# Wiki\n\nThis wiki has enough prose for orientation and status tracking.\n")
+        fixture.write(".llm-wiki/modules/index.md", "| Module | Status |\n|---|---|\n| app | active |\n")
+        fixture.write(".llm-wiki/sources/registry.md", "| Source | Status |\n|---|---|\n| pom.xml | active |\n")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "verified_at: 2020-01-01",
+                    "ttl_days: 90",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        result = run_doctor_cli(fixture.root, "score", "--format", "json")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(1, payload["signals"]["knowledge_unit_count"])
+        self.assertEqual(1, payload["signals"]["stale_knowledge_unit_count"])
+        self.assertEqual(1, payload["signals"]["missing_verified_commit_count"])
+
+    def test_edge_detail_unknown_edge_id_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/project-graph/details/edge-20260629-999.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: edge-detail-20260629-999",
+                    "kind: cross-service-contract",
+                    "origin: captured",
+                    "edge_id: edge-20260629-999",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        findings = fixture.findings()
+
+        self.assertIn(("invalid-edge-detail-id", ".llm-wiki/project-graph/details/edge-20260629-999.md"), fixture.finding_keys())
+        self.assertEqual("ERROR", next(f.severity for f in findings if f.check == "invalid-edge-detail-id"))
+
+    def test_edge_detail_repeated_fact_field_is_error(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/project-graph/details/edge-20260623-001.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: edge-detail-20260623-001",
+                    "kind: cross-service-contract",
+                    "origin: captured",
+                    "edge_id: edge-20260623-001",
+                    "from_project: smart-go-device-mapping",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("duplicated-edge-detail-fact", ".llm-wiki/project-graph/details/edge-20260623-001.md"), fixture.finding_keys())
+
+    def test_unreachable_verified_commit_warns(self):
+        fixture = self.with_fixture()
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    "    verified_commit: 0123456789abcdef0123456789abcdef01234567",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("unreachable-verified-commit", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_stale_source_anchor_warns_when_java_method_changes(self):
+        fixture = self.with_fixture()
+        init_git_repo(fixture.root)
+        fixture.write("src/main/java/Foo.java", "class Foo {\n  void bar() {\n    int x = 1;\n  }\n}\n")
+        verified_commit = git_commit_all(fixture.root, "initial")
+        fixture.write("src/main/java/Foo.java", "class Foo {\n  void bar() {\n    int x = 2;\n  }\n}\n")
+        git_commit_all(fixture.root, "change method")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: Foo#bar",
+                    "    anchor_type: method",
+                    f"    verified_commit: {verified_commit}",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertIn(("stale-source-anchor", ".llm-wiki/knowledge/decision.md"), fixture.finding_keys())
+
+    def test_file_anchor_uses_coarse_staleness_signal_when_file_changed(self):
+        fixture = self.with_fixture()
+        init_git_repo(fixture.root)
+        fixture.write("src/main/java/Foo.java", "class Foo {}\n")
+        verified_commit = git_commit_all(fixture.root, "initial")
+        fixture.write("src/main/java/Foo.java", "class Foo { int x = 1; }\n")
+        git_commit_all(fixture.root, "change file")
+        fixture.write(
+            ".llm-wiki/knowledge/decision.md",
+            "\n".join(
+                [
+                    "---",
+                    "schema_version: 1",
+                    "unit_id: k1",
+                    "kind: why-decision",
+                    "origin: captured",
+                    "source_refs:",
+                    "  - path: src/main/java/Foo.java",
+                    "    anchor: src/main/java/Foo.java",
+                    "    anchor_type: file",
+                    f"    verified_commit: {verified_commit}",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        checks = fixture.finding_checks()
+
+        self.assertIn("coarse-stale-source-anchor", checks)
+        self.assertNotIn("stale-source-anchor", checks)
 
     def test_project_id_matching_uses_token_boundaries_and_aliases(self):
         fixture = self.with_fixture()
