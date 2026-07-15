@@ -1,4 +1,4 @@
-﻿# Change Brief
+# Change Brief
 
 Read `north-star.md` and `flow-record.md` first. Change Brief is the lightweight internal OpenSpec-style mechanism for Project Develop Copilot.
 
@@ -93,7 +93,7 @@ Use this compact shape:
 
 ## Sources
 
-- 
+-
 
 ## Scope
 
@@ -103,7 +103,7 @@ Use this compact shape:
 
 ## Acceptance
 
-- 
+-
 
 ## Plan
 
@@ -136,11 +136,11 @@ Use this compact shape:
 
 ## Open Questions
 
-- 
+-
 
 ## Notes
 
-- 
+-
 ```
 
 The selected output language controls headings, prose, summaries, and notes.

@@ -12,8 +12,8 @@
 
 ## Context Lookup Order
 
-1. Locate project root and `.llm-wiki/index.md`.
-2. Read `.llm-wiki/modules/*` and `.llm-wiki/ingest/index.md` to identify relevant domains and source proxies.
+1. Locate project root and `.llm-wiki/` root; treat `.llm-wiki/index.md` as optional.
+2. Read available wiki entrypoints such as `.llm-wiki/README.md`, `.llm-wiki/index.md` when present, `.llm-wiki/modules/*`, and `.llm-wiki/ingest/index.md` to identify relevant domains and source proxies.
 3. Search requirement, bug, source, artifact, and working-context pages for the user's topic terms.
 4. Assemble a Project Context Pack with exact evidence pages and confidence.
 5. Return possible next routes only after the read-only answer: continue discussion, ingest missing docs, create Change Brief, create Bug Brief, review scope, or run Lifecycle Quality Review.

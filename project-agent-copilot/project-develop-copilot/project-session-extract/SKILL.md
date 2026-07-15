@@ -48,11 +48,11 @@ Use when the user asks to:
 
 Example triggers:
 
-- "鎶婁箣鍓嶇殑 session 鎬荤粨涓€涓嬪鍏?wiki"
-- "浠庤繖娈靛巻鍙茶亰澶╅噷鎻愬彇鍚庣画鍙彫鍥炵殑涓婁笅鏂?
-- "鍚屼簨涔嬪墠鍜?AI 鑱婁簡寰堝锛屽府鎴戞矇娣€鍒?llm-wiki"
-- "鎴戜笉鎯抽噸鏂板紑 session锛屾兂鎶婃棫浼氳瘽鐨勫ソ鍐呭鍐呭寲"
-- "鎶婅繖涓?conversation / transcript / chat history 鎻愮函鎴愪笂涓嬫枃鎽樿"
+- "把之前的 session 总结一下导入 wiki"
+- "从这段历史聊天里提取后续可召回的上下文"
+- "同事之前和 AI 聊了很多，帮我沉淀到 llm-wiki"
+- "我不想重新开 session，想把旧会话的好内容内化"
+- "把这个 conversation / transcript / chat history 提纯成上下文摘要"
 
 ## When Not to Use
 
@@ -214,24 +214,25 @@ Default template:
 For the first preview, keep it brief:
 
 ```text
-鎴戜粠杩欐鍘嗗彶 session 涓彁鍙栧埌杩欎簺鍊欓€変笂涓嬫枃锛?
-寤鸿瀵煎叆:
+我从这段历史 session 中提取到这些候选上下文：
+建议导入：
 1. ...
 2. ...
 
-鍙€夊鍏?
+可选导入：
 1. ...
 
-涓嶅缓璁鍏?
+不建议导入：
 - ...
 
-涓嬩竴姝?
-璇峰憡璇夋垜瑕佷繚鐣欏摢浜涙潯鐩€備綘閫夊畾鍚庯紝鎴戜細鍏堟暣鐞嗘垚 Session Digest Markdown 鑽夌锛屼笉浼氱洿鎺ュ啓鍏?`.llm-wiki`銆?```
+下一步：
+请告诉我要保留哪些条目。你选定后，我会先整理成 Session Digest Markdown 草稿，不会直接写入 `.llm-wiki`。
+```
 
 For Markdown draft preview:
 
 ```text
-涓嬮潰鏄嫙鍐欏叆鐨?Session Digest 鑽夌銆傝纭鏄惁鍐欏叆 `.llm-wiki/session-digests/<id>.md`銆?
+下面是拟写入的 Session Digest 草稿。请确认是否写入 .llm-wiki/session-digests/<id>.md。
 <markdown draft>
 ```
 

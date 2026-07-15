@@ -30,17 +30,17 @@ Use when the user asks to:
 
 Example triggers:
 
-- "鍩轰簬杩欎釜椤圭洰鐨?llm wiki 鍥炵瓟"
-- "浠庨」鐩?wiki 閲屾壘涓€涓嬭繖涓渶姹?
-- "杩欎釜鍔熻兘涔嬪墠鏈変粈涔堝紑鍙戞枃妗?
-- "甯垜鎵惧埌鐩稿叧 requirement / bug / working-context"
-- "鍏堟妸涓婁笅鏂囨壘鍑烘潵锛屾垜浠璁轰竴涓?
+- "基于这个项目的 llm wiki 回答"
+- "从项目 wiki 里找一下这个需求"
+- "这个功能之前有什么开发文档"
+- "帮我找到相关 requirement / bug / working-context"
+- "先把上下文找出来，我们讨论一下"
 - "what does the project wiki say about this module"
 - "find related project docs before we decide what to do"
-- "杩欎釜椤圭洰閲岄潰锛屽ぇ鐤?API 閫傞厤锛岀洿鎾浉鍏崇殑鍐呭鏈夊摢浜涳紵濡備綍閫氳繃 API 璋冪敤"
-- "鏇存柊椤圭洰鐪嬫澘"
-- "鍒锋柊 dashboard"
-- "鍚屾椤圭洰鐘舵€侀〉"
+- "这个项目里面，大疆 API 适配，直播相关的内容有哪些？如何通过 API 调用"
+- "更新项目看板"
+- "刷新 dashboard"
+- "同步项目状态页"
 - "update progress dashboard"
 
 ## When Not to Use
@@ -63,7 +63,7 @@ Example triggers:
 
 1. Resolve project root.
 2. Resolve optional shared references from `../references/` or local `references/`. If `lifecycle-router.md`, `flow-record.md`, or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep answers read-only unless the user explicitly asks to write dashboard state.
-3. Confirm `.llm-wiki` exists.
+3. Confirm `.llm-wiki/` exists. The directory itself proves that the project has a local LLM Wiki; `.llm-wiki/index.md` is an optional navigation page, not the existence sentinel.
 4. Decide whether this is read-only project query or full lifecycle work.
 5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, session-digests, log.
 6. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
@@ -81,7 +81,8 @@ Read as needed:
 - `../references/base-graph.md`
 - `../references/progress-dashboard.md`
 - `../references/flow-record.md`
-- `.llm-wiki/index.md`
+- `.llm-wiki/README.md`
+- `.llm-wiki/index.md` when present
 - `.llm-wiki/modules/index.md`
 - `.llm-wiki/ingest/index.md`
 - `.llm-wiki/artifacts/index.md`
@@ -107,8 +108,8 @@ Reference availability policy:
 Workflow:
 
 1. Resolve project root and `.llm-wiki` root.
-2. Read `.llm-wiki/index.md` first.
-3. Search lightweight indexes before deep-reading pages.
+2. Build the wiki entrypoint map from the available targets under `.llm-wiki/`. Prefer `.llm-wiki/README.md` and `.llm-wiki/index.md` when present, but do not declare the wiki absent just because either file is missing.
+3. Search lightweight indexes and directory entrypoints before deep-reading pages.
 4. Read the smallest relevant set of wiki pages.
 5. For cross-service questions, use Project Graph lookup before inferring remote ownership or contracts:
    - Read `.llm-wiki/cross-refs/index.md` as the pin layer.

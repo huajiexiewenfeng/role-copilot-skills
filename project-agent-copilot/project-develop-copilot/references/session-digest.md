@@ -59,19 +59,20 @@ By default it must not:
 First preview should stay lightweight:
 
 ```text
-鎴戜粠杩欐鍘嗗彶 session 涓彁鍙栧埌杩欎簺鍊欓€変笂涓嬫枃锛?
-寤鸿瀵煎叆:
+我从这段历史 session 中提取到这些候选上下文：
+建议导入：
 1. ...
 2. ...
 
-鍙€夊鍏?
+可选导入：
 1. ...
 
-涓嶅缓璁鍏?
+不建议导入：
 - ...
 
-涓嬩竴姝?
-璇峰憡璇夋垜瑕佷繚鐣欏摢浜涙潯鐩€備綘閫夊畾鍚庯紝鎴戜細鍏堟暣鐞嗘垚 Context Digest Markdown 鑽夌锛屼笉浼氱洿鎺ュ啓鍏?`.llm-wiki`銆?```
+下一步：
+请告诉我要保留哪些条目。你选定后，我会先整理成 Session Digest Markdown 草稿，不会直接写入 `.llm-wiki`。
+```
 
 Use simple buckets:
 
