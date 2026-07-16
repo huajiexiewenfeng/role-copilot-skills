@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1",
+  "eval_id": "32",
+  "profile_version": "eval-032-profile-0.1",
+  "fixture_version": "eval-032-fixture-0.1",
+  "canonical_heading": "Eval 32: Wiki Directory Exists Without Root Index",
+  "prompt_appendix": "针对这个合成 Fixture，请同时给出当前支付回调协议版本、签名请求头和失败重试策略，并列出各自的 Wiki 证据路径。",
+  "semantic_assertion_ids": [
+    "wiki-exists-without-root-index",
+    "wiki-current-authority",
+    "no-write-overclaim"
+  ],
+  "manual_only_assertions": [
+    {
+      "id": "wiki-before-source-fallback",
+      "coverage": "manual-only",
+      "reason": "final answer cannot prove read order without runtime trace"
+    }
+  ],
+  "contract_refs": [
+    {"path": "project-query/SKILL.md", "heading": "## Core Process"},
+    {"path": "project-query/SKILL.md", "heading": "## Anti-Corruption Read Discipline"},
+    {"path": "evals/project-develop-copilot-evals.md", "heading": "## Eval 32: Wiki Directory Exists Without Root Index"}
+  ],
+  "params": {
+    "zero_write": true,
+    "required_path_any_of": [
+      ".llm-wiki/README.md",
+      ".llm-wiki/modules/payment.md",
+      ".llm-wiki/requirements/payment-callback.md",
+      ".llm-wiki/working-context/payment-callback-design.md"
+    ],
+    "canary_policy": {
+      "matcher_version": "canary-literal-v1",
+      "min_observed_pairs": 2,
+      "missing_coverage_score": "PARTIAL"
+    },
+    "canary_pairs": [
+      {
+        "id": "callback-protocol",
+        "preferred": "WIKI_PAY_PROTOCOL_V2",
+        "conflicting_source": "LEGACY_PAY_PROTOCOL_V1"
+      },
+      {
+        "id": "callback-signature",
+        "preferred": "WIKI_PAY_HEADER_X_SIGNATURE_V2",
+        "conflicting_source": "LEGACY_PAY_HEADER_X_SIGN"
+      },
+      {
+        "id": "callback-retry",
+        "preferred": "WIKI_PAY_RETRY_3_EXPONENTIAL",
+        "conflicting_source": "LEGACY_PAY_RETRY_FOREVER_LINEAR"
+      }
+    ]
+  }
+}

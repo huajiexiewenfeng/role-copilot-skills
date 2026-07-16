@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Develop Copilot Black-box Judge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "model", "temperature", "prompt_version", "profile_version",
+    "evidence_match_mode", "evidence_normalizer_version", "assertions"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "model": {"type": "string", "minLength": 1},
+    "temperature": {"type": ["number", "null"]},
+    "prompt_version": {"const": "judge-prompt-0.1"},
+    "profile_version": {"type": "string", "minLength": 1},
+    "evidence_match_mode": {"const": "normalized-substring"},
+    "evidence_normalizer_version": {"const": "quote-normalization-v1"},
+    "assertions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "verdict", "evidence_ref", "evidence_quote", "reason"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "verdict": {"enum": ["pass", "fail", "uncertain"]},
+          "adopted": {"enum": ["preferred", "source", "neither", "uncertain"]},
+          "evidence_ref": {"enum": ["answer.md", "diff.patch"]},
+          "evidence_quote": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

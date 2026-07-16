@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Develop Copilot Human Patch Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decision", "diagnosis_sha256", "freeze_manifest_sha256", "decided_by", "decided_at", "note"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "decision": {"enum": ["approve", "revise", "reject"]},
+    "diagnosis_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "freeze_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decided_by": {"type": "string", "minLength": 1},
+    "decided_at": {"type": "string", "minLength": 1},
+    "note": {"type": "string", "minLength": 1}
+  }
+}

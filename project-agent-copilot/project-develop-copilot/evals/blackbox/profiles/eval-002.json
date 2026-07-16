@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.1",
+  "eval_id": "2",
+  "profile_version": "eval-002-profile-0.1",
+  "fixture_version": "eval-002-fixture-0.1",
+  "canonical_heading": "Eval 2: Project Wiki Question Routes To Read-Only Query",
+  "prompt_appendix": "针对这个合成 Fixture，请同时给出当前直播需求标识、已知 Bug 症状和关键设计决策，并列出各自的 Wiki 证据路径。",
+  "semantic_assertion_ids": [
+    "read-only-context-pack",
+    "evidence-inference-separated",
+    "no-completion-overclaim"
+  ],
+  "manual_only_assertions": [],
+  "contract_refs": [
+    {"path": "project-query/SKILL.md", "heading": "## Core Process"},
+    {"path": "project-query/SKILL.md", "heading": "## Anti-Corruption Read Discipline"},
+    {"path": "evals/project-develop-copilot-evals.md", "heading": "## Eval 2: Project Wiki Question Routes To Read-Only Query"}
+  ],
+  "params": {
+    "zero_write": true,
+    "required_path_any_of": [
+      ".llm-wiki/requirements/live-stream.md",
+      ".llm-wiki/bugs/live-stream-freeze.md",
+      ".llm-wiki/working-context/live-stream-design.md"
+    ],
+    "canary_policy": {
+      "matcher_version": "canary-literal-v1",
+      "min_observed_pairs": 2,
+      "missing_coverage_score": "PARTIAL"
+    },
+    "canary_pairs": [
+      {
+        "id": "live-requirement",
+        "preferred": "WIKI_LIVE_REQ_R2026",
+        "conflicting_source": "LEGACY_LIVE_REQ_R2019"
+      },
+      {
+        "id": "live-bug-symptom",
+        "preferred": "WIKI_LIVE_BUG_AUDIO_CONTINUES",
+        "conflicting_source": "LEGACY_LIVE_BUG_VIDEO_CONTINUES"
+      },
+      {
+        "id": "live-design-authority",
+        "preferred": "WIKI_LIVE_DESIGN_SERVER_AUTH",
+        "conflicting_source": "LEGACY_LIVE_DESIGN_CLIENT_AUTH"
+      }
+    ]
+  }
+}
