@@ -34,6 +34,7 @@ QUOTE_NORMALIZER_VERSION = "quote-normalization-v1"
 CANARY_MATCHER_VERSION = "canary-literal-v1"
 MAX_UNTRACKED_FILE_BYTES = 65_536
 MAX_UNTRACKED_TOTAL_BYTES = 1_048_576
+DEFAULT_WORKSPACE = REPO_ROOT.parent / "project-develop-copilot-eval-workspace"
 
 
 class EvalError(RuntimeError):
@@ -84,6 +85,17 @@ class EvalProfile:
         return tuple(item.id for item in self.manual_only_assertions)
 
 
+@dataclass(frozen=True)
+class GitResult:
+    returncode: int
+    stdout: bytes
+    stderr: bytes
+
+    @property
+    def stdout_text(self) -> str:
+        return self.stdout.decode("utf-8", errors="strict")
+
+
 def read_json_object(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -92,6 +104,110 @@ def read_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise EvalError(f"JSON root must be an object: {path}")
     return value
+
+
+def write_json(path: Path, value: Mapping[str, Any]) -> None:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        indent=2,
+    )
+    temporary = path.with_name(f"{path.name}.tmp")
+    temporary.write_bytes((payload + "\n").encode("utf-8"))
+    os.replace(temporary, path)
+
+
+def git_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["LC_ALL"] = "C"
+    env["LANG"] = "C"
+    return env
+
+
+def run_git(cwd: Path, args: Sequence[str], check: bool = True) -> GitResult:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        env=git_environment(),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=False,
+        check=False,
+    )
+    result = GitResult(completed.returncode, completed.stdout, completed.stderr)
+    if check and result.returncode != 0:
+        message = result.stderr.decode("utf-8", errors="replace").strip()
+        raise EvalError(f"git {' '.join(args)} failed: {message}")
+    return result
+
+
+def _sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _is_reparse_point(file_stat: os.stat_result) -> bool:
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return bool(getattr(file_stat, "st_file_attributes", 0) & reparse_flag)
+
+
+def fingerprint_tree(root: Path) -> str:
+    resolved_root = root.resolve(strict=True)
+    if not resolved_root.is_dir():
+        raise EvalError(f"fingerprint root must be a directory: {root}")
+
+    files: list[tuple[str, Path, os.stat_result]] = []
+
+    def visit(directory: Path, relative_parts: tuple[str, ...]) -> None:
+        try:
+            entries = list(os.scandir(directory))
+        except OSError as error:
+            raise EvalError(f"cannot scan fingerprint root {directory}: {error}") from error
+        for entry in entries:
+            if entry.name in {".git", "__pycache__"}:
+                continue
+            try:
+                file_stat = entry.stat(follow_symlinks=False)
+            except OSError as error:
+                raise EvalError(f"cannot stat fingerprint entry {entry.path}: {error}") from error
+            if stat.S_ISLNK(file_stat.st_mode) or _is_reparse_point(file_stat):
+                continue
+            parts = (*relative_parts, entry.name)
+            path = Path(entry.path)
+            if stat.S_ISDIR(file_stat.st_mode):
+                visit(path, parts)
+            elif stat.S_ISREG(file_stat.st_mode):
+                normalized_path = unicodedata.normalize("NFC", "/".join(parts))
+                files.append((normalized_path, path, file_stat))
+
+    visit(resolved_root, ())
+    serialized_entries = [
+        {
+            "kind": "file",
+            "path": relative_path,
+            "sha256": _sha256_file(path),
+            "size": file_stat.st_size,
+        }
+        for relative_path, path, file_stat in sorted(files, key=lambda item: item[0])
+    ]
+    payload = json.dumps(
+        serialized_entries,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return _sha256_bytes(payload)
 
 
 def _require_string(value: Mapping[str, Any], key: str) -> str:
@@ -248,3 +364,131 @@ def extract_canonical_prompt(profile: EvalProfile) -> str:
     if fence_start < 0 or content_start <= 0 or fence_end < 0:
         raise EvalError(f"Input prompt fence missing for Eval {profile.eval_id}")
     return section[content_start:fence_end].strip()
+
+
+def _utc_timestamp(value: datetime) -> str:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise EvalError("Run time must be timezone-aware")
+    utc = value.astimezone(timezone.utc).replace(microsecond=0)
+    return utc.isoformat().replace("+00:00", "Z")
+
+
+def _workspace_is_inside_repository(workspace: Path) -> bool:
+    try:
+        workspace.relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _skill_identity(skill_path: Path | None) -> dict[str, Any]:
+    if skill_path is None:
+        return {
+            "fingerprint_sha256": None,
+            "path": None,
+            "status": "unverified",
+        }
+    resolved = skill_path.expanduser().resolve(strict=True)
+    if not resolved.is_dir():
+        raise EvalError(f"Skill path must be a directory: {skill_path}")
+    return {
+        "fingerprint_sha256": fingerprint_tree(resolved),
+        "path": str(resolved),
+        "status": "verified",
+    }
+
+
+def prepare_run(
+    eval_id: str,
+    workspace: Path,
+    skill_path: Path | None,
+    run_id: str | None = None,
+    now: Callable[[], datetime] | None = None,
+) -> Path:
+    profile = load_profile(eval_id)
+    resolved_workspace = workspace.expanduser().resolve(strict=False)
+    if _workspace_is_inside_repository(resolved_workspace):
+        raise EvalError(f"Run workspace must be outside the source repository: {workspace}")
+
+    instant = (now or (lambda: datetime.now(timezone.utc)))()
+    timestamp = _utc_timestamp(instant)
+    expected_prefix = f"eval-{int(profile.eval_id):03d}-"
+    if run_id is None:
+        run_id = (
+            f"{expected_prefix}{instant.astimezone(timezone.utc):%Y%m%dT%H%M%SZ}-"
+            f"{uuid.uuid4().hex[:8]}"
+        )
+    if not re.fullmatch(
+        rf"{re.escape(expected_prefix)}[A-Za-z0-9][A-Za-z0-9._-]*", run_id
+    ):
+        raise EvalError(
+            f"Run ID must be one separator-free {expected_prefix}* path component"
+        )
+
+    identity = _skill_identity(skill_path)
+    skill_source_commit = run_git(REPO_ROOT, ["rev-parse", "HEAD"]).stdout_text.strip()
+    run_path = resolved_workspace / run_id
+    if run_path.exists():
+        raise EvalError(f"Run directory already exists: {run_path}")
+
+    resolved_workspace.mkdir(parents=True, exist_ok=True)
+    run_path.mkdir()
+    fixture_path = run_path / "fixture"
+    shutil.copytree(profile.fixture_root, fixture_path, symlinks=True)
+
+    canonical_prompt = extract_canonical_prompt(profile)
+    effective_prompt = f"{canonical_prompt}\n\n{profile.prompt_appendix}\n"
+    prompt_bytes = effective_prompt.encode("utf-8")
+    (run_path / "prompt.md").write_bytes(prompt_bytes)
+    (run_path / "answer.md").write_bytes(b"")
+
+    run_git(fixture_path, ["init"])
+    run_git(fixture_path, ["config", "core.autocrlf", "false"])
+    run_git(fixture_path, ["add", "--all"])
+    run_git(
+        fixture_path,
+        [
+            "-c",
+            "user.name=Blackbox Eval",
+            "-c",
+            "user.email=blackbox-eval@example.invalid",
+            "-c",
+            "commit.gpgSign=false",
+            "commit",
+            "-m",
+            "Baseline fixture",
+        ],
+    )
+    fixture_baseline_commit = run_git(
+        fixture_path, ["rev-parse", "HEAD"]
+    ).stdout_text.strip()
+    if run_git(fixture_path, ["status", "--porcelain"]).stdout:
+        raise EvalError("Fixture repository is not clean after baseline commit")
+
+    write_json(
+        run_path / "run.json",
+        {
+            "agent_identity": None,
+            "answer_sha256": None,
+            "canonical_prompt_sha256": _sha256_bytes(canonical_prompt.encode("utf-8")),
+            "created_at": timestamp,
+            "effective_prompt_sha256": _sha256_bytes(prompt_bytes),
+            "eval_id": profile.eval_id,
+            "fixture_baseline_commit": fixture_baseline_commit,
+            "fixture_version": profile.fixture_version,
+            "freeze_manifest_sha256": None,
+            "grader_version": GRADER_VERSION,
+            "needs_review_reasons": [],
+            "needs_review_since": None,
+            "patch_decision_history": [],
+            "profile_version": profile.profile_version,
+            "prompt_appendix": profile.prompt_appendix,
+            "run_id": run_id,
+            "run_status": "READY_FOR_AGENT",
+            "schema_version": RUN_SCHEMA_VERSION,
+            "skill_identity": identity,
+            "skill_source_commit": skill_source_commit,
+            "unresolved_assertion_ids": [],
+        },
+    )
+    return run_path
