@@ -101,6 +101,19 @@ def _require_string(value: Mapping[str, Any], key: str) -> str:
     return item
 
 
+def validate_judge_adoption_fields(judge: Mapping[str, Any]) -> None:
+    assertions = judge.get("assertions", ())
+    for assertion in assertions:
+        assertion_id = assertion.get("id")
+        is_canary_adoption = isinstance(assertion_id, str) and assertion_id.startswith(
+            "canary-adoption:"
+        )
+        if is_canary_adoption and "adopted" not in assertion:
+            raise EvalError("adopted is required for canary-adoption assertions")
+        if not is_canary_adoption and "adopted" in assertion:
+            raise EvalError("adopted is forbidden for non-canary assertions")
+
+
 def load_profile(eval_id: str) -> EvalProfile:
     normalized_id = str(int(eval_id))
     path = BLACKBOX_ROOT / "profiles" / f"eval-{int(normalized_id):03d}.json"

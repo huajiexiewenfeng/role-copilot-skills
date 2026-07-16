@@ -74,3 +74,45 @@ class BlackboxEvalAssetTest(unittest.TestCase):
                 self.assertNotIn(pair.conflicting_source, wiki)
                 self.assertEqual(1, legacy.count(pair.conflicting_source))
                 self.assertNotIn(pair.preferred, legacy)
+
+    def test_judge_adoption_fields_accept_the_conditional_contract(self):
+        judge = {
+            "assertions": [
+                {
+                    "id": "canary-adoption:live-requirement",
+                    "adopted": "preferred",
+                },
+                {"id": "read-only-context-pack"},
+            ]
+        }
+
+        self.runner.validate_judge_adoption_fields(judge)
+
+    def test_judge_adoption_fields_reject_missing_adoption_for_canary_assertion(self):
+        judge = {
+            "assertions": [
+                {"id": "canary-adoption:live-requirement"},
+            ]
+        }
+
+        with self.assertRaisesRegex(
+            self.runner.EvalError,
+            "adopted is required for canary-adoption assertions",
+        ):
+            self.runner.validate_judge_adoption_fields(judge)
+
+    def test_judge_adoption_fields_reject_adoption_for_other_assertion(self):
+        judge = {
+            "assertions": [
+                {
+                    "id": "read-only-context-pack",
+                    "adopted": "preferred",
+                },
+            ]
+        }
+
+        with self.assertRaisesRegex(
+            self.runner.EvalError,
+            "adopted is forbidden for non-canary assertions",
+        ):
+            self.runner.validate_judge_adoption_fields(judge)
