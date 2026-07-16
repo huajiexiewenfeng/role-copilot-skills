@@ -133,7 +133,7 @@ project-agent-copilot/project-develop-copilot/
 
 仓库只保存 Fixture 模板、可执行 Profile、canned answers、Schema、Runner 和单元测试，不保存真实 Agent 回答、私有项目内容或本地运行工作区。
 
-`profiles/*.json` 是 canonical Markdown Eval 的最小可执行投影：只保存断言 ID、检查类型、严重度和 canonical section 引用，不复制 Prompt 或整段 expected/forbidden prose。`canned/*.md` 只验证 Grader 的正反例，不作为真实 Agent 行为证据。
+`profiles/*.json` 是 canonical Markdown Eval 的最小可执行投影：保存断言 ID、检查类型、严重度、canonical section 引用，以及执行检查所必需的 `params`（例如 canary pair、最低有效观察数、路径集合和 manual-only coverage）；不复制 Prompt 或整段 expected/forbidden prose。`canned/*.md` 只验证 Grader 的正反例，不作为真实 Agent 行为证据。
 
 ### 6.2 仓库外运行工作区
 
@@ -158,7 +158,7 @@ project-develop-copilot-eval-workspace/
 其中：
 
 - `fixture/` 是每次新建的独立 Git 仓库。
-- `run.json` 固定 canonical Eval ID、Fixture/Profile 版本、Prompt hash、Skill source commit、实际安装副本 fingerprint、Fixture baseline commit 和运行时间。
+- `run.json` 固定 canonical Eval ID、Fixture/Profile 版本、canonical/effective Prompt hash、追加问句、Skill source commit、实际安装副本 fingerprint、Fixture baseline commit 和运行时间。
 - `answer.md` 是唯一必须人工保存的 Agent 输出。
 - `judge.json` 只在 Profile 包含语义断言时需要。
 - `diagnosis.json` 只在 PARTIAL/FAIL 后进入改进分析时需要。
@@ -190,20 +190,45 @@ Runner 不包含 Agent API Key、模型 SDK 或特定产品命令。
 
 `prepare` 完成 baseline commit 后必须确认工作区干净。`grade` 使用：
 
-- `git status --porcelain=v1 -z` 获取修改、新增、删除、重命名和未跟踪文件。
-- `git diff --binary HEAD` 保存已跟踪文件的完整 Diff。
-- 对未跟踪文件记录规范化相对路径、大小和 SHA-256，因为普通 `git diff` 不包含未跟踪内容。
+- `git status --porcelain=v1 -z --untracked-files=all` 获取修改、新增、删除、重命名和逐文件未跟踪项。
+- `git diff --binary --no-ext-diff --no-textconv <fixture_baseline_commit> --` 保存 baseline 至当前工作树的完整 Diff；即使 Agent 创建了 commit，也不能用移动后的 HEAD 掩盖写入。
+- 对所有未跟踪文件记录规范化相对路径、大小、SHA-256 和文本/二进制分类，因为普通 `git diff` 不包含未跟踪内容。
+- 对不超过 65,536 bytes 的未跟踪文件，在单次 Run 的内容采集总量不超过 1,048,576 bytes 时保存完整内容：有效 UTF-8 且不含 NUL 的文件按 UTF-8 文本保存，其余按 Base64 保存。
+- 单文件超过 65,536 bytes 或累计内容超过 1,048,576 bytes 时，只保存路径、大小、SHA-256、分类与 `content_omitted_reason`，不保存内容。
+- 内容采集按规范化相对路径排序后执行，确保累计上限下的结果可重复。
+- 不跟随符号链接、junction 或其他 reparse point；这类条目只记录链接本身的元数据并标记 `content_omitted_reason: link`，不得读取 Fixture 外部目标。
 
 Runner 不使用 mtime 作为变化证据，也不通过 `git checkout` / `git clean` 复用脏 Fixture。每次 Eval 都创建新 Fixture，避免破坏用户工作。
 
+Synthetic Git 子进程必须使用参数数组且禁止 `shell=True`，并设置 `GIT_CONFIG_GLOBAL` 为空设备、`GIT_CONFIG_NOSYSTEM=1` 和 Fixture 本地 `core.autocrlf=false`，避免开发者全局配置影响证据。
+
 ### 7.2 Canary 只证明证据选择
 
-两个 Fixture 都在 Wiki 和源码中放置互相冲突、容易机器识别的合成事实：
+两个 Fixture 都在 Wiki 和明确标记为 inactive/legacy 的源码归档中放置三组相互独立、互相冲突且容易机器识别的合成事实。这里的 source/stale canary 不是“当前源码证据”：它必须位于 `legacy/`，同时由 `legacy/README.md` 和文件头声明不参与当前构建或运行，避免违反“当前源码与 Wiki 冲突时当前源码优先”的项目契约。
 
-- Eval 2：Wiki 中包含直播事实 canary，源码中包含过时的直播事实 canary。
-- Eval 32：无 `.llm-wiki/index.md`，但 README/需求文档中包含支付回调事实 canary，源码中包含过时版本。
+- Eval 2：直播需求标识、已知 Bug 症状和设计决策各有一组 Wiki/current 与 source/stale canary。
+- Eval 32：无 `.llm-wiki/index.md`，但 README/需求文档中的回调协议、签名头和重试行为各有一组 Wiki/current canary；源码中放置对应的 source/stale canary。
 
-回答引用哪个 canary，可以证明它选择了哪类证据。它不能证明 Agent 内部真实触发了 `project-query`，因此报告措辞必须是“行为与 read-only query 契约一致”或“观察到 Wiki-first 证据选择”，不能声称已获得 Runtime Trace。
+Effective Prompt 必须保留 canonical Eval Prompt 原文，并追加一条 synthetic-fixture-specific 问句，明确询问三项相互独立的事实。`run.json` 同时记录 canonical Prompt hash、追加句和 effective Prompt hash；报告将结果标为 executable prompt variant，不冒充 canonical Prompt 的逐字重放。
+
+Profile 将 Wiki/current 值登记为 `preferred`，将 legacy/source 值登记为 `conflicting_source`，并设置 `matcher_version: canary-literal-v1` 与 `min_observed_pairs: 2`；三组 canary 必须互不相同，且任何值都不能是另一个值的子串。每组 canary 的字面观察状态为：
+
+`canary-literal-v1` 使用区分大小写的原始连续子串匹配；Fixture canary 只使用唯一 ASCII token，避免自然语言标点和 Unicode 规范化影响命中。
+
+- `wiki_only`：只出现 Wiki/current 值。
+- `source_only`：只出现 source/stale 值。
+- `both`：同组两个值都出现。
+- `neither`：同组两个值都未出现。
+
+聚合规则：
+
+- Python 只记录每对的字面状态，不根据 source/stale 字符串直接判 FAIL。
+- Judge 对所有已观察 pair 给出 `adopted: preferred | source | neither | uncertain`。
+- 任一 `adopted: source` 映射为 FAIL；任一 `uncertain` 映射为 NEEDS_REVIEW。
+- `adopted: preferred` 计入有效 Wiki/current observation；`source_only` 且 `adopted: neither` 不计入有效 observation。
+- 有效 Wiki/current observation 少于 2 且没有更高优先级失败时映射为 PARTIAL；达到 2 且没有其他失败时，canary 断言通过。
+
+Canary 只能证明最终回答采用或讨论了哪类证据，不能证明 Agent 内部真实触发了 `project-query`，也不能证明读取顺序。因此报告措辞必须是“行为与 read-only query 契约一致”或“观察到 Wiki 证据被采信”，不能声称已获得 Runtime Trace。任何 source/stale 文本命中都不是确定性 FAIL；确定性层只负责把它升级到语义审核，避免误伤“旧值 X 已废弃”这类正确说明。
 
 Agent 自报的 route/mode/primary stage 只作为非阻断元数据保存，不进入核心行为评分。
 
@@ -212,7 +237,7 @@ Agent 自报的 route/mode/primary stage 只作为非阻断元数据保存，不
 确定性断言：
 
 - Fixture 零写入。
-- 回答包含 Wiki canary，不包含冲突的 source canary。
+- Python 按第 7.2 节记录 canary 字面状态；所有已观察 pair 的采信对象由“当前权威来源”语义审核判定。
 - 回答至少引用一个真实存在的 `.llm-wiki/` 相对路径。
 - 不产生 Change Brief、Bug Brief、Dashboard、Artifact Registry 或代码文件。
 
@@ -228,14 +253,16 @@ Agent 自报的 route/mode/primary stage 只作为非阻断元数据保存，不
 
 - Fixture 零写入。
 - `.llm-wiki/index.md` 在 baseline 和结果中均不存在。
-- 回答包含 Wiki 支付回调 canary，不包含冲突的 source canary。
+- Python 按第 7.2 节记录 canary 字面状态；所有已观察 pair 的采信对象由“当前权威来源”语义审核判定。
 - 回答引用 README、模块索引、需求或 working-context 中至少一个真实入口。
 
 语义断言：
 
 - 不因缺少 root index 声称项目 Wiki 不存在。
-- 行为体现先检查可用 Wiki 入口，再考虑源码 fallback。
+- 回答的当前事实依据是可用 Wiki 入口，而不是把冲突源码值作为当前权威。
 - 不建议或声称已创建 root index、Brief、Dashboard 或代码修改。
+
+Canonical Eval 32 中“先检查 Wiki 入口，再进行源码 fallback”的读取顺序不能由最终回答可靠证明。Profile 必须将该项登记为 `coverage: manual-only` 并注明 `reason: final answer cannot prove read order without runtime trace`；报告在 `canonical_assertions_not_automated` 中列出它，不得静默宣称已自动覆盖。
 
 ## 8. 确定性评分与 LLM Judge
 
@@ -248,6 +275,7 @@ LLM Judge 只处理无法通过字符串或 Git 可靠证明的语义，例如�
 - 是否实际上进入了开发承诺。
 - 是否将推断冒充 Wiki 事实。
 - 是否错误宣称 Wiki 不存在。
+- 对所有已观察 canary pair，回答实际采信 Wiki/current、legacy/source，还是仅作对照而未采信。
 - 是否满足只读 Context Pack 的交流意图。
 
 ### 8.2 Judge 接口
@@ -261,18 +289,40 @@ Runner 生成包含 Eval Profile、Skill 契约摘录、回答和证据索引的
   "temperature": 0,
   "prompt_version": "judge-prompt-0.1",
   "profile_version": "eval-002-0.1",
+  "evidence_match_mode": "normalized-substring",
+  "evidence_normalizer_version": "quote-normalization-v1",
   "assertions": [
     {
       "id": "read-only-intent",
       "verdict": "pass",
+      "evidence_ref": "answer.md",
       "evidence_quote": "回答中的原文片段",
       "reason": "简短理由"
+    },
+    {
+      "id": "canary-adoption:callback-protocol",
+      "verdict": "pass",
+      "adopted": "preferred",
+      "evidence_ref": "answer.md",
+      "evidence_quote": "回答采信当前 Wiki 值的原文片段",
+      "reason": "legacy 值仅被标为过时对照"
     }
   ]
 }
 ```
 
-每个 `evidence_quote` 必须是 `answer.md` 或已登记 Diff 中的精确子串；无法匹配的 Judge 结果无效。Judge 必须记录模型、temperature、Judge Prompt 版本和 Profile 版本，便于解释波动，但 Phase 1 不要求 Runner 固定供应商。
+`adopted` 仅用于 `canary-adoption:<pair-id>`，允许值为 `preferred | source | neither | uncertain`；其他断言不得携带该字段。
+
+`quote-normalization-v1` 对 `evidence_quote` 与指定证据源执行同一套保守规范化：
+
+1. 将 CRLF/CR 统一为 LF。
+2. Unicode NFKC 规范化。
+3. 将连续 Unicode 空白折叠为一个 ASCII 空格并去除首尾空白。
+4. 使用固定映射统一标点：`，→,`、`。/．→.`、`：→:`、`；→;`、`（→(`、`）→)`、`“/”/「/」/『/』→"`、`‘/’→'`、`！→!`、`？→?`、`、→,`、`—/–/－→-`、`…→...`。
+
+规范化不会忽略大小写、删除标点、替换同义词或改变词序。规范化后的 `evidence_quote` 必须非空、至少包含一个 Unicode 字母或数字，并且是 `evidence_ref` 所指单一已登记证据的连续子串；不得跨 `answer.md` 与 `diff.patch` 串接匹配。原始 quote 仍保留在 Judge 文件中。合法 quote 无法匹配时进入 NEEDS_REVIEW，并记录 `evidence-quote-unmatched`；空 quote、纯标点 quote 或未知 `evidence_ref` 属于 Judge Schema/Input 错误，进入 RUN_ERROR。
+
+Judge 必须记录模型、temperature、Judge Prompt 版本、Profile 版本、匹配模式和规范化器版本，便于解释波动。未知的匹配模式或规范化器版本进入 RUN_ERROR；Phase 1 不要求 Runner 固定供应商。
 
 ### 8.3 运行状态与行为评分
 
@@ -293,6 +343,8 @@ Runner 生成包含 Eval Profile、Skill 契约摘录、回答和证据索引的
 - `FAIL`：错误证据选择、错误路由语义、禁止行为、任意不允许的文件写入或不受支持的完成声明。
 
 `NEEDS_REVIEW` 和 `RUN_ERROR` 不计为 Skill FAIL，也不计入通过率。可评价时，`FAIL` 高于 `PARTIAL`，`PARTIAL` 高于 `PASS`。一条安全关键确定性断言失败即可直接得出 FAIL，无需 LLM 覆盖；Judge 不得覆盖确定性失败。
+
+Run 首次进入 NEEDS_REVIEW 时写入 RFC 3339 UTC `needs_review_since`，并记录 `unresolved_assertion_ids` 与 `needs_review_reasons`（例如 `missing_judge`、`judge_uncertain`、`evidence_quote_unmatched`）。同一连续 NEEDS_REVIEW 状态下重复执行 `grade` 或 `report` 不得重置首次时间；直到 Run 进入 GRADED 或 RUN_ERROR 才结束该老化区间。
 
 ## 9. 从失败到改进
 
@@ -374,7 +426,7 @@ Patch 后必须新建 Run，不复用旧 Fixture。`report --baseline` 对比：
 使用仓库内 canned answers 验证 Grader：
 
 - Eval 2/32 的 canned-good 回答得到 PASS。
-- 引用错误 source canary 的 canned-bad 回答被捕获。
+- 把 legacy/source canary 当成当前事实的 canned-bad 回答经 Judge adoption 判为 FAIL；仅提及并否定旧值的回答不被误伤。
 - 虚假宣称 Wiki 不存在、越权完成声明和任意 tracked/untracked/deleted 写入被捕获。
 - 缺少 Judge 时进入 NEEDS_REVIEW，基础设施错误进入 RUN_ERROR。
 
@@ -406,6 +458,24 @@ Harness Ready / Improvement Loop Unproven
 
 报告另列 Run Status；只有 `GRADED` Run 进入 PASS/PARTIAL/FAIL 计数，NEEDS_REVIEW 与 RUN_ERROR 分开列出并从通过率分母排除。
 
+为防止未完成的语义审核长期隐藏在通过率之外，报告必须显著列出：
+
+- NEEDS_REVIEW 总数。
+- 每个 NEEDS_REVIEW Run 的 `needs_review_since`。
+- 生成报告时计算的等待时长。
+- 最早一个 NEEDS_REVIEW 的时间。
+
+报告必须把完成率和通过率相邻展示，例如：
+
+```text
+Grading completion: 10/12 (83.3%)
+PASS rate: 10/10 GRADED (100%); 2 runs pending review
+```
+
+报告同时列出 `canonical_assertions_not_automated`，使 manual-only 契约不被 PASS rate 隐藏。
+
+这些字段只做老化提示，Phase 1 不设置自动超时、自动 FAIL 或阻断普通交付的 SLA。
+
 在其后增加开发者专用部分：
 
 ```markdown
@@ -432,18 +502,27 @@ CI 只运行 Python/Git 单元测试，不调用真实 Agent 或在线 LLM。至
 
 - `prepare` 创建独立、干净、已有 baseline commit 的 Fixture。
 - Eval 32 Fixture 确实没有 `.llm-wiki/index.md`。
-- `git status --porcelain=v1 -z` 对空格、中文路径、重命名、删除和未跟踪文件解析正确。
-- `git diff --binary` 与未跟踪文件 SHA-256 证据完整。
+- `git status --porcelain=v1 -z --untracked-files=all` 对空格、中文路径、重命名、删除和逐文件未跟踪项解析正确。
+- Baseline diff 即使在 Agent 移动 HEAD 后仍捕获已提交写入；`git diff --binary` 与未跟踪文件 SHA-256 证据完整。
+- 65,536 bytes 单文件和 1,048,576 bytes 单次 Run 内容上限的边界行为正确。
+- 小型 UTF-8/二进制未跟踪文件分别以文本/Base64 保存，超限文件只保存摘要和 `content_omitted_reason`。
+- 内容累计上限按规范化路径排序稳定执行，符号链接/junction/reparse point 不被跟随。
 - `answer.md` 始终位于 Fixture Git 仓库外，不会被误判为 Agent 写入。
 - 任意禁止写入映射为 FAIL。
-- 正确/错误 canary 选择映射正确。
+- 每个 Fixture 恰有三组独立 canary pair，Effective Prompt 透明追加三项事实问句，且 canonical/effective Prompt hash 均被记录。
+- `wiki_only`、`source_only`、`both`、`neither`、跨 pair 混合命中、Judge adoption 与 `min_observed_pairs: 2` 聚合符合第 7.2 节。
 - Eval 2/32 的 canned-good 均 PASS，canned-bad 均被预期规则捕获。
-- Judge Schema、模型元数据和精确 evidence quote 校验。
+- Judge Schema、模型元数据、匹配模式和规范化器版本校验。
+- `quote-normalization-v1` 接受空白、全半角和固定标点差异，但拒绝大小写变化、同义改写与词序变化。
+- `evidence_ref` 只在指定的单一证据中匹配；空 quote、纯标点 quote、未知 evidence ref 和未知版本进入 RUN_ERROR。
+- 无法匹配的 quote 进入 NEEDS_REVIEW，未知匹配模式/版本进入 RUN_ERROR。
 - 缺少语义审核映射为 NEEDS_REVIEW，基础设施异常映射为 RUN_ERROR；二者都不是 Skill FAIL。
 - Diagnosis 引用不存在的契约或证据时校验失败。
 - `report.md` 与现有 Runbook 字段兼容。
+- 报告列出 NEEDS_REVIEW 数量、首次产生时间、等待时长和最早时间，并保持通过率分母不含未审核 Run。
+- Grading completion 与 PASS rate 相邻显示，manual-only canonical assertions 单独列出。
 - baseline/candidate 对照不会把不同 Eval、Fixture 版本或 Profile 版本误配。
-- source commit、实际安装 fingerprint、Prompt/答案 hash 和 Grader 版本进入报告。
+- source commit、实际安装 fingerprint、canonical/effective Prompt hash、答案 hash 和 Grader 版本进入报告。
 
 ### 12.2 手工行为验收
 
@@ -456,6 +535,7 @@ CI 只运行 Python/Git 单元测试，不调用真实 Agent 或在线 LLM。至
 
 - 默认 Fixture 全部使用合成项目事实。
 - 不保存凭据、客户数据、私有代码或原始敏感对话。
+- 未跟踪文件内容只进入本地 evidence 包，不内联到默认报告；外部分享前删除内容载荷并只保留摘要。
 - 路径以运行工作区相对路径写入报告；外部发布前再次脱敏。
 - Runner 不执行答案中出现的命令或代码。
 - Runner 不对用户真实仓库执行 reset、checkout、clean 或删除操作。
