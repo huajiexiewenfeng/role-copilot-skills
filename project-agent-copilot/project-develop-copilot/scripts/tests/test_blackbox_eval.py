@@ -368,6 +368,41 @@ class BlackboxEvalEvidenceTest(unittest.TestCase):
         )
         self.assertNotIn("must not be captured", json.dumps(entry))
 
+    def test_untracked_capture_rejects_link_in_parent_path(self):
+        fixture = self.root / "fixture-nested-link"
+        fixture.mkdir()
+        target = self.root / "outside-directory"
+        target.mkdir()
+        (target / "secret.txt").write_text(
+            "must not be captured through a parent link\n", encoding="utf-8"
+        )
+        link = fixture / "link-dir"
+        if os.name == "nt":
+            completed = subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False,
+                check=False,
+            )
+            if completed.returncode != 0:
+                self.fail(
+                    "junction unavailable: "
+                    + completed.stderr.decode("utf-8", errors="replace")
+                )
+            self.addCleanup(os.rmdir, link)
+        else:
+            os.symlink(target, link, target_is_directory=True)
+            self.addCleanup(link.unlink)
+
+        with self.assertRaisesRegex(
+            self.runner.EvalError, "link-like untracked path component"
+        ):
+            self.runner.collect_untracked_content(
+                fixture, ["link-dir/secret.txt"]
+            )
+
     def test_evidence_keeps_status_and_untracked_content_outside_fixture(self):
         run_path, fixture, baseline = self.make_run({"tracked.txt": b"before\n"})
         (fixture / "tracked.txt").write_text("after\n", encoding="utf-8")
@@ -398,6 +433,25 @@ class BlackboxEvalEvidenceTest(unittest.TestCase):
         for artifact in ("answer.md", "run.json", "evidence.json", "diff.patch"):
             self.assertTrue((run_path / artifact).exists())
             self.assertFalse((fixture / artifact).exists())
+
+    def test_evidence_disables_optional_locks_and_preserves_git_index(self):
+        run_path, fixture, _ = self.make_run({"tracked.txt": b"unchanged\n"})
+        tracked = fixture / "tracked.txt"
+        tracked_stat = tracked.stat()
+        os.utime(
+            tracked,
+            ns=(tracked_stat.st_atime_ns, tracked_stat.st_mtime_ns + 2_000_000_000),
+        )
+        index = fixture / ".git" / "index"
+        fixed_time_ns = 946_684_800_000_000_000
+        os.utime(index, ns=(fixed_time_ns, fixed_time_ns))
+        before = (index.read_bytes(), index.stat().st_mtime_ns)
+
+        self.runner.collect_git_evidence(run_path)
+
+        after = (index.read_bytes(), index.stat().st_mtime_ns)
+        self.assertEqual("0", self.runner.git_environment()["GIT_OPTIONAL_LOCKS"])
+        self.assertEqual(before, after)
 
     def test_evidence_uses_baseline_diff_after_agent_moves_head(self):
         run_path, fixture, baseline = self.make_run({"binary.bin": b"\x00before\n"})

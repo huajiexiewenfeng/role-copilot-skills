@@ -15,6 +15,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 
@@ -122,16 +123,25 @@ def git_environment() -> dict[str, str]:
     env = os.environ.copy()
     env["GIT_CONFIG_GLOBAL"] = os.devnull
     env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
     env["LC_ALL"] = "C"
     env["LANG"] = "C"
     return env
 
 
-def run_git(cwd: Path, args: Sequence[str], check: bool = True) -> GitResult:
+def run_git(
+    cwd: Path,
+    args: Sequence[str],
+    check: bool = True,
+    env_overrides: Mapping[str, str] | None = None,
+) -> GitResult:
+    env = git_environment()
+    if env_overrides is not None:
+        env.update(env_overrides)
     completed = subprocess.run(
         ["git", *args],
         cwd=cwd,
-        env=git_environment(),
+        env=env,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -247,11 +257,22 @@ def collect_untracked_content(
     manifest: list[dict[str, Any]] = []
     captured_bytes = 0
     for relative_path in normalized_paths:
-        path = fixture_path.joinpath(*relative_path.split("/"))
-        try:
-            file_stat = path.lstat()
-        except OSError as error:
-            raise EvalError(f"cannot stat untracked entry {path}: {error}") from error
+        parts = relative_path.split("/")
+        path = fixture_path
+        file_stat = None
+        for index, part in enumerate(parts):
+            path = path / part
+            try:
+                file_stat = path.lstat()
+            except OSError as error:
+                raise EvalError(
+                    f"cannot stat untracked entry {path}: {error}"
+                ) from error
+            if (
+                path.is_symlink() or _is_reparse_point(file_stat)
+            ) and index < len(parts) - 1:
+                raise EvalError(f"link-like untracked path component: {path}")
+        assert file_stat is not None
         if path.is_symlink() or _is_reparse_point(file_stat):
             try:
                 target = os.readlink(path)
@@ -643,22 +664,32 @@ def collect_git_evidence(run_path: Path) -> dict[str, Any]:
     baseline = _require_string(run, "fixture_baseline_commit")
     fixture_path = run_path / "fixture"
 
-    status_raw = run_git(
-        fixture_path,
-        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
-    ).stdout
-    current_head = run_git(fixture_path, ["rev-parse", "HEAD"]).stdout_text.strip()
-    diff = run_git(
-        fixture_path,
-        [
-            "diff",
-            "--binary",
-            "--no-ext-diff",
-            "--no-textconv",
-            baseline,
-            "--",
-        ],
-    ).stdout
+    with TemporaryDirectory(prefix="evidence-index-", dir=run_path) as temporary:
+        evidence_index = Path(temporary) / "index"
+        shutil.copyfile(fixture_path / ".git" / "index", evidence_index)
+        env_overrides = {"GIT_INDEX_FILE": str(evidence_index)}
+        status_raw = run_git(
+            fixture_path,
+            ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            env_overrides=env_overrides,
+        ).stdout
+        current_head = run_git(
+            fixture_path,
+            ["rev-parse", "HEAD"],
+            env_overrides=env_overrides,
+        ).stdout_text.strip()
+        diff = run_git(
+            fixture_path,
+            [
+                "diff",
+                "--binary",
+                "--no-ext-diff",
+                "--no-textconv",
+                baseline,
+                "--",
+            ],
+            env_overrides=env_overrides,
+        ).stdout
 
     statuses = parse_porcelain_v1_z(status_raw)
     untracked_paths = [
