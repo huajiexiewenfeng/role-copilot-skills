@@ -351,6 +351,269 @@ class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
         self.assertEqual(plain, self_reported)
 
 
+class BlackboxEvalJudgeTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.profile = self.runner.load_profile("2")
+        self.answer = (
+            "Canonical answer clause. "
+            + " ".join(pair.preferred for pair in self.profile.canary_pairs)
+        )
+        self.observations = self.runner.observe_canary_pairs(
+            self.answer, self.profile
+        )
+        self.evidence_registry = {
+            "answer.md": {
+                "kind": "text",
+                "content": self.answer,
+                "quotable": True,
+            },
+            "diff.patch": {
+                "kind": "text",
+                "content": "diff-only evidence clause",
+                "quotable": True,
+            },
+        }
+
+    def valid_judge(self):
+        assertions = [
+            {
+                "id": assertion_id,
+                "verdict": "pass",
+                "evidence_ref": "answer.md",
+                "evidence_quote": "Canonical answer clause.",
+                "reason": "The answer supplies the required semantic behavior.",
+            }
+            for assertion_id in self.profile.semantic_assertion_ids
+        ]
+        assertions.extend(
+            {
+                "id": f"canary-adoption:{pair.id}",
+                "verdict": "pass",
+                "adopted": "preferred",
+                "evidence_ref": "answer.md",
+                "evidence_quote": pair.preferred,
+                "reason": "The preferred authority was adopted.",
+            }
+            for pair in self.profile.canary_pairs
+        )
+        return {
+            "schema_version": self.runner.JUDGE_SCHEMA_VERSION,
+            "model": "fixture-judge",
+            "temperature": 0,
+            "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+            "profile_version": self.profile.profile_version,
+            "evidence_match_mode": self.runner.QUOTE_MATCH_MODE,
+            "evidence_normalizer_version": (
+                self.runner.QUOTE_NORMALIZER_VERSION
+            ),
+            "assertions": assertions,
+        }
+
+    def grade(self, judge, deterministic_assertions=()):
+        return self.runner.grade_judge(
+            judge,
+            self.profile,
+            self.evidence_registry,
+            self.observations,
+            deterministic_assertions,
+        )
+
+    @staticmethod
+    def by_id(results, assertion_id):
+        return next(item for item in results if item.id == assertion_id)
+
+    def test_quote_normalization_matches_only_fixed_transformations(self):
+        evidence = (
+            "ＡＢＣ，第一句。\r\n\u2003\u2003第二句：“值”——完成！"
+        )
+        quote = 'ABC,第一句. \n 第二句:"值"--完成!'
+
+        self.assertEqual(
+            'ABC,第一句. 第二句:"值"--完成!',
+            self.runner.normalize_quote_v1(evidence),
+        )
+        self.assertTrue(self.runner.quote_matches_evidence(quote, evidence))
+
+    def test_quote_matching_rejects_nonliteral_transformations(self):
+        evidence = "Alpha first clause, exact middle clause, final clause."
+        rejected = (
+            "alpha first clause, exact middle clause, final clause.",
+            "Alpha first clause, synonymous middle clause, final clause.",
+            "Alpha first clause, final clause.",
+            "final clause. Alpha first clause, exact middle clause",
+        )
+
+        for quote in rejected:
+            with self.subTest(quote=quote):
+                self.assertFalse(
+                    self.runner.quote_matches_evidence(quote, evidence)
+                )
+
+    def test_valid_quote_is_matched_only_in_its_declared_evidence_source(self):
+        judge = self.valid_judge()
+        judge["assertions"][0]["evidence_quote"] = (
+            "diff-only evidence clause"
+        )
+
+        results = self.grade(judge)
+
+        result = self.by_id(results, self.profile.semantic_assertion_ids[0])
+        self.assertEqual("NEEDS_REVIEW", result.outcome)
+        self.assertIn("evidence_quote_unmatched", result.message)
+
+    def test_invalid_judge_inputs_produce_run_error_validation_result(self):
+        cases = {}
+        invalid_quote = self.valid_judge()
+        invalid_quote["assertions"][0]["evidence_quote"] = "，。！？"
+        cases["punctuation-only quote"] = invalid_quote
+        empty_quote = self.valid_judge()
+        empty_quote["assertions"][0]["evidence_quote"] = ""
+        cases["empty quote"] = empty_quote
+        wrong_schema = self.valid_judge()
+        wrong_schema["schema_version"] = "9.9"
+        cases["wrong schema"] = wrong_schema
+        unknown_ref = self.valid_judge()
+        unknown_ref["assertions"][0]["evidence_ref"] = "evidence.json"
+        cases["unknown evidence ref"] = unknown_ref
+        unknown_mode = self.valid_judge()
+        unknown_mode["evidence_match_mode"] = "fuzzy"
+        cases["unknown match mode"] = unknown_mode
+        unknown_normalizer = self.valid_judge()
+        unknown_normalizer["evidence_normalizer_version"] = "future-v2"
+        cases["unknown normalizer"] = unknown_normalizer
+        wrong_profile = self.valid_judge()
+        wrong_profile["profile_version"] = "wrong-profile"
+        cases["wrong profile"] = wrong_profile
+        wrong_prompt = self.valid_judge()
+        wrong_prompt["prompt_version"] = "judge-prompt-9.9"
+        cases["wrong prompt"] = wrong_prompt
+        missing_required = self.valid_judge()
+        del missing_required["model"]
+        cases["missing required key"] = missing_required
+        duplicate_id = self.valid_judge()
+        duplicate_id["assertions"][-1]["id"] = duplicate_id["assertions"][0]["id"]
+        cases["duplicate ID"] = duplicate_id
+        missing_expected = self.valid_judge()
+        missing_expected["assertions"].pop()
+        cases["missing expected ID"] = missing_expected
+
+        for name, judge in cases.items():
+            with self.subTest(name=name):
+                result = self.by_id(self.grade(judge), "judge-validation")
+                self.assertEqual("RUN_ERROR", result.outcome)
+
+    def test_every_observed_canary_pair_requires_an_adoption_assertion(self):
+        judge = self.valid_judge()
+        judge["assertions"] = [
+            item
+            for item in judge["assertions"]
+            if item["id"] != f"canary-adoption:{self.profile.canary_pairs[1].id}"
+        ]
+
+        result = self.by_id(self.grade(judge), "judge-validation")
+
+        self.assertEqual("RUN_ERROR", result.outcome)
+
+    def test_canary_adoption_maps_to_results_and_requires_two_preferred(self):
+        judge = self.valid_judge()
+        canary_assertions = [
+            item
+            for item in judge["assertions"]
+            if item["id"].startswith("canary-adoption:")
+        ]
+        canary_assertions[0].update(adopted="source", verdict="fail")
+        canary_assertions[1].update(adopted="uncertain", verdict="uncertain")
+        canary_assertions[2].update(adopted="preferred", verdict="pass")
+
+        results = self.grade(judge)
+
+        self.assertEqual("FAIL", self.by_id(results, canary_assertions[0]["id"]).outcome)
+        self.assertEqual(
+            "NEEDS_REVIEW",
+            self.by_id(results, canary_assertions[1]["id"]).outcome,
+        )
+        self.assertEqual(
+            "PARTIAL",
+            self.by_id(results, "canary-adoption-coverage").outcome,
+        )
+
+    def test_judge_results_do_not_override_deterministic_hard_failures(self):
+        hard_fail = self.runner.AssertionResult(
+            id="write-boundary",
+            layer="deterministic",
+            outcome="FAIL",
+            severity="hard",
+            message="Fixture was modified.",
+        )
+
+        results = self.grade(self.valid_judge(), (hard_fail,))
+
+        self.assertEqual("FAIL", self.by_id(results, "write-boundary").outcome)
+        self.assertEqual("hard", self.by_id(results, "write-boundary").severity)
+
+    def test_build_judge_request_records_versions_contract_and_text_evidence(self):
+        with TemporaryDirectory() as temp:
+            run_path = Path(temp)
+            request = self.runner.build_judge_request(
+                run_path,
+                self.profile,
+                self.answer,
+                b"diff --git a/file b/file\n+text change\n",
+                self.observations,
+            )
+
+            self.assertEqual(self.profile.profile_version, request["profile_version"])
+            self.assertEqual(self.runner.JUDGE_PROMPT_VERSION, request["prompt_version"])
+            self.assertEqual(self.runner.QUOTE_MATCH_MODE, request["evidence_match_mode"])
+            self.assertEqual(
+                self.runner.QUOTE_NORMALIZER_VERSION,
+                request["evidence_normalizer_version"],
+            )
+            self.assertIn(self.profile.canonical_heading, request["canonical_eval"])
+            self.assertEqual(
+                list(self.profile.semantic_assertion_ids),
+                request["semantic_assertion_ids"],
+            )
+            self.assertEqual(
+                list(self.profile.contract_refs),
+                [
+                    (item["path"], item["heading"])
+                    for item in request["contract_sections"]
+                ],
+            )
+            self.assertEqual(
+                self.answer,
+                request["evidence_registry"]["answer.md"]["content"],
+            )
+            self.assertTrue(request["evidence_registry"]["diff.patch"]["quotable"])
+            self.assertEqual(
+                request,
+                self.runner.read_json_object(run_path / "judge-request.json"),
+            )
+
+    def test_binary_diff_request_is_hash_only_and_not_quotable(self):
+        diffs = (
+            b"\x00\xffbinary patch",
+            b"diff --git a/image.png b/image.png\nGIT binary patch\nliteral 1\n",
+        )
+        for diff in diffs:
+            with self.subTest(diff=diff), TemporaryDirectory() as temp:
+                request = self.runner.build_judge_request(
+                    Path(temp),
+                    self.profile,
+                    self.answer,
+                    diff,
+                    self.observations,
+                )
+
+                entry = request["evidence_registry"]["diff.patch"]
+                self.assertEqual("binary", entry["kind"])
+                self.assertFalse(entry["quotable"])
+                self.assertNotIn("content", entry)
+                self.assertEqual(hashlib.sha256(diff).hexdigest(), entry["sha256"])
+
+
 class BlackboxEvalPrepareTest(unittest.TestCase):
     def setUp(self):
         self.runner = load_runner()

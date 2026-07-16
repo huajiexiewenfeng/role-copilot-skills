@@ -36,10 +36,52 @@ CANARY_MATCHER_VERSION = "canary-literal-v1"
 MAX_UNTRACKED_FILE_BYTES = 65_536
 MAX_UNTRACKED_TOTAL_BYTES = 1_048_576
 DEFAULT_WORKSPACE = REPO_ROOT.parent / "project-develop-copilot-eval-workspace"
+PUNCTUATION_MAP = str.maketrans(
+    {
+        "，": ",",
+        "。": ".",
+        "．": ".",
+        "：": ":",
+        "；": ";",
+        "（": "(",
+        "）": ")",
+        "“": '"',
+        "”": '"',
+        "「": '"',
+        "」": '"',
+        "『": '"',
+        "』": '"',
+        "‘": "'",
+        "’": "'",
+        "！": "!",
+        "？": "?",
+        "、": ",",
+        "—": "-",
+        "–": "-",
+        "－": "-",
+        "…": "...",
+    }
+)
 
 
 class EvalError(RuntimeError):
     pass
+
+
+def normalize_quote_v1(value: str) -> str:
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = unicodedata.normalize("NFKC", normalized)
+    normalized = normalized.translate(PUNCTUATION_MAP)
+    return " ".join(normalized.split()).strip()
+
+
+def quote_matches_evidence(quote: str, evidence: str) -> bool:
+    normalized_quote = normalize_quote_v1(quote)
+    if not normalized_quote or not any(
+        character.isalnum() for character in normalized_quote
+    ):
+        return False
+    return normalized_quote in normalize_quote_v1(evidence)
 
 
 @dataclass(frozen=True)
@@ -531,6 +573,105 @@ def extract_canonical_prompt(profile: EvalProfile) -> str:
     return section[content_start:fence_end].strip()
 
 
+def _extract_contract_section(path: Path, heading: str) -> str:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as error:
+        raise EvalError(f"contract heading missing: {path} {heading}") from error
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        match = re.match(r"^(#+)\s", lines[index])
+        if match is not None and len(match.group(1)) <= heading_level:
+            end = index
+            break
+    return "\n".join(lines[start:end]).strip()
+
+
+def build_judge_request(
+    run_path: Path,
+    profile: EvalProfile,
+    answer: str,
+    diff: bytes,
+    observations: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    answer_bytes = answer.encode("utf-8")
+    evidence_registry: dict[str, dict[str, Any]] = {
+        "answer.md": {
+            "kind": "text",
+            "path": "answer.md",
+            "encoding": "utf-8",
+            "sha256": _sha256_bytes(answer_bytes),
+            "size": len(answer_bytes),
+            "quotable": True,
+            "content": answer,
+        }
+    }
+    diff_is_binary = any(
+        marker in diff
+        for marker in (b"\x00", b"GIT binary patch", b"Binary files ")
+    )
+    try:
+        diff_text = None if diff_is_binary else diff.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        diff_text = None
+    if diff_text is None:
+        evidence_registry["diff.patch"] = {
+            "kind": "binary",
+            "path": "diff.patch",
+            "sha256": _sha256_bytes(diff),
+            "size": len(diff),
+            "quotable": False,
+        }
+    else:
+        evidence_registry["diff.patch"] = {
+            "kind": "text",
+            "path": "diff.patch",
+            "encoding": "utf-8",
+            "sha256": _sha256_bytes(diff),
+            "size": len(diff),
+            "quotable": True,
+            "content": diff_text,
+        }
+
+    contract_sections = [
+        {
+            "path": contract_path,
+            "heading": heading,
+            "content": _extract_contract_section(SKILL_ROOT / contract_path, heading),
+        }
+        for contract_path, heading in profile.contract_refs
+    ]
+    request: dict[str, Any] = {
+        "schema_version": JUDGE_SCHEMA_VERSION,
+        "profile_version": profile.profile_version,
+        "prompt_version": JUDGE_PROMPT_VERSION,
+        "evidence_match_mode": QUOTE_MATCH_MODE,
+        "evidence_normalizer_version": QUOTE_NORMALIZER_VERSION,
+        "canonical_eval": extract_canonical_eval(profile),
+        "contract_sections": contract_sections,
+        "semantic_assertion_ids": list(profile.semantic_assertion_ids),
+        "canary_observations": [dict(item) for item in observations],
+        "canary_adoption": {
+            "assertion_id_format": "canary-adoption:<pair-id>",
+            "required_for_states": ["wiki_only", "source_only", "both"],
+            "output_enum": ["preferred", "source", "neither", "uncertain"],
+            "minimum_preferred": profile.min_observed_pairs,
+            "pair_count": len(profile.canary_pairs),
+        },
+        "evidence_registry": evidence_registry,
+        "instruction": (
+            "Return every required semantic and canary-adoption assertion. "
+            "Every verdict must include an evidence_quote from its declared "
+            "evidence_ref. Quotes are checked only by case-sensitive "
+            "normalized substring matching within that one evidence source."
+        ),
+    }
+    write_json(run_path / "judge-request.json", request)
+    return request
+
+
 def _utc_timestamp(value: datetime) -> str:
     if value.tzinfo is None or value.utcoffset() is None:
         raise EvalError("Run time must be timezone-aware")
@@ -736,6 +877,213 @@ def observe_canary_pairs(
             }
         )
     return observations
+
+
+def _validate_judge_input(
+    judge: Mapping[str, Any],
+    profile: EvalProfile,
+    evidence_registry: Mapping[str, Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    required_keys = {
+        "schema_version",
+        "model",
+        "temperature",
+        "prompt_version",
+        "profile_version",
+        "evidence_match_mode",
+        "evidence_normalizer_version",
+        "assertions",
+    }
+    if set(judge) != required_keys:
+        raise EvalError("Judge root keys must exactly match the v0.1 schema")
+    if judge["schema_version"] != JUDGE_SCHEMA_VERSION:
+        raise EvalError("unsupported Judge schema version")
+    if not isinstance(judge["model"], str) or not judge["model"]:
+        raise EvalError("Judge model must be a non-empty string")
+    temperature = judge["temperature"]
+    if temperature is not None and (
+        isinstance(temperature, bool)
+        or not isinstance(temperature, (int, float))
+    ):
+        raise EvalError("Judge temperature must be a number or null")
+    if judge["prompt_version"] != JUDGE_PROMPT_VERSION:
+        raise EvalError("unsupported Judge prompt version")
+    if judge["profile_version"] != profile.profile_version:
+        raise EvalError("Judge Profile version mismatch")
+    if judge["evidence_match_mode"] != QUOTE_MATCH_MODE:
+        raise EvalError("unsupported Judge evidence match mode")
+    if judge["evidence_normalizer_version"] != QUOTE_NORMALIZER_VERSION:
+        raise EvalError("unsupported Judge evidence normalizer version")
+
+    profile_pair_ids = [pair.id for pair in profile.canary_pairs]
+    observed_pair_ids = [item.get("pair_id") for item in observations]
+    if (
+        len(observations) != 3
+        or len(profile_pair_ids) != 3
+        or observed_pair_ids != profile_pair_ids
+    ):
+        raise EvalError("Judge requires exactly three ordered canary observations")
+    allowed_states = {"wiki_only", "source_only", "both", "neither"}
+    if any(item.get("state") not in allowed_states for item in observations):
+        raise EvalError("unknown canary observation state")
+
+    raw_assertions = judge["assertions"]
+    if not isinstance(raw_assertions, list) or not raw_assertions:
+        raise EvalError("Judge assertions must be a non-empty list")
+    assertions: list[Mapping[str, Any]] = []
+    required_assertion_keys = {
+        "id",
+        "verdict",
+        "evidence_ref",
+        "evidence_quote",
+        "reason",
+    }
+    for raw_assertion in raw_assertions:
+        if not isinstance(raw_assertion, dict):
+            raise EvalError("every Judge assertion must be an object")
+        assertion_id = raw_assertion.get("id")
+        is_canary = isinstance(assertion_id, str) and assertion_id.startswith(
+            "canary-adoption:"
+        )
+        allowed_keys = required_assertion_keys | ({"adopted"} if is_canary else set())
+        if set(raw_assertion) != allowed_keys:
+            raise EvalError("Judge assertion keys do not match the v0.1 schema")
+        for key in required_assertion_keys:
+            if not isinstance(raw_assertion[key], str) or not raw_assertion[key]:
+                raise EvalError(f"Judge assertion {key} must be a non-empty string")
+        if raw_assertion["verdict"] not in {"pass", "fail", "uncertain"}:
+            raise EvalError("unknown Judge verdict")
+        evidence_ref = raw_assertion["evidence_ref"]
+        if evidence_ref not in {"answer.md", "diff.patch"}:
+            raise EvalError("unknown Judge evidence ref")
+        evidence = evidence_registry.get(evidence_ref)
+        if not isinstance(evidence, Mapping):
+            raise EvalError("Judge evidence ref is not registered")
+        if evidence.get("kind") != "text" or evidence.get("quotable") is not True:
+            raise EvalError("Judge evidence ref is not quotable text")
+        if not isinstance(evidence.get("content"), str):
+            raise EvalError("Judge text evidence has no string content")
+        normalized_quote = normalize_quote_v1(raw_assertion["evidence_quote"])
+        if not normalized_quote or not any(
+            character.isalnum() for character in normalized_quote
+        ):
+            raise EvalError("Judge evidence quote must contain an alphanumeric character")
+        if is_canary:
+            adopted = raw_assertion["adopted"]
+            expected_verdict = {
+                "preferred": "pass",
+                "source": "fail",
+                "neither": "pass",
+                "uncertain": "uncertain",
+            }.get(adopted)
+            if expected_verdict is None:
+                raise EvalError("unknown Judge canary adoption value")
+            if raw_assertion["verdict"] != expected_verdict:
+                raise EvalError("Judge canary adoption and verdict disagree")
+        assertions.append(raw_assertion)
+
+    assertion_ids = [item["id"] for item in assertions]
+    if len(assertion_ids) != len(set(assertion_ids)):
+        raise EvalError("Judge assertion IDs must not contain duplicates")
+    expected_ids = set(profile.semantic_assertion_ids)
+    expected_ids.update(
+        f"canary-adoption:{item['pair_id']}"
+        for item in observations
+        if item["state"] != "neither"
+    )
+    if set(assertion_ids) != expected_ids:
+        raise EvalError("Judge assertion IDs do not exactly match expected IDs")
+    validate_judge_adoption_fields(judge)
+    return assertions
+
+
+def grade_judge(
+    judge: Mapping[str, Any],
+    profile: EvalProfile,
+    evidence_registry: Mapping[str, Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+    deterministic_assertions: Sequence[AssertionResult] = (),
+) -> list[AssertionResult]:
+    results = list(deterministic_assertions)
+    try:
+        assertions = _validate_judge_input(
+            judge, profile, evidence_registry, observations
+        )
+    except (EvalError, KeyError, TypeError) as error:
+        results.append(
+            AssertionResult(
+                id="judge-validation",
+                layer="judge-validation",
+                outcome="RUN_ERROR",
+                severity="hard",
+                message=f"judge_input_invalid: {error}",
+            )
+        )
+        return results
+
+    results.append(
+        AssertionResult(
+            id="judge-validation",
+            layer="judge-validation",
+            outcome="PASS",
+            severity="info",
+            message="Judge input satisfies the file-based v0.1 contract.",
+        )
+    )
+    preferred_count = 0
+    verdict_outcomes = {
+        "pass": "PASS",
+        "fail": "FAIL",
+        "uncertain": "NEEDS_REVIEW",
+    }
+    for assertion in assertions:
+        evidence_ref = assertion["evidence_ref"]
+        evidence_text = evidence_registry[evidence_ref]["content"]
+        matched = quote_matches_evidence(
+            assertion["evidence_quote"], evidence_text
+        )
+        outcome = verdict_outcomes[assertion["verdict"]]
+        message = assertion["reason"]
+        if not matched:
+            outcome = "NEEDS_REVIEW"
+            message = f"evidence_quote_unmatched: {evidence_ref}"
+        if assertion["id"].startswith("canary-adoption:"):
+            preferred_count += assertion["adopted"] == "preferred"
+        results.append(
+            AssertionResult(
+                id=assertion["id"],
+                layer="judge",
+                outcome=outcome,
+                severity=(
+                    "hard"
+                    if outcome == "FAIL"
+                    else "soft"
+                    if outcome == "NEEDS_REVIEW"
+                    else "info"
+                ),
+                message=message,
+                evidence_ids=(f"{evidence_ref}:quote",),
+            )
+        )
+
+    coverage_outcome = (
+        "PASS" if preferred_count >= profile.min_observed_pairs else "PARTIAL"
+    )
+    results.append(
+        AssertionResult(
+            id="canary-adoption-coverage",
+            layer="judge",
+            outcome=coverage_outcome,
+            severity="info" if coverage_outcome == "PASS" else "soft",
+            message=(
+                f"{preferred_count} of exactly {len(profile.canary_pairs)} "
+                "canary pairs adopted preferred evidence; "
+                f"minimum is {profile.min_observed_pairs}."
+            ),
+        )
+    )
+    return results
 
 
 def _answer_has_standalone_path(answer: str, paths: Iterable[str]) -> bool:
