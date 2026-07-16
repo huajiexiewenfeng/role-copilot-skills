@@ -302,12 +302,14 @@ tracked source files
 
 ## 9. 后续路线
 
-### Phase 1：Minimum Lifecycle Eval
+### Phase 1 v0.1：Developer-only Black-box Eval Sidecar（已批准）
 
-- Trace Schema；
-- Read-only Query、Resume、State-changing Task 三个核心场景；
-- Route、Writes、Duplicate Flow、Scope、Gate Evidence 和 Done Claim 断言；
-- Fixture 结果与 Live Agent/Real Project 状态分层。
+- 仅覆盖现有 Eval 2 与 Eval 32，不扩张普通用户或团队工作流；
+- 提供稳定的 `prepare`、`grade`、`report` 文件式 CLI；
+- 由人工在 sidecar 外运行 Agent/Judge，并复制 `answer.md`、`judge.json`；
+- 将离线证据、诊断、Human Patch Gate、获批后的 before/after 对比串联起来；
+- CI 只运行离线脚本测试与仓库完整性检查，不运行在线 Agent/LLM；
+- v0.1 明确延期 Agent Tool **Trace Schema**、**Resume**、**State-changing Task** 与 **Harness Manifest**，后续必须以新的 Brief 和独立验收重新批准。
 
 ### Phase 2：降低使用成本
 

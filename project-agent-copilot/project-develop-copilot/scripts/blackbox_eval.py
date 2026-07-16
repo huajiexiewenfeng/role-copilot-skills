@@ -10,6 +10,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import unicodedata
 import uuid
 from dataclasses import dataclass
@@ -2722,8 +2723,20 @@ def render_report(
 def build_cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Project Develop Copilot black-box evaluator")
     commands = parser.add_subparsers(dest="command", required=True)
+
+    prepare = commands.add_parser("prepare", help="prepare an Eval 2 or 32 Run")
+    prepare.add_argument("--case", dest="eval_id", required=True, choices=("2", "32"))
+    prepare.add_argument("--skill-path", type=Path)
+    prepare.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE)
+
+    grade = commands.add_parser("grade", help="grade a prepared Run")
+    grade.add_argument("--run", dest="run_path", required=True, type=Path)
+    grade.add_argument("--execution-kind", choices=("agent", "canned"))
+    grade.add_argument("--agent-product")
+    grade.add_argument("--agent-model")
+
     report = commands.add_parser("report", help="render a validated Run report")
-    report.add_argument("run_path", type=Path)
+    report.add_argument("--run", dest="run_path", required=True, type=Path)
     report.add_argument("--baseline", dest="baseline_path", type=Path)
     report.add_argument(
         "--regression-pair",
@@ -2736,16 +2749,54 @@ def build_cli_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_cli_parser().parse_args(argv)
+def main(argv: list[str] | None = None) -> int:
+    parser = build_cli_parser()
+    args = parser.parse_args(argv)
+    if args.command == "prepare":
+        try:
+            run_path = prepare_run(args.eval_id, args.workspace, args.skill_path)
+        except (EvalError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(f"Run: {run_path}")
+        print(f"Prompt: {run_path / 'prompt.md'}")
+        print(f"Fixture: {run_path / 'fixture'}")
+        print(f"Answer: {run_path / 'answer.md'}")
+        return 0
+    if args.command == "grade":
+        identity = (args.execution_kind, args.agent_product, args.agent_model)
+        if sum(value is not None for value in identity) not in {0, 3}:
+            parser.error(
+                "--execution-kind, --agent-product, and --agent-model "
+                "must be supplied together"
+            )
+        try:
+            status = grade_run(
+                args.run_path,
+                execution_kind=args.execution_kind,
+                agent_product=args.agent_product,
+                agent_model=args.agent_model,
+            )
+            run = read_json_object(args.run_path.expanduser().resolve() / "run.json")
+        except (EvalError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(f"Run Status: {run.get('run_status')}")
+        print(f"Behavior Score: {run.get('behavior_score') or 'n/a'}")
+        return status
     if args.command == "report":
-        render_report(
-            args.run_path,
-            baseline_path=args.baseline_path,
-            regression_pairs=tuple(
-                (before, after) for before, after in args.regression_pair
-            ),
-        )
+        try:
+            report_path = render_report(
+                args.run_path,
+                baseline_path=args.baseline_path,
+                regression_pairs=tuple(
+                    (before, after) for before, after in args.regression_pair
+                ),
+            )
+        except (EvalError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(report_path)
         return 0
     raise EvalError(f"unsupported command: {args.command}")
 

@@ -8,6 +8,26 @@ It borrows from `thinking-skills` concepts such as `skill-evaluator` and `conver
 
 Normal delivery comes first.
 
+## Offline black-box bridge
+
+The developer-only black-box sidecar adds an offline bridge for Eval 2 and Eval
+32:
+
+```text
+offline evidence -> diagnosis -> Human Patch Gate -> before/after comparison
+```
+
+The sidecar prepares files, validates deterministic/Judge evidence, and freezes
+diagnosis provenance. It does not call an Agent or LLM, apply a Skill patch, or
+infer human approval. A human copies `answer.md` and `judge.json` into the Run,
+then the process must stop at the Human Patch Gate. Only an explicit Human
+`patch-decision.json` value of `approve` authorizes the Level B before/after
+bridge.
+
+This offline maintenance path is separate from user-triggered Evaluator/Dolores
+analysis. It adds no step to ordinary delivery and does not make Evaluator or
+Dolores an automatic user-facing workflow.
+
 Evaluator or Dolores runs only when:
 
 - the user explicitly asks for it

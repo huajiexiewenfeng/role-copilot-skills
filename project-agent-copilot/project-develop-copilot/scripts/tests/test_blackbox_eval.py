@@ -6,12 +6,16 @@ import os
 import subprocess
 import sys
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "blackbox_eval.py"
+SKILL_ROOT = SCRIPT_PATH.parents[1]
+REPO_ROOT = SKILL_ROOT.parents[1]
 
 
 def load_runner():
@@ -2357,6 +2361,7 @@ class BlackboxEvalReportTest(unittest.TestCase):
         )
         argv = [
             "report",
+            "--run",
             str(candidate),
             "--baseline",
             str(baseline),
@@ -2369,7 +2374,249 @@ class BlackboxEvalReportTest(unittest.TestCase):
         ]
         parsed = self.runner.build_cli_parser().parse_args(argv)
         self.assertEqual(2, len(parsed.regression_pair))
-        self.assertEqual(0, self.runner.main(argv))
+        output = StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(0, self.runner.main(argv))
         report = (candidate / "report.md").read_text(encoding="utf-8")
+        self.assertEqual(str(candidate / "report.md"), output.getvalue().strip())
         self.assertIn(f"source={first[0].name} -> {first[1].name}", report)
         self.assertIn(f"source={second[0].name} -> {second[1].name}", report)
+
+
+class BlackboxEvalCliTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def _answer(self):
+        profile = self.runner.load_profile("2")
+        return (
+            f"Canonical answer clause. {profile.required_path_any_of[0]} "
+            + " ".join(pair.preferred for pair in profile.canary_pairs)
+        )
+
+    def _prepare(self, suffix):
+        return self.runner.prepare_run(
+            "2",
+            self.root / "grade-workspace",
+            skill_path=None,
+            run_id=f"eval-002-{suffix}",
+        )
+
+    def _invoke(self, argv):
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            status = self.runner.main(argv)
+        return status, stdout.getvalue(), stderr.getvalue()
+
+    def test_prepare_cli_prints_paths_and_records_optional_verified_skill(self):
+        workspace = self.root / "prepare-workspace"
+        status, stdout, stderr = self._invoke(
+            ["prepare", "--case", "2", "--workspace", str(workspace)]
+        )
+        self.assertEqual(0, status)
+        self.assertEqual("", stderr)
+        run_path = next(workspace.iterdir())
+        self.assertEqual(
+            [
+                f"Run: {run_path}",
+                f"Prompt: {run_path / 'prompt.md'}",
+                f"Fixture: {run_path / 'fixture'}",
+                f"Answer: {run_path / 'answer.md'}",
+            ],
+            stdout.strip().splitlines(),
+        )
+
+        skill_path = self.root / "installed-skill"
+        skill_path.mkdir()
+        (skill_path / "SKILL.md").write_text("# Installed Skill\n", encoding="utf-8")
+        verified_workspace = self.root / "verified-workspace"
+        status, _, stderr = self._invoke(
+            [
+                "prepare",
+                "--case",
+                "32",
+                "--skill-path",
+                str(skill_path),
+                "--workspace",
+                str(verified_workspace),
+            ]
+        )
+        self.assertEqual(0, status)
+        self.assertEqual("", stderr)
+        verified_run = self.runner.read_json_object(
+            next(verified_workspace.iterdir()) / "run.json"
+        )
+        self.assertEqual("verified", verified_run["skill_identity"]["status"])
+        self.assertEqual(str(skill_path.resolve()), verified_run["skill_identity"]["path"])
+
+    def test_grade_cli_locks_identity_and_preserves_state_exit_semantics(self):
+        pending = self._prepare("cli-pending")
+        (pending / "answer.md").write_text(self._answer(), encoding="utf-8")
+        status, stdout, stderr = self._invoke(
+            [
+                "grade",
+                "--run",
+                str(pending),
+                "--execution-kind",
+                "canned",
+                "--agent-product",
+                "fixture-product",
+                "--agent-model",
+                "fixture-model",
+            ]
+        )
+        self.assertEqual(0, status)
+        self.assertEqual("", stderr)
+        self.assertIn("Run Status: NEEDS_REVIEW", stdout)
+        self.assertIn("Behavior Score: n/a", stdout)
+        pending_run = self.runner.read_json_object(pending / "run.json")
+        self.assertEqual(
+            {
+                "execution_kind": "canned",
+                "agent_product": "fixture-product",
+                "agent_model": "fixture-model",
+            },
+            pending_run["agent_identity"],
+        )
+        self.assertEqual(0, self._invoke(["grade", "--run", str(pending)])[0])
+
+        partial_group = StringIO()
+        with redirect_stderr(partial_group), self.assertRaises(SystemExit) as error:
+            self.runner.main(
+                [
+                    "grade",
+                    "--run",
+                    str(pending),
+                    "--execution-kind",
+                    "canned",
+                ]
+            )
+        self.assertEqual(2, error.exception.code)
+        self.assertIn("must be supplied together", partial_group.getvalue())
+
+        failed = self._prepare("cli-fail")
+        (failed / "answer.md").write_text(self._answer(), encoding="utf-8")
+        (failed / "fixture" / "agent-write.txt").write_text("write\n", encoding="utf-8")
+        status, stdout, _ = self._invoke(
+            [
+                "grade",
+                "--run",
+                str(failed),
+                "--execution-kind",
+                "canned",
+                "--agent-product",
+                "fixture-product",
+                "--agent-model",
+                "fixture-model",
+            ]
+        )
+        self.assertEqual(0, status)
+        self.assertIn("Run Status: GRADED", stdout)
+        self.assertIn("Behavior Score: FAIL", stdout)
+
+        run_error = self._prepare("cli-run-error")
+        (run_error / "answer.md").write_text(self._answer(), encoding="utf-8")
+        self.runner.write_json(run_error / "judge.json", {"schema_version": "9.9"})
+        status, stdout, _ = self._invoke(
+            [
+                "grade",
+                "--run",
+                str(run_error),
+                "--execution-kind",
+                "agent",
+                "--agent-product",
+                "fixture-agent",
+                "--agent-model",
+                "fixture-model",
+            ]
+        )
+        self.assertEqual(1, status)
+        self.assertIn("Run Status: RUN_ERROR", stdout)
+
+    def test_cli_help_is_complete_and_invalid_arguments_exit_two(self):
+        parser = self.runner.build_cli_parser()
+        self.assertIn("{prepare,grade,report}", parser.format_help())
+        for command, options in {
+            "prepare": ("--case", "--skill-path", "--workspace"),
+            "grade": ("--run", "--execution-kind", "--agent-product", "--agent-model"),
+            "report": ("--run", "--baseline", "--regression-pair"),
+        }.items():
+            subparser = parser._subparsers._group_actions[0].choices[command]
+            help_text = subparser.format_help()
+            for option in options:
+                self.assertIn(option, help_text)
+
+        stderr = StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+            self.runner.main(["not-a-command"])
+        self.assertEqual(2, error.exception.code)
+        self.assertIn("invalid choice", stderr.getvalue())
+
+
+class BlackboxEvalDocumentationTest(unittest.TestCase):
+    def test_developer_readme_documents_offline_human_gated_sidecar(self):
+        readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "Developer-only",
+            "ordinary users",
+            "prepare",
+            "grade",
+            "report",
+            "execution_kind",
+            "judge.json",
+            "grading.json",
+            "diagnosis.json",
+            "freeze-manifest.json",
+            "patch-decision.json",
+            "Run Status",
+            "Behavior Score",
+            "manual-only",
+            "65,536",
+            "1,048,576",
+            "local-only",
+            "Level A",
+            "Level B",
+            "No live Agent or LLM runs in CI",
+            "--regression-pair",
+            "approve",
+            "Human Patch Gate",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, readme)
+
+    def test_existing_docs_define_sidecar_boundaries_and_deferred_scope(self):
+        evals_readme = (SKILL_ROOT / "evals" / "README.md").read_text(encoding="utf-8")
+        runbook = (SKILL_ROOT / "evals" / "runbook.md").read_text(encoding="utf-8")
+        evolution = (SKILL_ROOT / "references" / "continuous-evolution.md").read_text(
+            encoding="utf-8"
+        )
+        plan = (
+            SKILL_ROOT / "references" / "project-develop-copilot-improvement-plan.zh.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("no automated Agent runner", evals_readme)
+        self.assertIn("developer-only black-box sidecar", evals_readme)
+        self.assertIn("blackbox/README.md", runbook)
+        self.assertIn("NEEDS_REVIEW", runbook)
+        self.assertIn("RUN_ERROR", runbook)
+        self.assertIn("Human Patch Gate", evolution)
+        self.assertIn("user-triggered Evaluator/Dolores", evolution)
+        self.assertIn("v0.1", plan)
+        for deferred in ("Trace Schema", "Resume", "State-changing Task", "Harness Manifest"):
+            self.assertIn(deferred, plan)
+
+    def test_ci_names_script_tests_without_agent_or_llm_claims(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "project-develop-copilot-ci.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(2, workflow.count("name: Run Project Develop Copilot script tests"))
+        self.assertNotIn("name: Run doctor unit tests", workflow)
+        self.assertNotIn("name: Run repository integrity unit tests", workflow)
+        for line in workflow.splitlines():
+            if line.lstrip().startswith("- name:"):
+                self.assertNotRegex(line, r"(?i)agent|llm")

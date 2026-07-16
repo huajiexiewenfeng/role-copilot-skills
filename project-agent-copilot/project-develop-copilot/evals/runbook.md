@@ -7,6 +7,7 @@ Use this runbook to manually evaluate Project Develop Copilot lifecycle behavior
 ## Inputs
 
 - Eval definitions: `evals/project-develop-copilot-evals.md`
+- Optional developer-only sidecar: [`evals/blackbox/README.md`](blackbox/README.md)
 - Optional real project fixture with `.llm-wiki`
 - Current commit hash
 - Notes from any related failure case
@@ -45,6 +46,23 @@ FAIL:
   unsafe write occurs
   unsupported lifecycle claim occurs
 ```
+
+## Run Status
+
+The developer-only sidecar keeps execution state separate from the canonical
+`PASS` / `PARTIAL` / `FAIL` Behavior Score:
+
+- `READY_FOR_AGENT`: the Run is prepared and awaits a human-supplied answer.
+- `READY_TO_GRADE`: answer identity is locked and grading is in progress.
+- `NEEDS_REVIEW`: required semantic or canary assertions still need the manual
+  `judge.json` boundary.
+- `GRADED`: grading completed and the Run has a Behavior Score.
+- `RUN_ERROR`: Run input, artifact, or provenance validation failed.
+
+`NEEDS_REVIEW` and `RUN_ERROR` are reported separately and excluded from the
+canonical PASS/PARTIAL/FAIL behavior-score totals and PASS-rate denominator.
+They never become a behavior `FAIL` merely because review or execution failed.
+The canonical PASS/PARTIAL/FAIL meanings above do not change.
 
 ## Report Template
 

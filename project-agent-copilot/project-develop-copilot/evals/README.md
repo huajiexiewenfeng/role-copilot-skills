@@ -1,6 +1,6 @@
 # Evals
 
-Manual and future automated eval definitions for Project Develop Copilot lifecycle behavior live here.
+Manual eval definitions and developer tooling for Project Develop Copilot lifecycle behavior live here.
 
 Do not store raw private conversations, customer data, credentials, or sensitive project context.
 
@@ -8,8 +8,9 @@ Do not store raw private conversations, customer data, credentials, or sensitive
 
 - `project-develop-copilot-evals.md`: 32 manual P0 lifecycle and routing regression definitions.
 - `runbook.md`: how to run and score the evals manually.
+- `blackbox/README.md`: developer-only black-box sidecar for Eval 2 and Eval 32.
 
-The manual Eval set has no automated Agent runner. Deterministic repository-integrity CI may validate static text, link, and canonical definition facts; automated Agent lifecycle and Runtime Eval CI remain deferred.
+There is no automated Agent runner. The developer-only black-box sidecar prepares, grades, and reports file-based Eval 2/32 Runs without invoking an Agent or LLM. Deterministic repository-integrity CI may validate the sidecar, static text, links, and canonical definition facts; automated Agent lifecycle and Runtime Eval CI remain deferred.
 
 ## Required Rule
 
