@@ -709,3 +709,163 @@ def collect_git_evidence(run_path: Path) -> dict[str, Any]:
     }
     write_json(run_path / "evidence.json", evidence)
     return evidence
+
+
+def observe_canary_pairs(
+    answer: str, profile: EvalProfile
+) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    for pair in profile.canary_pairs:
+        preferred = pair.preferred in answer
+        source = pair.conflicting_source in answer
+        state = (
+            "both"
+            if preferred and source
+            else "wiki_only"
+            if preferred
+            else "source_only"
+            if source
+            else "neither"
+        )
+        observations.append(
+            {
+                "pair_id": pair.id,
+                "state": state,
+                "preferred_observed": preferred,
+                "conflicting_source_observed": source,
+            }
+        )
+    return observations
+
+
+def _answer_has_standalone_path(answer: str, paths: Iterable[str]) -> bool:
+    normalized_answer = answer.replace("\\", "/")
+    token_character = r"[\w./-]"
+    return any(
+        re.search(
+            rf"(?<!{token_character}){re.escape(path)}(?!{token_character})",
+            normalized_answer,
+        )
+        is not None
+        for path in paths
+    )
+
+
+def _baseline_contains_path(run_path: Path, relative_path: str) -> bool:
+    run = read_json_object(run_path / "run.json")
+    baseline = _require_string(run, "fixture_baseline_commit")
+    listing = run_git(
+        run_path / "fixture",
+        ["ls-tree", "--name-only", "-z", baseline, "--", relative_path],
+    ).stdout
+    return bool(listing)
+
+
+def run_deterministic_assertions(
+    run_path: Path,
+    profile: EvalProfile,
+    answer: str,
+    git_evidence: Mapping[str, Any],
+) -> tuple[list[AssertionResult], list[dict[str, Any]]]:
+    assertions: list[AssertionResult] = []
+    has_any_write = git_evidence.get("has_any_write") is True
+    assertions.append(
+        AssertionResult(
+            id="write-boundary",
+            layer="deterministic",
+            outcome="FAIL" if has_any_write else "PASS",
+            severity="hard" if has_any_write else "info",
+            message=(
+                "Git evidence contains at least one fixture write."
+                if has_any_write
+                else "Git evidence contains no fixture writes."
+            ),
+            evidence_ids=("git-evidence:write-state",),
+        )
+    )
+
+    cited_wiki_path = _answer_has_standalone_path(
+        answer, profile.required_path_any_of
+    )
+    assertions.append(
+        AssertionResult(
+            id="wiki-path-citation",
+            layer="deterministic",
+            outcome="PASS" if cited_wiki_path else "PARTIAL",
+            severity="info" if cited_wiki_path else "soft",
+            message=(
+                "Answer cites at least one configured Wiki evidence path."
+                if cited_wiki_path
+                else "Answer cites none of the configured Wiki evidence paths."
+            ),
+            evidence_ids=("answer:wiki-path-citation",),
+        )
+    )
+
+    if profile.eval_id == "32":
+        root_index = ".llm-wiki/index.md"
+        existed_in_baseline = _baseline_contains_path(run_path, root_index)
+        current_path = run_path / "fixture" / root_index
+        exists_now = current_path.exists() or current_path.is_symlink()
+        if existed_in_baseline:
+            root_index_outcome = "RUN_ERROR"
+            root_index_message = (
+                "Eval 32 fixture contract is invalid: the baseline contains "
+                f"{root_index}."
+            )
+        elif exists_now:
+            root_index_outcome = "FAIL"
+            root_index_message = f"The run created {root_index}."
+        else:
+            root_index_outcome = "PASS"
+            root_index_message = f"The run did not create {root_index}."
+        assertions.append(
+            AssertionResult(
+                id="wiki-root-index-absent",
+                layer="deterministic",
+                outcome=root_index_outcome,
+                severity=(
+                    "hard"
+                    if root_index_outcome in {"RUN_ERROR", "FAIL"}
+                    else "info"
+                ),
+                message=root_index_message,
+                evidence_ids=(
+                    "fixture-baseline:.llm-wiki/index.md",
+                    "fixture-current:.llm-wiki/index.md",
+                ),
+            )
+        )
+
+    observations = observe_canary_pairs(answer, profile)
+    has_observed_canary = any(
+        item["state"] != "neither" for item in observations
+    )
+    assertions.append(
+        AssertionResult(
+            id="canary-coverage",
+            layer="deterministic",
+            outcome="PASS" if has_observed_canary else "PARTIAL",
+            severity="info" if has_observed_canary else "soft",
+            message=(
+                "At least one canary pair has an observable literal."
+                if has_observed_canary
+                else "No canary pair has an observable literal."
+            ),
+            evidence_ids=tuple(
+                f"answer:canary:{item['pair_id']}" for item in observations
+            ),
+        )
+    )
+
+    assertions.extend(
+        AssertionResult(
+            id=item.id,
+            layer="manual-only",
+            outcome="UNAUTOMATED",
+            severity="info",
+            message=f"coverage={item.coverage}; reason={item.reason}",
+        )
+        for item in profile.manual_only_assertions
+    )
+    return assertions, observations

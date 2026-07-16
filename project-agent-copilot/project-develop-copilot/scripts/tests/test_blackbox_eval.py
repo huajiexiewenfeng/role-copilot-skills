@@ -122,6 +122,235 @@ class BlackboxEvalAssetTest(unittest.TestCase):
             self.runner.validate_judge_adoption_fields(judge)
 
 
+class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.profile = self.runner.load_profile("2")
+
+    def assertion_by_id(self, assertions, assertion_id):
+        return next(item for item in assertions if item.id == assertion_id)
+
+    def run_assertions(self, answer, profile=None, has_any_write=False, run_path=None):
+        selected_profile = profile or self.profile
+        selected_run_path = run_path or self.root / "unused-run"
+        return self.runner.run_deterministic_assertions(
+            selected_run_path,
+            selected_profile,
+            answer,
+            {"has_any_write": has_any_write},
+        )
+
+    def make_eval_032_run(self, baseline_has_root_index):
+        run_path = self.root / (
+            "eval-032-invalid-baseline" if baseline_has_root_index else "eval-032-run"
+        )
+        fixture = run_path / "fixture"
+        fixture.mkdir(parents=True)
+        readme = fixture / ".llm-wiki" / "README.md"
+        readme.parent.mkdir(parents=True)
+        readme.write_text("# Fixture Wiki\n", encoding="utf-8")
+        if baseline_has_root_index:
+            (readme.parent / "index.md").write_text(
+                "# Invalid baseline index\n", encoding="utf-8"
+            )
+        self.runner.run_git(fixture, ["init"])
+        self.runner.run_git(fixture, ["add", "--all"])
+        self.runner.run_git(
+            fixture,
+            [
+                "-c",
+                "user.name=Blackbox Eval",
+                "-c",
+                "user.email=blackbox-eval@example.invalid",
+                "-c",
+                "commit.gpgSign=false",
+                "commit",
+                "-m",
+                "Baseline fixture",
+            ],
+        )
+        baseline = self.runner.run_git(
+            fixture, ["rev-parse", "HEAD"]
+        ).stdout_text.strip()
+        self.runner.write_json(
+            run_path / "run.json", {"fixture_baseline_commit": baseline}
+        )
+        return run_path, fixture
+
+    def test_observe_canary_pairs_reports_all_four_states_for_each_pair(self):
+        for pair in self.profile.canary_pairs:
+            cases = {
+                "wiki_only": pair.preferred,
+                "source_only": pair.conflicting_source,
+                "both": f"{pair.preferred} {pair.conflicting_source}",
+                "neither": "no canary facts",
+            }
+            for expected_state, answer in cases.items():
+                with self.subTest(pair=pair.id, state=expected_state):
+                    observation = next(
+                        item
+                        for item in self.runner.observe_canary_pairs(
+                            answer, self.profile
+                        )
+                        if item["pair_id"] == pair.id
+                    )
+                    self.assertEqual(expected_state, observation["state"])
+                    self.assertEqual(
+                        expected_state in {"wiki_only", "both"},
+                        observation["preferred_observed"],
+                    )
+                    self.assertEqual(
+                        expected_state in {"source_only", "both"},
+                        observation["conflicting_source_observed"],
+                    )
+
+    def test_observe_canary_pairs_keeps_cross_pair_states_independent(self):
+        first, second, third = self.profile.canary_pairs
+        answer = " ".join(
+            (
+                first.preferred,
+                second.conflicting_source,
+                third.preferred,
+                third.conflicting_source,
+            )
+        )
+
+        observations = self.runner.observe_canary_pairs(answer, self.profile)
+
+        self.assertEqual(
+            ["wiki_only", "source_only", "both"],
+            [item["state"] for item in observations],
+        )
+        self.assertEqual(
+            2, sum(item["preferred_observed"] for item in observations)
+        )
+
+    def test_observe_canary_pairs_is_case_sensitive(self):
+        pair = self.profile.canary_pairs[0]
+
+        observations = self.runner.observe_canary_pairs(
+            f"{pair.preferred.lower()} {pair.conflicting_source.lower()}",
+            self.profile,
+        )
+
+        self.assertEqual("neither", observations[0]["state"])
+
+    def test_source_only_canaries_never_create_a_deterministic_fail(self):
+        answer = " ".join(
+            pair.conflicting_source for pair in self.profile.canary_pairs
+        )
+
+        assertions, observations = self.run_assertions(answer)
+
+        self.assertEqual(
+            ["source_only", "source_only", "source_only"],
+            [item["state"] for item in observations],
+        )
+        self.assertNotIn("FAIL", [item.outcome for item in assertions])
+
+    def test_any_git_write_is_a_hard_fail(self):
+        assertions, _ = self.run_assertions("", has_any_write=True)
+
+        result = self.assertion_by_id(assertions, "write-boundary")
+        self.assertEqual("FAIL", result.outcome)
+        self.assertEqual("hard", result.severity)
+
+    def test_missing_all_required_wiki_paths_is_partial_not_fail(self):
+        assertions, _ = self.run_assertions("No configured Wiki path is cited.")
+
+        result = self.assertion_by_id(assertions, "wiki-path-citation")
+        self.assertEqual("PARTIAL", result.outcome)
+        self.assertNotEqual("FAIL", result.outcome)
+
+    def test_wiki_path_matches_markdown_and_backslash_tokens_but_not_suffixes(self):
+        path = self.profile.required_path_any_of[0]
+        answers = (
+            f"Evidence: `{path}`.",
+            f"Evidence: {path.replace('/', chr(92))}",
+            f"See [{path}]({path}).",
+        )
+        for answer in answers:
+            with self.subTest(answer=answer):
+                assertions, _ = self.run_assertions(answer)
+                self.assertEqual(
+                    "PASS",
+                    self.assertion_by_id(
+                        assertions, "wiki-path-citation"
+                    ).outcome,
+                )
+
+        assertions, _ = self.run_assertions(f"Evidence: `{path}.bak`.")
+        self.assertEqual(
+            "PARTIAL",
+            self.assertion_by_id(assertions, "wiki-path-citation").outcome,
+        )
+
+    def test_eval_032_rejects_fixture_baseline_that_contains_root_index(self):
+        profile = self.runner.load_profile("32")
+        run_path, _ = self.make_eval_032_run(baseline_has_root_index=True)
+
+        assertions, _ = self.run_assertions(
+            profile.required_path_any_of[0], profile=profile, run_path=run_path
+        )
+
+        result = self.assertion_by_id(assertions, "wiki-root-index-absent")
+        self.assertEqual("RUN_ERROR", result.outcome)
+        self.assertEqual("hard", result.severity)
+
+    def test_eval_032_fails_when_root_index_is_created_after_baseline(self):
+        profile = self.runner.load_profile("32")
+        run_path, fixture = self.make_eval_032_run(baseline_has_root_index=False)
+        (fixture / ".llm-wiki" / "index.md").write_text(
+            "# Agent-created index\n", encoding="utf-8"
+        )
+
+        assertions, _ = self.run_assertions(
+            profile.required_path_any_of[0], profile=profile, run_path=run_path
+        )
+
+        result = self.assertion_by_id(assertions, "wiki-root-index-absent")
+        self.assertEqual("FAIL", result.outcome)
+        self.assertEqual("hard", result.severity)
+
+    def test_all_neither_canaries_create_partial_coverage_without_adoption(self):
+        assertions, observations = self.run_assertions("No observable facts.")
+
+        result = self.assertion_by_id(assertions, "canary-coverage")
+        self.assertEqual("PARTIAL", result.outcome)
+        self.assertTrue(all(item["state"] == "neither" for item in observations))
+        self.assertFalse(any(hasattr(item, "adopted") for item in assertions))
+        self.assertTrue(all("adopted" not in item for item in observations))
+
+    def test_manual_only_assertion_is_recorded_as_unautomated_metadata(self):
+        profile = self.runner.load_profile("32")
+        run_path, _ = self.make_eval_032_run(baseline_has_root_index=False)
+
+        assertions, _ = self.run_assertions(
+            profile.required_path_any_of[0], profile=profile, run_path=run_path
+        )
+
+        result = self.assertion_by_id(assertions, "wiki-before-source-fallback")
+        self.assertEqual("UNAUTOMATED", result.outcome)
+        self.assertEqual("manual-only", result.layer)
+        self.assertIn("coverage=manual-only", result.message)
+        self.assertIn(profile.manual_only_assertions[0].reason, result.message)
+        self.assertNotEqual("PASS", result.outcome)
+
+    def test_route_self_report_text_does_not_affect_deterministic_grading(self):
+        pair = self.profile.canary_pairs[0]
+        facts = f"{self.profile.required_path_any_of[0]} {pair.preferred}"
+
+        plain = self.run_assertions(facts)
+        self_reported = self.run_assertions(
+            "I routed through project-query in read-only mode. " + facts
+        )
+
+        self.assertEqual(plain, self_reported)
+
+
 class BlackboxEvalPrepareTest(unittest.TestCase):
     def setUp(self):
         self.runner = load_runner()
