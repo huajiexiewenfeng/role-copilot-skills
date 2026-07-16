@@ -1356,6 +1356,62 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
                 mutate(run_path)
                 self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
 
+    def test_freeze_manifest_artifacts_forbid_missing_run_pointer_rollback(self):
+        for suffix, mutate in (
+            (
+                "freeze-pointer-null",
+                lambda run: run.__setitem__("freeze_manifest_sha256", None),
+            ),
+            (
+                "freeze-pointer-delete",
+                lambda run: run.pop("freeze_manifest_sha256"),
+            ),
+        ):
+            with self.subTest(suffix=suffix):
+                run_path = self.make_failing_run(suffix)
+                grading = self.runner.read_json_object(run_path / "grading.json")
+                self.runner.write_json(run_path / "diagnosis.json", self.diagnosis(grading))
+                self.assertEqual(
+                    0,
+                    self.grade(
+                        run_path,
+                        execution_kind=None,
+                        agent_product=None,
+                        agent_model=None,
+                    ),
+                )
+                manifest = self.runner.read_json_object(run_path / "freeze-manifest.json")
+                frozen_bytes = {
+                    name: (run_path / name).read_bytes()
+                    for name in manifest["artifact_hashes"]
+                }
+                manifest_bytes = (run_path / "freeze-manifest.json").read_bytes()
+                run = self.runner.read_json_object(run_path / "run.json")
+                mutate(run)
+                self.runner.write_json(run_path / "run.json", run)
+
+                self.assertEqual(
+                    1,
+                    self.grade(
+                        run_path,
+                        execution_kind=None,
+                        agent_product=None,
+                        agent_model=None,
+                    ),
+                )
+                failed = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("RUN_ERROR", failed["run_status"])
+                self.assertEqual(
+                    manifest_bytes, (run_path / "freeze-manifest.json").read_bytes()
+                )
+                self.assertEqual(
+                    frozen_bytes,
+                    {
+                        name: (run_path / name).read_bytes()
+                        for name in manifest["artifact_hashes"]
+                    },
+                )
+
     def test_diagnosis_and_patch_decision_validation_reject_bad_closure(self):
         run_path = self.make_failing_run("bad-diagnosis")
         grading = self.runner.read_json_object(run_path / "grading.json")
@@ -1496,6 +1552,32 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
                 failed = self.runner.read_json_object(run_path / "run.json")
                 self.assertEqual("RUN_ERROR", failed["run_status"])
                 self.assertFalse(failed["level_b_comparison_authorized"])
+
+    def test_terminal_history_forbids_anchor_and_pointer_rollback(self):
+        run_path, decision = self.make_terminal_run("terminal-history-rollback")
+        before = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("reject", before["patch_decision_history"][-1]["decision"])
+        (run_path / "terminal-patch-decision.json").unlink()
+        before.pop("terminal_patch_decision_sha256")
+        before.pop("terminal_patch_decision_anchor_sha256")
+        self.runner.write_json(run_path / "run.json", before)
+        decision["decision"] = "approve"
+        decision["note"] = "Attempt approval after partially rolling back terminal state."
+        self.runner.write_json(run_path / "patch-decision.json", decision)
+
+        self.assertEqual(
+            1,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        failed = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("RUN_ERROR", failed["run_status"])
+        self.assertFalse(failed["level_b_comparison_authorized"])
+        self.assertFalse((run_path / "terminal-patch-decision.json").exists())
 
     def _mutate_run_key(self, run_path, key, value=None, delete=False):
         run = self.runner.read_json_object(run_path / "run.json")

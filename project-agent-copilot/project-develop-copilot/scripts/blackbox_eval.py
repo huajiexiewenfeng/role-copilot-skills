@@ -1647,8 +1647,24 @@ def _validate_patch_decision(
             raise EvalError("terminal Patch decision anchor freeze pointer mismatch")
         if anchor.get("diagnosis_sha256") != manifest["artifact_hashes"].get("diagnosis.json"):
             raise EvalError("terminal Patch decision anchor Diagnosis pointer mismatch")
-    elif terminal_hash is not None or terminal_anchor_hash is not None:
-        raise EvalError("terminal Patch decision anchor is missing")
+    else:
+        history = run.get("patch_decision_history")
+        has_terminal_history = isinstance(history, list) and any(
+            isinstance(record, dict)
+            and record.get("decision") in {"approve", "reject"}
+            for record in history
+        )
+        has_terminal_metadata = (
+            run.get("patch_decision") in {"approve", "reject"}
+            or run.get("level_b_comparison_authorized") is True
+        )
+        if (
+            terminal_hash is not None
+            or terminal_anchor_hash is not None
+            or has_terminal_history
+            or has_terminal_metadata
+        ):
+            raise EvalError("terminal Patch decision anchor is missing")
     if not decision_path.exists():
         if terminal_hash is not None or anchor is not None:
             raise EvalError("terminal patch decision is missing")
@@ -1738,7 +1754,10 @@ def grade_run(
         return 1
     try:
         eval_id = _require_string(run, "eval_id")
-        if run.get("freeze_manifest_sha256") is not None:
+        freeze_pointer = run.get("freeze_manifest_sha256")
+        if freeze_pointer is None and (run_path / "freeze-manifest.json").exists():
+            raise EvalError("freeze manifest exists but its Run pointer is missing")
+        if freeze_pointer is not None:
             manifest, _ = _validate_frozen_run(run_path, run)
             if run.get("schema_version") != RUN_SCHEMA_VERSION:
                 raise EvalError("unsupported Run schema version")
