@@ -129,6 +129,7 @@ project-agent-copilot/project-develop-copilot/
     schemas/
       judge.schema.json
       diagnosis.schema.json
+      patch-decision.schema.json
 ```
 
 仓库只保存 Fixture 模板、可执行 Profile、canned answers、Schema、Runner 和单元测试，不保存真实 Agent 回答、私有项目内容或本地运行工作区。
@@ -152,16 +153,19 @@ project-develop-copilot-eval-workspace/
     judge.json
     diagnosis-request.json
     diagnosis.json
+    freeze-manifest.json
+    patch-decision.json
     report.md
 ```
 
 其中：
 
 - `fixture/` 是每次新建的独立 Git 仓库。
-- `run.json` 固定 canonical Eval ID、Fixture/Profile 版本、canonical/effective Prompt hash、追加问句、Skill source commit、实际安装副本 fingerprint、Fixture baseline commit 和运行时间。
+- `run.json` 固定 canonical Eval ID、Fixture/Profile 版本、canonical/effective Prompt hash、追加问句、Skill source commit、实际安装副本 fingerprint、Fixture baseline commit、Agent/模型标签、answer hash 和运行时间。
 - `answer.md` 是唯一必须人工保存的 Agent 输出。
 - `judge.json` 只在 Profile 包含语义断言时需要。
 - `diagnosis.json` 只在 PARTIAL/FAIL 后进入改进分析时需要。
+- `patch-decision.json` 只记录 Human Patch Gate 决定，不与 LLM 诊断混写。
 - `report.md` 兼容现有 Runbook 的结果行和失败摘要。
 
 运行目录不得回写到 Skill 仓库，也不得作为默认提交资产。
@@ -172,12 +176,12 @@ Phase 1 保持三个命令：
 
 ```text
 python scripts/blackbox_eval.py prepare --case <eval-id> [--skill-path <path>] [--workspace <path>]
-python scripts/blackbox_eval.py grade --run <run-path>
-python scripts/blackbox_eval.py report --run <run-path> [--baseline <old-run-path>]
+python scripts/blackbox_eval.py grade --run <run-path> [--execution-kind <agent|canned> --agent-product <label> --agent-model <label>]
+python scripts/blackbox_eval.py report --run <run-path> [--baseline <old-run-path>] [--regression-pair <before-run> <after-run>]...
 ```
 
 - `prepare`：复制 Fixture 模板、初始化独立 Git 仓库、提交 baseline、生成 Prompt 与 `run.json`，并打印人工执行说明；提供 `--skill-path` 时生成规范化文件清单和 SHA-256 fingerprint。
-- `grade`：采集 Git/回答证据并执行确定性断言；需要语义审核而缺少 `judge.json` 时生成 `judge-request.json` 并进入 NEEDS_REVIEW，再次运行时校验并合并 Judge。可评价且结果非 PASS 时生成 `diagnosis-request.json`。
+- `grade`：首次处理回答时记录成组提供的 execution kind、产品/模型标签与 answer hash，采集 Git/回答证据并执行确定性断言；需要语义审核而缺少 `judge.json` 时生成 `judge-request.json` 并进入 NEEDS_REVIEW，再次运行时校验并合并 Judge。`grading.json` 固化用于报告的 provenance 投影。可评价且结果非 PASS 时生成 `diagnosis-request.json`。
 - `report`：生成 Runbook 兼容报告；提供 `--baseline` 时生成旧版/新版逐断言对照。
 
 Runner 不包含 Agent API Key、模型 SDK 或特定产品命令。
@@ -383,8 +387,7 @@ Developer 可自行分析，或让任意 LLM 按现有 Project Skill Evaluator �
   },
   "eval_gap": "covered | update-existing | add-new",
   "overfitting_risk": "风险与缓解方式",
-  "confidence": "high | medium | low",
-  "human_decision": "pending"
+  "confidence": "high | medium | low"
 }
 ```
 
@@ -392,9 +395,27 @@ Python 只验证 Schema、相对路径、引用存在性和证据闭合，不把
 
 ### 9.3 Human Patch Gate
 
-Developer 必须明确做出 `approve`、`revise` 或 `reject` 决定。批准只授权进入单独的 Skill 修改工作，不授权 Runner 自动写文件、提交或发布。
+Runner 首次接受 Schema 合法的 `diagnosis.json` 时，必须先生成 `freeze-manifest.json`，冻结 baseline Run 的 Prompt、答案、证据、评分、Judge、诊断请求、诊断文件 hash，以及来自 `grading.json` 的 Skill source/install、Agent identity、Eval/Profile/Fixture/Grader 版本和 Prompt/answer hash provenance。报告与比较不得只信可编辑的 `run.json`，必须对照这两个不可变投影。诊断文件不再承载可变的 Human 决定。
 
-作出 Patch 决定前，baseline Run 的 Prompt、答案、证据、评分和诊断必须冻结并记录 hash。不得在同一 Run 中一边修改 Skill 规则、一边回写 baseline 结论。
+Developer 通过独立的 `patch-decision.json` 明确做出 `approve`、`revise` 或 `reject` 决定；文件必须同时引用已冻结的 diagnosis SHA-256 和 freeze-manifest SHA-256，并记录 Human 标签、UTC 时间和说明。`revise` 表示需要继续修订、不得开始 Patch；`reject` 表示终止；只有 `approve` 授权进入单独的 Skill 修改工作。授权不允许 Runner 自动写文件、提交或发布。
+
+`patch-decision.json` 的最小接口是：
+
+```json
+{
+  "schema_version": "0.1",
+  "decision": "approve | revise | reject",
+  "diagnosis_sha256": "64 hex characters",
+  "freeze_manifest_sha256": "64 hex characters",
+  "decided_by": "human label",
+  "decided_at": "RFC 3339 UTC",
+  "note": "decision rationale or requested revision"
+}
+```
+
+`revise` 后可更新该决定文件；一旦 `approve` 或 `reject` 被 Runner 接受，就记录 terminal decision hash，后续变更视为 RUN_ERROR。Level B before/after 只接受引用冻结诊断的 `approve`。
+
+不得在同一 Run 中一边修改 Skill 规则、一边回写 baseline 结论。
 
 Patch 设计遵循：
 
@@ -412,6 +433,8 @@ Patch 后必须新建 Run，不复用旧 Fixture。`report --baseline` 对比：
 - Judge 语义判断及模型元数据。
 - 仍未解决或新出现的失败。
 - 受影响 P0 Eval 的回归结果。
+
+回归状态只能来自显式提供的 before/after Run 对，不从 sibling 目录猜测。每对 Run 必须通过相同的 Eval/Fixture/Profile/Prompt/Grader 兼容性校验，使用与目标对照一致的 Agent 产品/模型和 Judge 配置，且 before 侧与目标 baseline 的 Skill commit/install fingerprint 一致、after 侧与目标 candidate 一致。出现新增 FAIL 时 Level B 必须判为 ineligible。Phase 1 的 Level B 至少提供另一个 in-scope Eval（2 或 32）作为 regression pair；未提供时报告也必须写明 `Level B ineligible`。
 
 只有目标失败转为 PASS，且受影响回归没有新增 FAIL，Developer 才可决定发布。
 
@@ -440,13 +463,13 @@ Harness Ready / Improvement Loop Unproven
 
 只有真实 Agent 行为失败，或带有原始回答与可复现 Skill snapshot 的历史真实失败，才能进入本级证明。端到端成功条件是：
 
-1. 在冻结的 baseline Skill、Fixture 和 Profile 上观察到真实 PARTIAL/FAIL。
+1. baseline 是 `GRADED + PARTIAL/FAIL` 的真实 Agent Run，candidate 是 `GRADED + PASS` 的真实 Agent Run；两侧实际安装 fingerprint 均为 verified，execution kind 不能是 canned。
 2. 证据包能定位到具体契约文件与 section，而不是泛化成“模型不好”。
 3. 诊断提出一般化的最小 Patch，并说明过拟合风险。
-4. Developer 明确批准或修订 Patch。
+4. Developer 对最终 Patch 明确给出 `approve`；`revise` 只要求继续修订，不授权修改。
 5. candidate 在同一 Eval 的新 Fixture 上转为 PASS。
 6. 受影响 P0 Eval 没有新增 FAIL。
-7. before/after 报告记录 baseline/candidate source commit、实际安装 fingerprint、Prompt/答案 hash、Fixture/Profile/Grader 版本和 Human 决定。
+7. before/after 固定相同 Agent 产品/模型和 Judge 配置，报告记录 baseline/candidate source commit、实际安装 fingerprint、Prompt/答案 hash、Fixture/Profile/Grader 版本和 Human 决定；source commit 与实际安装 fingerprint 必须体现 candidate 变化。
 
 人为编写 canned-bad、篡改真实回答或故意破坏临时 Skill 只能测试 Harness，不能满足 Level B。
 
@@ -508,6 +531,7 @@ CI 只运行 Python/Git 单元测试，不调用真实 Agent 或在线 LLM。至
 - 小型 UTF-8/二进制未跟踪文件分别以文本/Base64 保存，超限文件只保存摘要和 `content_omitted_reason`。
 - 内容累计上限按规范化路径排序稳定执行，符号链接/junction/reparse point 不被跟随。
 - `answer.md` 始终位于 Fixture Git 仓库外，不会被误判为 Agent 写入。
+- 首次 grade 成组记录 execution kind、Agent 产品/模型标签和 answer SHA-256，后续不得静默改写身份。
 - 任意禁止写入映射为 FAIL。
 - 每个 Fixture 恰有三组独立 canary pair，Effective Prompt 透明追加三项事实问句，且 canonical/effective Prompt hash 均被记录。
 - `wiki_only`、`source_only`、`both`、`neither`、跨 pair 混合命中、Judge adoption 与 `min_observed_pairs: 2` 聚合符合第 7.2 节。
@@ -518,11 +542,15 @@ CI 只运行 Python/Git 单元测试，不调用真实 Agent 或在线 LLM。至
 - 无法匹配的 quote 进入 NEEDS_REVIEW，未知匹配模式/版本进入 RUN_ERROR。
 - 缺少语义审核映射为 NEEDS_REVIEW，基础设施异常映射为 RUN_ERROR；二者都不是 Skill FAIL。
 - Diagnosis 引用不存在的契约或证据时校验失败。
+- Runner 在接受 diagnosis 后、读取 Human 决定前冻结 baseline artifacts；冻结后的 grade 只校验而不重写证据。
+- `grading.json` provenance 与 `freeze-manifest.json` 必须和 `run.json`/底层 artifacts 交叉校验，不能通过单独改写 `run.json` 绕过。
+- `patch-decision.json` 必须引用冻结 diagnosis 和 freeze manifest；`revise/reject` 不放行 comparison，只有 `approve` 放行，terminal decision 后变更进入 RUN_ERROR。
 - `report.md` 与现有 Runbook 字段兼容。
 - 报告列出 NEEDS_REVIEW 数量、首次产生时间、等待时长和最早时间，并保持通过率分母不含未审核 Run。
 - Grading completion 与 PASS rate 相邻显示，manual-only canonical assertions 单独列出。
-- baseline/candidate 对照不会把不同 Eval、Fixture 版本或 Profile 版本误配。
-- source commit、实际安装 fingerprint、canonical/effective Prompt hash、答案 hash 和 Grader 版本进入报告。
+- baseline/candidate 对照不会把不同 Eval、Fixture、Profile 或 Grader 版本误配，也不会接受被改写的冻结 baseline。
+- Level B 拒绝 canned、unverified、非 `GRADED PARTIAL/FAIL -> GRADED PASS`、Agent/Judge 配置漂移或 Skill commit/fingerprint 未变化的对照。
+- source commit、实际安装 fingerprint、Agent/模型、canonical/effective Prompt hash、答案 hash 和 Grader 版本进入报告。
 
 ### 12.2 手工行为验收
 
