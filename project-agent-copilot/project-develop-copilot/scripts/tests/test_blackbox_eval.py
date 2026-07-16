@@ -1161,6 +1161,14 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         self.assertEqual("PASS", grading["behavior_score"])
         self.assertEqual("canned", grading["provenance"]["agent_identity"]["execution_kind"])
         self.assertEqual(run["answer_sha256"], grading["provenance"]["answer_sha256"])
+        self.assertEqual(
+            {
+                "model": "fixture-judge",
+                "temperature": 0,
+                "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+            },
+            grading["provenance"]["judge_identity"],
+        )
 
         self.assertEqual(
             1,
@@ -1764,3 +1772,466 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         rejected = self.runner.read_json_object(run_path / "run.json")
         self.assertFalse(rejected["level_b_comparison_authorized"])
         self.assertEqual("reject", rejected["patch_decision"])
+
+
+class BlackboxEvalReportTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace = Path(self.temp.name) / "workspace"
+        self.workspace.mkdir()
+        self.before_commit = self.runner.run_git(
+            self.runner.REPO_ROOT, ["rev-parse", "HEAD~1"]
+        ).stdout_text.strip()
+        self.after_commit = self.runner.run_git(
+            self.runner.REPO_ROOT, ["rev-parse", "HEAD"]
+        ).stdout_text.strip()
+        self.before_fingerprint = "1" * 64
+        self.after_fingerprint = "2" * 64
+        self.agent_identity = {
+            "execution_kind": "agent",
+            "agent_product": "example-agent",
+            "agent_model": "example-model",
+        }
+        self.judge_identity = {
+            "model": "example-judge",
+            "temperature": 0,
+            "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+        }
+
+    def _compatibility(self, eval_id):
+        profile = self.runner.load_profile(str(eval_id))
+        marker = f"{int(eval_id):02x}"
+        return {
+            "eval_id": profile.eval_id,
+            "fixture_version": profile.fixture_version,
+            "profile_version": profile.profile_version,
+            "grader_version": self.runner.GRADER_VERSION,
+            "canonical_prompt_sha256": (marker * 32)[:64],
+            "effective_prompt_sha256": ((marker[::-1] or "f") * 32)[:64],
+        }
+
+    def _write_run(
+        self,
+        suffix,
+        *,
+        eval_id=2,
+        status="GRADED",
+        score="PASS",
+        source_commit=None,
+        fingerprint=None,
+        execution_kind="agent",
+        skill_status="verified",
+        agent_product="example-agent",
+        agent_model="example-model",
+        judge_model="example-judge",
+        judge_temperature=0,
+        frozen=False,
+        approved=False,
+        hard_fail=False,
+        private_content="PRIVATE-UNTRACKED-CONTENT",
+    ):
+        profile = self.runner.load_profile(str(eval_id))
+        run_path = self.workspace / f"eval-{int(eval_id):03d}-{suffix}"
+        run_path.mkdir()
+        answer = f"synthetic answer for {suffix}\n".encode("utf-8")
+        (run_path / "answer.md").write_bytes(answer)
+        source_commit = source_commit or self.after_commit
+        fingerprint = fingerprint if fingerprint is not None else self.after_fingerprint
+        skill_identity = {
+            "status": skill_status,
+            "path": "recorded/verified-skill" if skill_status == "verified" else None,
+            "fingerprint_sha256": fingerprint if skill_status == "verified" else None,
+        }
+        agent_identity = {
+            "execution_kind": execution_kind,
+            "agent_product": agent_product,
+            "agent_model": agent_model,
+        }
+        judge_identity = {
+            "model": judge_model,
+            "temperature": judge_temperature,
+            "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+        }
+        provenance = {
+            **self._compatibility(eval_id),
+            "skill_source_commit": source_commit,
+            "skill_identity": skill_identity,
+            "fixture_baseline_commit": "f" * 40,
+            "agent_identity": agent_identity,
+            "answer_sha256": self.runner._sha256_bytes(answer),
+            "judge_identity": judge_identity,
+        }
+        assertion_outcome = "FAIL" if score == "FAIL" else "PARTIAL" if score == "PARTIAL" else "PASS"
+        assertions = [
+            {
+                "id": "semantic-contract",
+                "layer": "judge",
+                "outcome": assertion_outcome,
+                "severity": "hard" if assertion_outcome == "FAIL" else "info",
+                "message": "synthetic semantic result",
+                "evidence_ids": ["answer.md:quote"],
+            }
+        ]
+        if hard_fail:
+            assertions.append(
+                {
+                    "id": "zero-write",
+                    "layer": "deterministic",
+                    "outcome": "FAIL",
+                    "severity": "hard",
+                    "message": "deterministic write failure",
+                    "evidence_ids": ["git:status"],
+                }
+            )
+        grading = {
+            "schema_version": self.runner.RUN_SCHEMA_VERSION,
+            "run_id": run_path.name,
+            "run_status": status,
+            "behavior_score": score,
+            "assertions": assertions,
+            "registered_evidence_ids": ["answer.md:quote", "git:status"],
+            "unresolved_assertion_ids": [],
+            "needs_review_reasons": [],
+            "provenance": provenance,
+        }
+        self.runner.write_json(run_path / "grading.json", grading)
+        self.runner.write_json(
+            run_path / "judge.json",
+            {
+                "schema_version": self.runner.JUDGE_SCHEMA_VERSION,
+                **judge_identity,
+            },
+        )
+        self.runner.write_json(
+            run_path / "evidence.json",
+            {
+                "has_any_write": score == "FAIL",
+                "statuses": [{"path": "private.txt", "xy": "??"}],
+                "untracked_manifest": [
+                    {
+                        "path": "private.txt",
+                        "sha256": "9" * 64,
+                        "content": private_content,
+                    }
+                ],
+            },
+        )
+        run = {
+            **provenance,
+            "schema_version": self.runner.RUN_SCHEMA_VERSION,
+            "run_id": run_path.name,
+            "created_at": "2026-07-16T01:02:03Z",
+            "run_status": status,
+            "behavior_score": score,
+            "needs_review_since": None,
+            "needs_review_reasons": [],
+            "unresolved_assertion_ids": [],
+            "patch_decision_history": [],
+            "freeze_manifest_sha256": None,
+            "level_b_comparison_authorized": False,
+        }
+        run["artifact_hashes"] = self.runner._artifact_hashes(run_path)
+        if frozen:
+            self.runner.write_json(run_path / "diagnosis.json", {"synthetic": True})
+            hashes = self.runner._artifact_hashes(run_path)
+            manifest = {
+                "schema_version": self.runner.DIAGNOSIS_SCHEMA_VERSION,
+                "frozen_at": "2026-07-16T02:03:04Z",
+                "provenance": provenance,
+                "artifact_hashes": hashes,
+            }
+            self.runner.write_json(run_path / "freeze-manifest.json", manifest)
+            run["freeze_manifest_sha256"] = self.runner._sha256_file(
+                run_path / "freeze-manifest.json"
+            )
+            run["artifact_hashes"] = hashes
+            decision = {
+                "schema_version": self.runner.PATCH_DECISION_SCHEMA_VERSION,
+                "decision": "approve" if approved else "reject",
+                "diagnosis_sha256": hashes["diagnosis.json"],
+                "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+                "decided_by": "Human Reviewer",
+                "decided_at": "2026-07-16T03:04:05Z",
+                "note": "Human-reviewed comparison decision.",
+            }
+            self.runner.write_json(run_path / "patch-decision.json", decision)
+            decision_hash = self.runner._sha256_file(run_path / "patch-decision.json")
+            history = [
+                {
+                    "sha256": decision_hash,
+                    "decision": decision["decision"],
+                    "decided_by": decision["decided_by"],
+                    "decided_at": decision["decided_at"],
+                    "note": decision["note"],
+                }
+            ]
+            run.update(
+                {
+                    "patch_decision_history": history,
+                    "patch_decision": decision["decision"],
+                    "patch_decision_sha256": decision_hash,
+                    "terminal_patch_decision_sha256": decision_hash,
+                    "level_b_comparison_authorized": approved,
+                }
+            )
+            anchor = {
+                "schema_version": self.runner.TERMINAL_PATCH_DECISION_SCHEMA_VERSION,
+                "decision": decision["decision"],
+                "decision_sha256": decision_hash,
+                "diagnosis_sha256": hashes["diagnosis.json"],
+                "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+                "patch_decision_history_sha256": self.runner._sha256_json(history),
+            }
+            self.runner.write_json(run_path / "terminal-patch-decision.json", anchor)
+            run["terminal_patch_decision_anchor_sha256"] = self.runner._sha256_file(
+                run_path / "terminal-patch-decision.json"
+            )
+        self.runner.write_json(run_path / "run.json", run)
+        return run_path
+
+    def _write_pending(self, suffix, status, since=None):
+        run_path = self.workspace / f"eval-002-{suffix}"
+        run_path.mkdir()
+        self.runner.write_json(
+            run_path / "run.json",
+            {
+                "run_id": run_path.name,
+                "run_status": status,
+                "behavior_score": None,
+                "needs_review_since": since,
+                "unresolved_assertion_ids": ["z-assertion", "a-assertion"] if since else [],
+                "needs_review_reasons": ["judge missing"] if since else [],
+            },
+        )
+        (run_path / "answer.md").write_text(
+            "SIBLING-PRIVATE-ANSWER", encoding="utf-8"
+        )
+        return run_path
+
+    def _set_provenance(self, run_path, key, value):
+        run = self.runner.read_json_object(run_path / "run.json")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        run[key] = value
+        grading["provenance"][key] = value
+        self.runner.write_json(run_path / "grading.json", grading)
+        self.runner.write_json(run_path / "run.json", run)
+
+    def test_report_renders_runbook_provenance_aging_rates_and_private_safe_evidence(self):
+        target = self._write_run("report", eval_id=32)
+        self._write_run("graded-fail", eval_id=2, score="FAIL")
+        pending = self._write_pending(
+            "pending", "NEEDS_REVIEW", "2026-07-15T01:02:00Z"
+        )
+        self._write_pending("draft", "READY_FOR_AGENT")
+        self._write_pending("error", "RUN_ERROR")
+        original_pending = (pending / "run.json").read_bytes()
+
+        report_path = self.runner.render_report(
+            target,
+            now=lambda: datetime(2026, 7, 17, 3, 4, 0, tzinfo=timezone.utc),
+        )
+        report = report_path.read_text(encoding="utf-8")
+
+        for field in (
+            "- Commit:", "- Runner:", "- Skill install:", "- Project fixture:",
+            "- Cases run:", "- PASS:", "- PARTIAL:", "- FAIL:",
+            "## Results", "## Failures", "## Summary",
+        ):
+            self.assertIn(field, report)
+        for value in (
+            self.after_commit,
+            self.after_fingerprint,
+            "verified",
+            "agent",
+            "example-agent",
+            "example-model",
+            "example-judge",
+            self.runner.JUDGE_PROMPT_VERSION,
+            self.runner.GRADER_VERSION,
+        ):
+            self.assertIn(str(value), report)
+        grading = self.runner.read_json_object(target / "grading.json")
+        self.assertIn(grading["provenance"]["canonical_prompt_sha256"], report)
+        self.assertIn(grading["provenance"]["effective_prompt_sha256"], report)
+        self.assertIn(grading["provenance"]["answer_sha256"], report)
+        lines = report.splitlines()
+        completion_index = next(i for i, line in enumerate(lines) if line.startswith("Grading completion:"))
+        self.assertTrue(lines[completion_index + 1].startswith("PASS rate:"))
+        self.assertIn("Grading completion: 2/3 (66.7%)", report)
+        self.assertIn("PASS rate: 1/2 GRADED (50.0%); 1 runs pending review", report)
+        self.assertIn("Generated at: 2026-07-17T03:04:00Z", report)
+        self.assertIn("NEEDS_REVIEW count: 1", report)
+        self.assertIn("Unresolved assertion count: 2", report)
+        self.assertIn("Oldest needs_review_since: 2026-07-15T01:02:00Z", report)
+        self.assertIn("2d 2h 2m", report)
+        self.assertIn("wiki-before-source-fallback", report)
+        self.assertIn("manual-only", report)
+        self.assertIn("final answer cannot prove read order without runtime trace", report)
+        self.assertIn("private.txt", report)
+        self.assertIn("9" * 64, report)
+        self.assertNotIn("PRIVATE-UNTRACKED-CONTENT", report)
+        self.assertNotIn("SIBLING-PRIVATE-ANSWER", report)
+        self.assertEqual(original_pending, (pending / "run.json").read_bytes())
+        self.runner.render_report(
+            target,
+            now=lambda: datetime(2026, 7, 18, 3, 4, 0, tzinfo=timezone.utc),
+        )
+        self.assertEqual(original_pending, (pending / "run.json").read_bytes())
+
+    def _make_level_b_pair(self, suffix="level-b", **overrides):
+        baseline_args = overrides.pop("baseline", {})
+        candidate_args = overrides.pop("candidate", {})
+        baseline_values = {
+            "score": "FAIL",
+            "source_commit": self.before_commit,
+            "fingerprint": self.before_fingerprint,
+            "frozen": True,
+            "approved": True,
+            **baseline_args,
+        }
+        candidate_values = {
+            "score": "PASS",
+            "source_commit": self.after_commit,
+            "fingerprint": self.after_fingerprint,
+            **candidate_args,
+        }
+        baseline = self._write_run(f"{suffix}-before", **baseline_values)
+        candidate = self._write_run(f"{suffix}-after", **candidate_values)
+        return baseline, candidate
+
+    def _make_regression_pair(self, suffix="regression", after_score="PASS", **after_args):
+        before = self._write_run(
+            f"{suffix}-before",
+            eval_id=32,
+            score="PASS",
+            source_commit=self.before_commit,
+            fingerprint=self.before_fingerprint,
+        )
+        after = self._write_run(
+            f"{suffix}-after",
+            eval_id=32,
+            score=after_score,
+            source_commit=self.after_commit,
+            fingerprint=self.after_fingerprint,
+            **after_args,
+        )
+        return before, after
+
+    def test_level_b_comparison_uses_approved_agent_runs_and_declared_regression_pairs(self):
+        baseline, candidate = self._make_level_b_pair()
+        regression = self._make_regression_pair()
+
+        report = self.runner.render_report(
+            candidate,
+            baseline_path=baseline,
+            regression_pairs=(regression,),
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Level B eligible: yes", report)
+        self.assertIn("Human decision: approve", report)
+        self.assertIn("## Before / After", report)
+        self.assertIn("semantic-contract", report)
+        self.assertIn("Git side effects", report)
+        self.assertIn("example-judge", report)
+        self.assertIn("Regression: PASS", report)
+
+    def test_compare_rejects_each_compatibility_mismatch_and_frozen_drift(self):
+        for key in (
+            "eval_id",
+            "fixture_version",
+            "profile_version",
+            "grader_version",
+            "canonical_prompt_sha256",
+            "effective_prompt_sha256",
+        ):
+            with self.subTest(key=key):
+                baseline, candidate = self._make_level_b_pair(f"compat-{key}")
+                self._set_provenance(candidate, key, "32" if key == "eval_id" else f"different-{key}")
+                with self.assertRaisesRegex(self.runner.EvalError, key):
+                    self.runner.render_report(candidate, baseline_path=baseline)
+
+        baseline, candidate = self._make_level_b_pair("frozen-missing")
+        (baseline / "evidence.json").unlink()
+        with self.assertRaisesRegex(self.runner.EvalError, "frozen"):
+            self.runner.render_report(candidate, baseline_path=baseline)
+
+        baseline, candidate = self._make_level_b_pair("run-provenance")
+        run = self.runner.read_json_object(candidate / "run.json")
+        run["agent_identity"]["agent_model"] = "tampered-model"
+        self.runner.write_json(candidate / "run.json", run)
+        with self.assertRaisesRegex(self.runner.EvalError, "provenance"):
+            self.runner.render_report(candidate, baseline_path=baseline)
+
+    def test_level_b_ineligibility_is_explicit_for_policy_gates(self):
+        cases = (
+            (
+                "canned",
+                {"baseline": {"execution_kind": "canned"}, "candidate": {"execution_kind": "canned"}},
+                "Harness-only",
+            ),
+            (
+                "unverified",
+                {"baseline": {"skill_status": "unverified"}, "candidate": {"skill_status": "unverified"}},
+                "verified Skill",
+            ),
+            ("baseline-pass", {"baseline": {"score": "PASS"}}, "baseline behavior score"),
+            ("candidate-fail", {"candidate": {"score": "FAIL"}}, "candidate behavior score"),
+            (
+                "same-commit",
+                {"candidate": {"source_commit": self.before_commit}},
+                "Skill source commit did not change",
+            ),
+            (
+                "same-fingerprint",
+                {"candidate": {"fingerprint": self.before_fingerprint}},
+                "Skill fingerprint did not change",
+            ),
+            (
+                "agent-drift",
+                {"candidate": {"agent_model": "different-model"}},
+                "Agent product/model drift",
+            ),
+            (
+                "judge-drift",
+                {"candidate": {"judge_model": "different-judge"}},
+                "Judge configuration drift",
+            ),
+            (
+                "hard-fail",
+                {"candidate": {"hard_fail": True}},
+                "deterministic hard FAIL",
+            ),
+        )
+        for suffix, arguments, expected in cases:
+            with self.subTest(suffix=suffix):
+                baseline, candidate = self._make_level_b_pair(suffix, **arguments)
+                report = self.runner.render_report(
+                    candidate, baseline_path=baseline
+                ).read_text(encoding="utf-8")
+                self.assertIn("Level B eligible: no", report)
+                self.assertIn(expected, report)
+
+    def test_regression_status_requires_other_eval_and_rejects_new_fail_or_identity_drift(self):
+        baseline, candidate = self._make_level_b_pair("regression-status")
+        report = self.runner.render_report(
+            candidate, baseline_path=baseline
+        ).read_text(encoding="utf-8")
+        self.assertIn("Regression: not supplied; Level B ineligible", report)
+
+        new_fail = self._make_regression_pair("new-fail", after_score="FAIL")
+        report = self.runner.render_report(
+            candidate, baseline_path=baseline, regression_pairs=(new_fail,)
+        ).read_text(encoding="utf-8")
+        self.assertIn("new FAIL", report)
+        self.assertIn("Level B eligible: no", report)
+
+        drift = self._make_regression_pair(
+            "identity-drift", agent_model="different-model"
+        )
+        report = self.runner.render_report(
+            candidate, baseline_path=baseline, regression_pairs=(drift,)
+        ).read_text(encoding="utf-8")
+        self.assertIn("regression Agent product/model drift", report)
+        self.assertIn("Level B eligible: no", report)

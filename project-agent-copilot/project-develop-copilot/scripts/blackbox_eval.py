@@ -48,6 +48,14 @@ FROZEN_ARTIFACTS = (
     "diagnosis-request.json",
     "diagnosis.json",
 )
+COMPARISON_KEYS = (
+    "eval_id",
+    "fixture_version",
+    "profile_version",
+    "grader_version",
+    "canonical_prompt_sha256",
+    "effective_prompt_sha256",
+)
 DIAGNOSTIC_LINKS = (
     "evals/project-develop-copilot-evals.md",
     "references/continuous-evolution.md",
@@ -835,6 +843,7 @@ def prepare_run(
             "fixture_version": profile.fixture_version,
             "freeze_manifest_sha256": None,
             "grader_version": GRADER_VERSION,
+            "judge_identity": None,
             "needs_review_reasons": [],
             "needs_review_since": None,
             "patch_decision_history": [],
@@ -1303,6 +1312,7 @@ def _provenance_from_run(run: Mapping[str, Any]) -> dict[str, Any]:
         "fixture_baseline_commit",
         "agent_identity",
         "answer_sha256",
+        "judge_identity",
     )
     return {key: run.get(key) for key in keys}
 
@@ -1352,6 +1362,7 @@ def _validate_existing_grading_identity(
             not isinstance(provenance, dict)
             or provenance.get("agent_identity") != identity
             or provenance.get("answer_sha256") != answer_hash
+            or provenance.get("judge_identity") != run.get("judge_identity")
         ):
             raise EvalError("Run identity locks differ from grading provenance")
 
@@ -1900,12 +1911,23 @@ def grade_run(
         if run_error_results:
             raise EvalError("; ".join(sorted(result.message for result in run_error_results)))
         if judge_path.exists():
+            judge_identity = {
+                "model": judge["model"],
+                "temperature": judge["temperature"],
+                "prompt_version": judge["prompt_version"],
+            }
+            locked_judge_identity = run.get("judge_identity")
+            if locked_judge_identity is not None and locked_judge_identity != judge_identity:
+                raise EvalError("Judge identity changed after a validated grade")
+            run["judge_identity"] = judge_identity
             unresolved = sorted(
                 {result.id for result in results if result.outcome == "NEEDS_REVIEW"}
             )
             needs_review_reasons = sorted(
                 {result.message for result in results if result.outcome == "NEEDS_REVIEW"}
             )
+        elif run.get("judge_identity") is not None:
+            raise EvalError("judge.json is missing after Judge identity was locked")
         registered_ids = _registered_evidence_ids(results)
         instant = (now or (lambda: datetime.now(timezone.utc)))()
         timestamp = _utc_timestamp(instant)
@@ -1958,3 +1980,618 @@ def grade_run(
         return 0
     except (EvalError, OSError, UnicodeDecodeError, KeyError, TypeError) as error:
         return _set_run_error(run_path, run, str(error))
+
+
+def _parse_report_timestamp(value: Any) -> datetime:
+    if not isinstance(value, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", value
+    ):
+        raise EvalError("Run timestamp must be RFC 3339 UTC")
+    try:
+        return datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as error:
+        raise EvalError("Run timestamp must be RFC 3339 UTC") from error
+
+
+def _format_review_age(started: datetime, current: datetime) -> str:
+    seconds = max(0, int((current - started).total_seconds()))
+    minutes = seconds // 60
+    days, minutes = divmod(minutes, 24 * 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{days}d {hours}h {minutes}m"
+
+
+def _percentage(numerator: int, denominator: int) -> str:
+    if denominator == 0:
+        return "n/a"
+    return f"{100 * numerator / denominator:.1f}%"
+
+
+def collect_review_backlog(
+    run_path: Path,
+    now: Callable[[], datetime] | None = None,
+) -> dict[str, Any]:
+    run_path = run_path.expanduser().resolve(strict=True)
+    instant = (now or (lambda: datetime.now(timezone.utc)))()
+    if instant.tzinfo is None or instant.utcoffset() is None:
+        raise EvalError("Report time must be timezone-aware")
+    current = instant.astimezone(timezone.utc)
+    runs: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    counts = {"PASS": 0, "PARTIAL": 0, "FAIL": 0}
+    graded_count = 0
+    needs_review_count = 0
+    for sibling in sorted(run_path.parent.iterdir(), key=lambda item: item.name):
+        run_file = sibling / "run.json"
+        if not sibling.is_dir() or not run_file.is_file():
+            continue
+        run = read_json_object(run_file)
+        status = run.get("run_status")
+        score = run.get("behavior_score")
+        run_id = str(run.get("run_id") or sibling.name)
+        runs.append({"run_id": run_id, "run_status": status, "behavior_score": score})
+        if status == "GRADED":
+            graded_count += 1
+            if score in counts:
+                counts[score] += 1
+        elif status == "NEEDS_REVIEW":
+            needs_review_count += 1
+            since = run.get("needs_review_since")
+            started = _parse_report_timestamp(since)
+            unresolved = run.get("unresolved_assertion_ids", [])
+            reasons = run.get("needs_review_reasons", [])
+            if not isinstance(unresolved, list) or not all(
+                isinstance(item, str) for item in unresolved
+            ):
+                raise EvalError(f"Run {run_id} unresolved assertions are malformed")
+            if not isinstance(reasons, list) or not all(
+                isinstance(item, str) for item in reasons
+            ):
+                raise EvalError(f"Run {run_id} review reasons are malformed")
+            pending.append(
+                {
+                    "run_id": run_id,
+                    "needs_review_since": since,
+                    "age": _format_review_age(started, current),
+                    "started": started,
+                    "unresolved_assertion_ids": sorted(unresolved),
+                    "needs_review_reasons": sorted(reasons),
+                }
+            )
+    pending.sort(key=lambda item: (item["started"], item["run_id"]))
+    attempted_count = graded_count + needs_review_count
+    return {
+        "generated_at": _utc_timestamp(current),
+        "runs": runs,
+        "pending": pending,
+        "graded_count": graded_count,
+        "needs_review_count": needs_review_count,
+        "attempted_count": attempted_count,
+        "unresolved_assertion_count": sum(
+            len(item["unresolved_assertion_ids"]) for item in pending
+        ),
+        "oldest_needs_review_since": (
+            pending[0]["needs_review_since"] if pending else None
+        ),
+        **{f"{key.lower()}_count": value for key, value in counts.items()},
+    }
+
+
+def _validate_judge_identity(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict) or set(value) != {
+        "model",
+        "temperature",
+        "prompt_version",
+    }:
+        raise EvalError("grading provenance Judge identity is malformed")
+    if not isinstance(value.get("model"), str) or not value["model"]:
+        raise EvalError("grading provenance Judge model is malformed")
+    temperature = value.get("temperature")
+    if temperature is not None and (
+        isinstance(temperature, bool) or not isinstance(temperature, (int, float))
+    ):
+        raise EvalError("grading provenance Judge temperature is malformed")
+    if value.get("prompt_version") != JUDGE_PROMPT_VERSION:
+        raise EvalError("grading provenance Judge prompt version is unsupported")
+    return value
+
+
+def _load_report_run(run_path: Path) -> dict[str, Any]:
+    run_path = run_path.expanduser().resolve(strict=True)
+    run = read_json_object(run_path / "run.json")
+    grading = read_json_object(run_path / "grading.json")
+    provenance = grading.get("provenance")
+    if not isinstance(provenance, dict) or _provenance_from_run(run) != provenance:
+        raise EvalError("Run provenance differs from grading.json provenance")
+    _validate_judge_identity(provenance.get("judge_identity"))
+    answer_path = run_path / "answer.md"
+    answer_hash = provenance.get("answer_sha256")
+    if (
+        not isinstance(answer_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", answer_hash)
+        or not answer_path.is_file()
+        or _sha256_file(answer_path) != answer_hash
+    ):
+        raise EvalError("report answer bytes differ from grading provenance")
+    if (
+        run.get("run_status") != grading.get("run_status")
+        or run.get("behavior_score") != grading.get("behavior_score")
+    ):
+        raise EvalError("Run status or behavior score differs from grading.json")
+    judge_path = run_path / "judge.json"
+    judge_identity = provenance.get("judge_identity")
+    if judge_path.is_file() and judge_identity is not None:
+        judge = read_json_object(judge_path)
+        current_judge = {
+            "model": judge.get("model"),
+            "temperature": judge.get("temperature"),
+            "prompt_version": judge.get("prompt_version"),
+        }
+        if current_judge != judge_identity:
+            raise EvalError("judge.json differs from grading provenance")
+    evidence = (
+        read_json_object(run_path / "evidence.json")
+        if (run_path / "evidence.json").is_file()
+        else {}
+    )
+    return {
+        "path": run_path,
+        "run": run,
+        "grading": grading,
+        "provenance": provenance,
+        "evidence": evidence,
+    }
+
+
+def _require_compatible(
+    before: Mapping[str, Any], after: Mapping[str, Any], label: str
+) -> None:
+    for key in COMPARISON_KEYS:
+        if before.get(key) != after.get(key):
+            raise EvalError(f"{label} compatibility mismatch: {key}")
+
+
+def _has_hard_deterministic_fail(grading: Mapping[str, Any]) -> bool:
+    assertions = grading.get("assertions", [])
+    return isinstance(assertions, list) and any(
+        isinstance(item, dict)
+        and item.get("layer") == "deterministic"
+        and item.get("severity") == "hard"
+        and item.get("outcome") == "FAIL"
+        for item in assertions
+    )
+
+
+def _git_effect_summary(evidence: Mapping[str, Any]) -> str:
+    statuses = evidence.get("statuses", [])
+    status_count = len(statuses) if isinstance(statuses, list) else 0
+    return (
+        f"has_any_write={str(bool(evidence.get('has_any_write'))).lower()}, "
+        f"status_entries={status_count}"
+    )
+
+
+def _validate_baseline_decision(
+    baseline: Mapping[str, Any], manifest: Mapping[str, Any]
+) -> dict[str, Any] | None:
+    run_path = baseline["path"]
+    decision_path = run_path / "patch-decision.json"
+    if not decision_path.is_file():
+        return None
+    decision = read_json_object(decision_path)
+    if decision.get("diagnosis_sha256") != manifest["artifact_hashes"].get(
+        "diagnosis.json"
+    ):
+        raise EvalError("baseline patch decision Diagnosis hash mismatch")
+    if decision.get("freeze_manifest_sha256") != baseline["run"].get(
+        "freeze_manifest_sha256"
+    ):
+        raise EvalError("baseline patch decision freeze manifest hash mismatch")
+    _parse_utc_rfc3339(decision.get("decided_at"))
+    if any(
+        not isinstance(decision.get(key), str) or not decision[key].strip()
+        for key in ("decided_by", "note")
+    ):
+        raise EvalError("baseline patch decision Human metadata is blank")
+    if decision.get("decision") in {"approve", "reject"}:
+        run_copy = json.loads(json.dumps(baseline["run"]))
+        _validate_patch_decision(run_path, run_copy, manifest)
+    return decision
+
+
+def _assertion_map(grading: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    assertions = grading.get("assertions", [])
+    if not isinstance(assertions, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("id"), str)
+        for item in assertions
+    ):
+        raise EvalError("grading assertions are malformed")
+    return {item["id"]: item for item in assertions}
+
+
+def _comparison_report(
+    candidate: Mapping[str, Any],
+    baseline_path: Path | None,
+    regression_pairs: Sequence[tuple[Path, Path]],
+) -> dict[str, Any]:
+    if baseline_path is None:
+        return {
+            "baseline": None,
+            "decision": None,
+            "eligible": False,
+            "reasons": ["No baseline supplied"],
+            "regression_lines": ["Regression: not supplied; Level B ineligible"],
+        }
+    baseline = _load_report_run(baseline_path)
+    manifest, _ = _validate_frozen_run(baseline["path"], baseline["run"])
+    decision = _validate_baseline_decision(baseline, manifest)
+    _require_compatible(
+        baseline["provenance"], candidate["provenance"], "target comparison"
+    )
+    before_provenance = baseline["provenance"]
+    after_provenance = candidate["provenance"]
+    before_run = baseline["run"]
+    after_run = candidate["run"]
+    before_agent = before_provenance.get("agent_identity")
+    after_agent = after_provenance.get("agent_identity")
+    before_skill = before_provenance.get("skill_identity")
+    after_skill = after_provenance.get("skill_identity")
+    before_judge = before_provenance.get("judge_identity")
+    after_judge = after_provenance.get("judge_identity")
+    reasons: list[str] = []
+    if decision is None or decision.get("decision") != "approve":
+        reasons.append("baseline Human decision is not approve")
+    if before_run.get("run_status") != "GRADED":
+        reasons.append("baseline run_status must be GRADED")
+    if before_run.get("behavior_score") not in {"PARTIAL", "FAIL"}:
+        reasons.append("baseline behavior score must be PARTIAL or FAIL")
+    if after_run.get("run_status") != "GRADED":
+        reasons.append("candidate run_status must be GRADED")
+    if after_run.get("behavior_score") != "PASS":
+        reasons.append("candidate behavior score must be PASS")
+    if not isinstance(before_agent, dict) or not isinstance(after_agent, dict) or (
+        before_agent.get("execution_kind") != "agent"
+        or after_agent.get("execution_kind") != "agent"
+    ):
+        reasons.append("Harness-only evidence: canned Runs cannot prove Level B")
+    if not isinstance(before_skill, dict) or not isinstance(after_skill, dict) or (
+        before_skill.get("status") != "verified"
+        or after_skill.get("status") != "verified"
+    ):
+        reasons.append("both Runs require a verified Skill identity")
+    if before_agent != after_agent:
+        reasons.append("Agent product/model drift")
+    if before_judge is None or before_judge != after_judge:
+        reasons.append("Judge configuration drift")
+    if before_provenance.get("skill_source_commit") == after_provenance.get(
+        "skill_source_commit"
+    ):
+        reasons.append("Skill source commit did not change")
+    if isinstance(before_skill, dict) and isinstance(after_skill, dict) and (
+        before_skill.get("fingerprint_sha256")
+        == after_skill.get("fingerprint_sha256")
+    ):
+        reasons.append("Skill fingerprint did not change")
+    if _has_hard_deterministic_fail(candidate["grading"]):
+        reasons.append("candidate contains a deterministic hard FAIL")
+
+    regression_lines: list[str] = []
+    other_eval_present = False
+    if not regression_pairs:
+        regression_lines.append("Regression: not supplied; Level B ineligible")
+        reasons.append("required other-Eval regression pair was not supplied")
+    for before_path, after_path in regression_pairs:
+        regression_before = _load_report_run(before_path)
+        regression_after = _load_report_run(after_path)
+        _require_compatible(
+            regression_before["provenance"],
+            regression_after["provenance"],
+            "regression pair",
+        )
+        pair_reasons: list[str] = []
+        before_pair_provenance = regression_before["provenance"]
+        after_pair_provenance = regression_after["provenance"]
+        before_pair_agent = before_pair_provenance.get("agent_identity")
+        after_pair_agent = after_pair_provenance.get("agent_identity")
+        before_pair_skill = before_pair_provenance.get("skill_identity")
+        after_pair_skill = after_pair_provenance.get("skill_identity")
+        if (
+            regression_before["run"].get("run_status") != "GRADED"
+            or regression_after["run"].get("run_status") != "GRADED"
+        ):
+            pair_reasons.append("regression Runs must both be GRADED")
+        if (
+            not isinstance(before_pair_agent, dict)
+            or not isinstance(after_pair_agent, dict)
+            or before_pair_agent.get("execution_kind") != "agent"
+            or after_pair_agent.get("execution_kind") != "agent"
+        ):
+            pair_reasons.append("regression Runs require execution_kind=agent")
+        if (
+            not isinstance(before_pair_skill, dict)
+            or not isinstance(after_pair_skill, dict)
+            or before_pair_skill.get("status") != "verified"
+            or after_pair_skill.get("status") != "verified"
+        ):
+            pair_reasons.append("regression Runs require verified Skill identities")
+        if before_pair_agent != before_agent or after_pair_agent != after_agent:
+            pair_reasons.append("regression Agent product/model drift")
+        if (
+            before_pair_provenance.get("judge_identity") != before_judge
+            or after_pair_provenance.get("judge_identity") != after_judge
+        ):
+            pair_reasons.append("regression Judge configuration drift")
+        if (
+            before_pair_provenance.get("skill_source_commit")
+            != before_provenance.get("skill_source_commit")
+            or not isinstance(before_pair_skill, dict)
+            or not isinstance(before_skill, dict)
+            or before_pair_skill.get("fingerprint_sha256")
+            != before_skill.get("fingerprint_sha256")
+        ):
+            pair_reasons.append("regression BEFORE Skill identity mismatch")
+        if (
+            after_pair_provenance.get("skill_source_commit")
+            != after_provenance.get("skill_source_commit")
+            or not isinstance(after_pair_skill, dict)
+            or not isinstance(after_skill, dict)
+            or after_pair_skill.get("fingerprint_sha256")
+            != after_skill.get("fingerprint_sha256")
+        ):
+            pair_reasons.append("regression AFTER Skill identity mismatch")
+        pair_eval = before_pair_provenance.get("eval_id")
+        if pair_eval in {"2", "32"} and pair_eval != before_provenance.get("eval_id"):
+            other_eval_present = True
+        else:
+            pair_reasons.append("regression pair is not the other in-scope Eval")
+        before_score = regression_before["run"].get("behavior_score")
+        after_score = regression_after["run"].get("behavior_score")
+        if before_score in {"PASS", "PARTIAL"} and after_score == "FAIL":
+            pair_reasons.append("new FAIL regression")
+        source = f"{regression_before['path'].name} -> {regression_after['path'].name}"
+        if pair_reasons:
+            regression_lines.append(
+                f"Regression: INELIGIBLE; source={source}; " + "; ".join(pair_reasons)
+            )
+            reasons.extend(pair_reasons)
+        else:
+            regression_lines.append(
+                f"Regression: PASS; source={source}; {before_score} -> {after_score}"
+            )
+    if regression_pairs and not other_eval_present:
+        reasons.append("required other-Eval regression pair is missing")
+    return {
+        "baseline": baseline,
+        "decision": decision,
+        "eligible": not reasons,
+        "reasons": reasons,
+        "regression_lines": regression_lines,
+    }
+
+
+def _render_assertion_comparison(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> list[str]:
+    before_assertions = _assertion_map(before)
+    after_assertions = _assertion_map(after)
+    lines = [
+        "| Assertion | Before | After |",
+        "|---|---|---|",
+    ]
+    for assertion_id in sorted(set(before_assertions) | set(after_assertions)):
+        lines.append(
+            f"| {assertion_id} | "
+            f"{before_assertions.get(assertion_id, {}).get('outcome', 'missing')} | "
+            f"{after_assertions.get(assertion_id, {}).get('outcome', 'missing')} |"
+        )
+    return lines
+
+
+def render_report(
+    run_path: Path,
+    baseline_path: Path | None = None,
+    regression_pairs: Sequence[tuple[Path, Path]] = (),
+    now: Callable[[], datetime] | None = None,
+) -> Path:
+    candidate = _load_report_run(run_path)
+    backlog = collect_review_backlog(candidate["path"], now=now)
+    comparison = _comparison_report(candidate, baseline_path, regression_pairs)
+    provenance = candidate["provenance"]
+    run = candidate["run"]
+    grading = candidate["grading"]
+    agent = provenance["agent_identity"]
+    skill = provenance["skill_identity"]
+    judge = provenance.get("judge_identity")
+    profile = load_profile(str(provenance["eval_id"]))
+    generated_at = backlog["generated_at"]
+    lines = [
+        f"# Eval Run Report: {generated_at[:10]}",
+        "",
+        f"Generated at: {generated_at}",
+        "",
+        f"- Commit: {provenance['skill_source_commit']}",
+        (
+            "- Runner: "
+            f"{agent['execution_kind']} / {agent['agent_product']} / {agent['agent_model']}"
+        ),
+        (
+            "- Skill install: "
+            f"{skill['status']} / {skill.get('path')} / {skill.get('fingerprint_sha256')}"
+        ),
+        (
+            "- Project fixture: "
+            f"{provenance['fixture_version']} / {provenance['fixture_baseline_commit']}"
+        ),
+        f"- Cases run: {backlog['attempted_count']}",
+        f"- PASS: {backlog['pass_count']}",
+        f"- PARTIAL: {backlog['partial_count']}",
+        f"- FAIL: {backlog['fail_count']}",
+        "",
+        "## Results",
+        "",
+        "| Case | State | Score |",
+        "|---|---|---|",
+    ]
+    lines.extend(
+        f"| {item['run_id']} | {item['run_status']} | {item['behavior_score'] or 'n/a'} |"
+        for item in backlog["runs"]
+    )
+    lines.extend(
+        [
+            "",
+            "## Failures",
+            "",
+            "| Case | Failure signal | Follow-up |",
+            "|---|---|---|",
+        ]
+    )
+    failures = [
+        item for item in backlog["runs"] if item.get("behavior_score") == "FAIL"
+    ]
+    lines.extend(
+        f"| {item['run_id']} | behavior FAIL | See diagnosis evidence |"
+        for item in failures
+    )
+    if not failures:
+        lines.append("| none | none | none |")
+    lines.extend(
+        [
+            "",
+            "## Summary",
+            "",
+            (
+                f"{backlog['graded_count']} graded Runs and "
+                f"{backlog['needs_review_count']} pending reviews."
+            ),
+            "",
+            "## Run Status",
+            "",
+            f"- Run ID: {run['run_id']}",
+            f"- Status: {run['run_status']}",
+            f"- Behavior score: {run.get('behavior_score') or 'n/a'}",
+            f"- Grader version: {provenance['grader_version']}",
+            f"- Canonical Prompt SHA-256: {provenance['canonical_prompt_sha256']}",
+            f"- Effective Prompt SHA-256: {provenance['effective_prompt_sha256']}",
+            f"- Answer SHA-256: {provenance['answer_sha256']}",
+            (
+                "- Judge: n/a"
+                if judge is None
+                else (
+                    f"- Judge: {judge['model']} / temperature={judge['temperature']} / "
+                    f"{judge['prompt_version']}"
+                )
+            ),
+            "",
+            "## Grading Completion And PASS Rate",
+            "",
+            (
+                f"Grading completion: {backlog['graded_count']}/"
+                f"{backlog['attempted_count']} "
+                f"({_percentage(backlog['graded_count'], backlog['attempted_count'])})"
+            ),
+            (
+                f"PASS rate: {backlog['pass_count']}/{backlog['graded_count']} GRADED "
+                f"({_percentage(backlog['pass_count'], backlog['graded_count'])}); "
+                f"{backlog['needs_review_count']} runs pending review"
+            ),
+            "",
+            "## NEEDS_REVIEW Backlog",
+            "",
+            f"NEEDS_REVIEW count: {backlog['needs_review_count']}",
+            f"Unresolved assertion count: {backlog['unresolved_assertion_count']}",
+            (
+                "First pending needs_review_since: "
+                f"{backlog['oldest_needs_review_since'] or 'n/a'}"
+            ),
+            (
+                "Oldest needs_review_since: "
+                f"{backlog['oldest_needs_review_since'] or 'n/a'}"
+            ),
+            "",
+            "| Run | needs_review_since | Age | Unresolved assertions | Reasons |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    lines.extend(
+        f"| {item['run_id']} | {item['needs_review_since']} | {item['age']} | "
+        f"{', '.join(item['unresolved_assertion_ids']) or 'none'} | "
+        f"{'; '.join(item['needs_review_reasons']) or 'none'} |"
+        for item in backlog["pending"]
+    )
+    if not backlog["pending"]:
+        lines.append("| none | n/a | n/a | none | none |")
+    lines.extend(
+        [
+            "",
+            "## Canonical Assertions Not Automated",
+            "",
+            "| Assertion | Coverage | Reason |",
+            "|---|---|---|",
+        ]
+    )
+    lines.extend(
+        f"| {item.id} | {item.coverage} | {item.reason} |"
+        for item in profile.manual_only_assertions
+    )
+    if not profile.manual_only_assertions:
+        lines.append("| none | n/a | n/a |")
+    lines.extend(
+        [
+            "",
+            "## Improvement Evidence",
+            "",
+            f"Level B eligible: {'yes' if comparison['eligible'] else 'no'}",
+        ]
+    )
+    lines.extend(f"- {reason}" for reason in comparison["reasons"])
+    lines.extend(["", "Untracked evidence references:", ""])
+    manifest = candidate["evidence"].get("untracked_manifest", [])
+    if isinstance(manifest, list):
+        for item in manifest:
+            if isinstance(item, dict):
+                lines.append(
+                    f"- {item.get('path', 'unknown')} / {item.get('sha256', 'unhashed')}"
+                )
+    lines.extend(["", "## Diagnosis", ""])
+    diagnosis_path = candidate["path"] / "diagnosis.json"
+    lines.append(
+        "- diagnosis.json SHA-256: "
+        + (_sha256_file(diagnosis_path) if diagnosis_path.is_file() else "n/a")
+    )
+    lines.extend(["", "## Patch Decision", ""])
+    decision = comparison.get("decision")
+    if decision is None:
+        lines.append("Human decision: not supplied")
+    else:
+        lines.append(f"Human decision: {decision['decision']}")
+        lines.append(f"Decided by: {decision['decided_by']}")
+        lines.append(f"Decided at: {decision['decided_at']}")
+    lines.extend(["", "## Before / After", ""])
+    baseline = comparison.get("baseline")
+    if baseline is None:
+        lines.append("No compatible baseline supplied.")
+    else:
+        lines.extend(
+            _render_assertion_comparison(
+                baseline["grading"], candidate["grading"]
+            )
+        )
+        lines.append("")
+        lines.append(
+            "Git side effects: before "
+            f"{_git_effect_summary(baseline['evidence'])}; after "
+            f"{_git_effect_summary(candidate['evidence'])}"
+        )
+        before_judge = baseline["provenance"].get("judge_identity")
+        after_judge = candidate["provenance"].get("judge_identity")
+        lines.append(f"Judge metadata: before={before_judge}; after={after_judge}")
+    lines.extend(["", "## Regression", ""])
+    lines.extend(comparison["regression_lines"])
+    payload = "\n".join(lines) + "\n"
+    report_path = candidate["path"] / "report.md"
+    temporary = report_path.with_name("report.md.tmp")
+    temporary.write_bytes(payload.encode("utf-8"))
+    os.replace(temporary, report_path)
+    return report_path
