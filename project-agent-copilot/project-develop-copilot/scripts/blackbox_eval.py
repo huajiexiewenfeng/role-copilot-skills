@@ -36,6 +36,22 @@ CANARY_MATCHER_VERSION = "canary-literal-v1"
 MAX_UNTRACKED_FILE_BYTES = 65_536
 MAX_UNTRACKED_TOTAL_BYTES = 1_048_576
 DEFAULT_WORKSPACE = REPO_ROOT.parent / "project-develop-copilot-eval-workspace"
+FROZEN_ARTIFACTS = (
+    "prompt.md",
+    "answer.md",
+    "diff.patch",
+    "evidence.json",
+    "judge-request.json",
+    "judge.json",
+    "grading.json",
+    "diagnosis-request.json",
+    "diagnosis.json",
+)
+DIAGNOSTIC_LINKS = (
+    "evals/project-develop-copilot-evals.md",
+    "references/continuous-evolution.md",
+    "cases/failures/README.md",
+)
 PUNCTUATION_MAP = str.maketrans(
     {
         "，": ",",
@@ -1217,3 +1233,526 @@ def run_deterministic_assertions(
         for item in profile.manual_only_assertions
     )
     return assertions, observations
+
+
+def aggregate_behavior_score(results: Sequence[AssertionResult]) -> str:
+    outcomes = {result.outcome for result in results}
+    if "FAIL" in outcomes:
+        return "FAIL"
+    if "PARTIAL" in outcomes:
+        return "PARTIAL"
+    return "PASS"
+
+
+def _assertion_json(result: AssertionResult) -> dict[str, Any]:
+    return {
+        "evidence_ids": list(result.evidence_ids),
+        "id": result.id,
+        "layer": result.layer,
+        "message": result.message,
+        "outcome": result.outcome,
+        "severity": result.severity,
+    }
+
+
+def _provenance_from_run(run: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "eval_id",
+        "profile_version",
+        "fixture_version",
+        "grader_version",
+        "canonical_prompt_sha256",
+        "effective_prompt_sha256",
+        "skill_source_commit",
+        "skill_identity",
+        "fixture_baseline_commit",
+        "agent_identity",
+        "answer_sha256",
+    )
+    return {key: run.get(key) for key in keys}
+
+
+def _set_run_error(run_path: Path, run: dict[str, Any], reason: str) -> int:
+    run["run_status"] = "RUN_ERROR"
+    run["run_error_reason"] = reason
+    run["needs_review_since"] = None
+    run["needs_review_reasons"] = []
+    run["unresolved_assertion_ids"] = []
+    write_json(run_path / "run.json", run)
+    return 1
+
+
+def _validate_prepared_run(
+    run_path: Path, run: Mapping[str, Any], profile: EvalProfile
+) -> None:
+    if run.get("schema_version") != RUN_SCHEMA_VERSION:
+        raise EvalError("unsupported Run schema version")
+    expected = {
+        "eval_id": profile.eval_id,
+        "profile_version": profile.profile_version,
+        "fixture_version": profile.fixture_version,
+        "grader_version": GRADER_VERSION,
+    }
+    for key, value in expected.items():
+        if run.get(key) != value:
+            raise EvalError(f"Run {key} mismatch")
+    prompt_path = run_path / "prompt.md"
+    answer_path = run_path / "answer.md"
+    fixture_path = run_path / "fixture"
+    if not prompt_path.is_file() or not answer_path.is_file():
+        raise EvalError("Run prompt.md and answer.md must exist")
+    if not fixture_path.is_dir() or not (fixture_path / ".git").is_dir():
+        raise EvalError("Run fixture Git repository is missing")
+    if _sha256_file(prompt_path) != run.get("effective_prompt_sha256"):
+        raise EvalError("effective Prompt hash mismatch")
+    canonical = extract_canonical_prompt(profile).encode("utf-8")
+    if _sha256_bytes(canonical) != run.get("canonical_prompt_sha256"):
+        raise EvalError("canonical Prompt hash mismatch")
+    baseline = _require_string(run, "fixture_baseline_commit")
+    run_git(fixture_path, ["cat-file", "-e", f"{baseline}^{{commit}}"])
+    if not re.fullmatch(r"[0-9a-f]{40,64}", _require_string(run, "skill_source_commit")):
+        raise EvalError("Skill source commit is malformed")
+    identity = run.get("skill_identity")
+    if not isinstance(identity, dict) or set(identity) != {
+        "fingerprint_sha256",
+        "path",
+        "status",
+    }:
+        raise EvalError("Skill install identity is incomplete")
+    if identity.get("status") == "unverified":
+        if identity.get("fingerprint_sha256") is not None or identity.get("path") is not None:
+            raise EvalError("unverified Skill identity must not claim a fingerprint")
+    elif identity.get("status") == "verified":
+        if not re.fullmatch(r"[0-9a-f]{64}", str(identity.get("fingerprint_sha256", ""))):
+            raise EvalError("verified Skill fingerprint is malformed")
+        if not isinstance(identity.get("path"), str) or not identity["path"]:
+            raise EvalError("verified Skill path is missing")
+    else:
+        raise EvalError("unknown Skill identity status")
+
+
+def _validate_agent_identity(
+    run: dict[str, Any],
+    answer_sha256: str,
+    execution_kind: str | None,
+    agent_product: str | None,
+    agent_model: str | None,
+) -> None:
+    supplied = (execution_kind, agent_product, agent_model)
+    supplied_count = sum(value is not None for value in supplied)
+    if supplied_count not in {0, 3}:
+        raise EvalError("execution kind and Agent product/model must be supplied together")
+    current = run.get("agent_identity")
+    if current is None:
+        if supplied_count != 3:
+            raise EvalError("first grade requires execution kind and Agent product/model")
+        if execution_kind not in {"agent", "canned"}:
+            raise EvalError("execution_kind must be agent or canned")
+        if any(not isinstance(value, str) or not value.strip() for value in supplied):
+            raise EvalError("Agent identity labels must be non-blank strings")
+        current = {
+            "execution_kind": execution_kind,
+            "agent_product": agent_product,
+            "agent_model": agent_model,
+        }
+        run["agent_identity"] = current
+        run["answer_sha256"] = answer_sha256
+        return
+    if not isinstance(current, dict) or set(current) != {
+        "execution_kind",
+        "agent_product",
+        "agent_model",
+    }:
+        raise EvalError("stored Agent identity is incomplete")
+    if supplied_count == 3:
+        candidate = {
+            "execution_kind": execution_kind,
+            "agent_product": agent_product,
+            "agent_model": agent_model,
+        }
+        if candidate != current:
+            raise EvalError("Agent identity changed after first grade")
+    if run.get("answer_sha256") != answer_sha256:
+        raise EvalError("answer bytes changed after first grade")
+
+
+def _registered_evidence_ids(results: Sequence[AssertionResult]) -> list[str]:
+    return sorted({evidence_id for result in results for evidence_id in result.evidence_ids})
+
+
+def _build_diagnosis_request(
+    run_path: Path,
+    run: Mapping[str, Any],
+    profile: EvalProfile,
+    results: Sequence[AssertionResult],
+    registered_evidence_ids: Sequence[str],
+) -> dict[str, Any]:
+    request = {
+        "schema_version": DIAGNOSIS_SCHEMA_VERSION,
+        "eval_id": profile.eval_id,
+        "profile_version": profile.profile_version,
+        "canonical_eval": extract_canonical_eval(profile),
+        "contract_sections": [
+            {
+                "path": path,
+                "heading": heading,
+                "content": _extract_contract_section(SKILL_ROOT / path, heading),
+            }
+            for path, heading in profile.contract_refs
+        ],
+        "failed_assertion_ids": sorted(
+            result.id for result in results if result.outcome in {"PARTIAL", "FAIL"}
+        ),
+        "registered_evidence_ids": list(registered_evidence_ids),
+        "skill_source_commit": run["skill_source_commit"],
+        "install_fingerprint_sha256": run["skill_identity"]["fingerprint_sha256"],
+        "diagnostic_links": list(DIAGNOSTIC_LINKS),
+    }
+    write_json(run_path / "diagnosis-request.json", request)
+    return request
+
+
+def _resolve_diagnosis_markdown(path_value: Any, heading: Any) -> None:
+    if not isinstance(path_value, str) or not path_value or "\\" in path_value:
+        raise EvalError("diagnosis path must be a non-empty repository-relative path")
+    if re.match(r"^[A-Za-z]:", path_value):
+        raise EvalError("diagnosis path must not be a drive path")
+    relative = Path(path_value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise EvalError("diagnosis path must stay inside the repository")
+    candidates = (SKILL_ROOT / relative, REPO_ROOT / relative)
+    source = next((item for item in candidates if item.is_file()), None)
+    if source is None:
+        raise EvalError(f"diagnosis path does not exist: {path_value}")
+    if not isinstance(heading, str) or not heading.strip().startswith("#"):
+        raise EvalError("diagnosis heading must be a Markdown heading")
+    if heading not in source.read_text(encoding="utf-8").splitlines():
+        raise EvalError(f"diagnosis heading does not exist: {path_value} {heading}")
+
+
+def _validate_diagnosis(
+    diagnosis: Mapping[str, Any], registered_evidence_ids: Sequence[str]
+) -> None:
+    required = {
+        "schema_version",
+        "failure_type",
+        "likely_source",
+        "violated_contracts",
+        "minimal_patch",
+        "eval_gap",
+        "overfitting_risk",
+        "confidence",
+    }
+    if set(diagnosis) != required or diagnosis.get("schema_version") != DIAGNOSIS_SCHEMA_VERSION:
+        raise EvalError("Diagnosis root does not match schema 0.1")
+    if diagnosis.get("failure_type") not in {
+        "routing", "write-boundary", "evidence", "overclaim", "gate",
+        "output-contract", "eval-gap",
+    }:
+        raise EvalError("unknown Diagnosis failure_type")
+    if diagnosis.get("likely_source") not in {
+        "router", "stage-skill", "external-bridge", "gate", "reference", "eval",
+    }:
+        raise EvalError("unknown Diagnosis likely_source")
+    if diagnosis.get("eval_gap") not in {"covered", "update-existing", "add-new"}:
+        raise EvalError("unknown Diagnosis eval_gap")
+    if diagnosis.get("confidence") not in {"high", "medium", "low"}:
+        raise EvalError("unknown Diagnosis confidence")
+    for key in ("overfitting_risk",):
+        if not isinstance(diagnosis.get(key), str) or not diagnosis[key].strip():
+            raise EvalError(f"Diagnosis {key} must be non-blank")
+    registered = set(registered_evidence_ids)
+    contracts = diagnosis.get("violated_contracts")
+    if not isinstance(contracts, list) or not contracts:
+        raise EvalError("Diagnosis violated_contracts must be non-empty")
+    for contract in contracts:
+        if not isinstance(contract, dict) or set(contract) != {"path", "heading", "evidence_ids"}:
+            raise EvalError("Diagnosis violated contract does not match schema")
+        _resolve_diagnosis_markdown(contract["path"], contract["heading"])
+        evidence_ids = contract["evidence_ids"]
+        if not isinstance(evidence_ids, list) or not evidence_ids or any(
+            not isinstance(item, str) or not item or item not in registered
+            for item in evidence_ids
+        ):
+            raise EvalError("Diagnosis contains an invented evidence ID")
+    minimal_patch = diagnosis.get("minimal_patch")
+    if not isinstance(minimal_patch, dict) or set(minimal_patch) != {
+        "path", "heading", "change_intent",
+    }:
+        raise EvalError("Diagnosis minimal_patch does not match schema")
+    _resolve_diagnosis_markdown(minimal_patch["path"], minimal_patch["heading"])
+    if not isinstance(minimal_patch["change_intent"], str) or not minimal_patch["change_intent"].strip():
+        raise EvalError("Diagnosis change_intent must be non-blank")
+
+
+def _artifact_hashes(run_path: Path) -> dict[str, str]:
+    return {
+        name: _sha256_file(run_path / name)
+        for name in FROZEN_ARTIFACTS
+        if (run_path / name).is_file()
+    }
+
+
+def _freeze_diagnosis(
+    run_path: Path,
+    run: dict[str, Any],
+    grading: Mapping[str, Any],
+    frozen_at: str,
+) -> None:
+    manifest = {
+        "schema_version": DIAGNOSIS_SCHEMA_VERSION,
+        "frozen_at": frozen_at,
+        "provenance": grading["provenance"],
+        "artifact_hashes": _artifact_hashes(run_path),
+    }
+    write_json(run_path / "freeze-manifest.json", manifest)
+    run["freeze_manifest_sha256"] = _sha256_file(run_path / "freeze-manifest.json")
+    write_json(run_path / "run.json", run)
+
+
+def _validate_frozen_run(
+    run_path: Path, run: Mapping[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    manifest_path = run_path / "freeze-manifest.json"
+    expected_pointer = run.get("freeze_manifest_sha256")
+    if not isinstance(expected_pointer, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_pointer):
+        raise EvalError("freeze manifest pointer is malformed")
+    if not manifest_path.is_file() or _sha256_file(manifest_path) != expected_pointer:
+        raise EvalError("freeze manifest hash pointer mismatch")
+    manifest = read_json_object(manifest_path)
+    if set(manifest) != {"schema_version", "frozen_at", "provenance", "artifact_hashes"}:
+        raise EvalError("freeze manifest does not match schema")
+    if manifest.get("schema_version") != DIAGNOSIS_SCHEMA_VERSION:
+        raise EvalError("unsupported freeze manifest schema")
+    hashes = manifest.get("artifact_hashes")
+    if not isinstance(hashes, dict) or set(hashes) != {
+        name for name in FROZEN_ARTIFACTS if (run_path / name).is_file()
+    }:
+        raise EvalError("frozen artifact set changed")
+    for name, expected_hash in hashes.items():
+        path = run_path / name
+        if not isinstance(expected_hash, str) or not path.is_file() or _sha256_file(path) != expected_hash:
+            raise EvalError(f"frozen artifact changed or is missing: {name}")
+    grading = read_json_object(run_path / "grading.json")
+    provenance = manifest.get("provenance")
+    if not isinstance(provenance, dict) or grading.get("provenance") != provenance:
+        raise EvalError("frozen grading provenance mismatch")
+    if _provenance_from_run(run) != provenance:
+        raise EvalError("run provenance differs from frozen provenance")
+    recorded = run.get("artifact_hashes")
+    if not isinstance(recorded, dict) or any(recorded.get(name) != value for name, value in hashes.items()):
+        raise EvalError("run artifact hashes differ from freeze manifest")
+    return manifest, grading
+
+
+def _parse_utc_rfc3339(value: Any) -> None:
+    if not isinstance(value, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", value
+    ):
+        raise EvalError("patch decision time must be RFC 3339 UTC")
+    try:
+        datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as error:
+        raise EvalError("patch decision time must be RFC 3339 UTC") from error
+
+
+def _validate_patch_decision(
+    run_path: Path,
+    run: dict[str, Any],
+    manifest: Mapping[str, Any],
+) -> None:
+    decision_path = run_path / "patch-decision.json"
+    terminal_hash = run.get("terminal_patch_decision_sha256")
+    if not decision_path.exists():
+        if terminal_hash is not None:
+            raise EvalError("terminal patch decision is missing")
+        return
+    if not decision_path.is_file():
+        raise EvalError("patch-decision.json must be a regular file")
+    decision_hash = _sha256_file(decision_path)
+    if terminal_hash is not None and terminal_hash != decision_hash:
+        raise EvalError("terminal patch decision was mutated")
+    decision = read_json_object(decision_path)
+    required = {
+        "schema_version", "decision", "diagnosis_sha256",
+        "freeze_manifest_sha256", "decided_by", "decided_at", "note",
+    }
+    if set(decision) != required or decision.get("schema_version") != PATCH_DECISION_SCHEMA_VERSION:
+        raise EvalError("patch decision does not match schema 0.1")
+    if decision.get("decision") not in {"approve", "revise", "reject"}:
+        raise EvalError("unknown patch decision")
+    for key in ("decided_by", "note"):
+        if not isinstance(decision.get(key), str) or not decision[key].strip():
+            raise EvalError(f"patch decision {key} must be non-blank")
+    _parse_utc_rfc3339(decision.get("decided_at"))
+    diagnosis_hash = manifest["artifact_hashes"].get("diagnosis.json")
+    if decision.get("diagnosis_sha256") != diagnosis_hash:
+        raise EvalError("patch decision Diagnosis hash mismatch")
+    if decision.get("freeze_manifest_sha256") != run.get("freeze_manifest_sha256"):
+        raise EvalError("patch decision freeze manifest hash mismatch")
+    history = run.setdefault("patch_decision_history", [])
+    if not isinstance(history, list):
+        raise EvalError("patch decision history is malformed")
+    if not history or history[-1].get("sha256") != decision_hash:
+        history.append({
+            "sha256": decision_hash,
+            "decision": decision["decision"],
+            "decided_by": decision["decided_by"],
+            "decided_at": decision["decided_at"],
+            "note": decision["note"],
+        })
+    run["patch_decision"] = decision["decision"]
+    run["patch_decision_sha256"] = decision_hash
+    run["level_b_comparison_authorized"] = decision["decision"] == "approve"
+    if decision["decision"] in {"approve", "reject"}:
+        run["terminal_patch_decision_sha256"] = decision_hash
+
+
+def grade_run(
+    run_path: Path,
+    execution_kind: str | None = None,
+    agent_product: str | None = None,
+    agent_model: str | None = None,
+    now: Callable[[], datetime] | None = None,
+) -> int:
+    run_path = run_path.expanduser().resolve(strict=True)
+    try:
+        run = read_json_object(run_path / "run.json")
+    except EvalError:
+        return 1
+    try:
+        eval_id = _require_string(run, "eval_id")
+        if run.get("freeze_manifest_sha256") is not None:
+            manifest, _ = _validate_frozen_run(run_path, run)
+            if run.get("schema_version") != RUN_SCHEMA_VERSION:
+                raise EvalError("unsupported Run schema version")
+            _validate_agent_identity(
+                run,
+                _require_string(run, "answer_sha256"),
+                execution_kind,
+                agent_product,
+                agent_model,
+            )
+            _validate_patch_decision(run_path, run, manifest)
+            write_json(run_path / "run.json", run)
+            return 0
+
+        profile = load_profile(eval_id)
+        _validate_prepared_run(run_path, run, profile)
+
+        answer_bytes = (run_path / "answer.md").read_bytes()
+        if not answer_bytes.strip():
+            run["operator_error"] = "answer.md is empty"
+            run["run_status"] = "READY_FOR_AGENT"
+            write_json(run_path / "run.json", run)
+            return 1
+        try:
+            answer = answer_bytes.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as error:
+            raise EvalError("answer.md must be UTF-8") from error
+        answer_sha256 = _sha256_bytes(answer_bytes)
+        _validate_agent_identity(
+            run, answer_sha256, execution_kind, agent_product, agent_model
+        )
+        run.pop("operator_error", None)
+        run.pop("run_error_reason", None)
+        run["run_status"] = "READY_TO_GRADE"
+        write_json(run_path / "run.json", run)
+
+        evidence = collect_git_evidence(run_path)
+        deterministic, observations = run_deterministic_assertions(
+            run_path, profile, answer, evidence
+        )
+        judge_request = build_judge_request(
+            run_path, profile, answer, (run_path / "diff.patch").read_bytes(), observations
+        )
+        results = list(deterministic)
+        hard_fail = any(
+            result.outcome == "FAIL" and result.severity == "hard"
+            for result in deterministic
+        )
+        judge_path = run_path / "judge.json"
+        if judge_path.exists():
+            judge = read_json_object(judge_path)
+            results = grade_judge(
+                judge,
+                profile,
+                judge_request["evidence_registry"],
+                observations,
+                deterministic,
+            )
+        elif not hard_fail:
+            expected = set(profile.semantic_assertion_ids)
+            expected.update(
+                f"canary-adoption:{item['pair_id']}"
+                for item in observations
+                if item["state"] != "neither"
+            )
+            unresolved = sorted(expected)
+            needs_review_reasons = ["judge.json is missing"]
+        else:
+            unresolved = []
+            needs_review_reasons = []
+
+        run_error_results = [result for result in results if result.outcome == "RUN_ERROR"]
+        if run_error_results:
+            raise EvalError("; ".join(sorted(result.message for result in run_error_results)))
+        if judge_path.exists():
+            unresolved = sorted(
+                {result.id for result in results if result.outcome == "NEEDS_REVIEW"}
+            )
+            needs_review_reasons = sorted(
+                {result.message for result in results if result.outcome == "NEEDS_REVIEW"}
+            )
+        registered_ids = _registered_evidence_ids(results)
+        instant = (now or (lambda: datetime.now(timezone.utc)))()
+        timestamp = _utc_timestamp(instant)
+        if unresolved:
+            status = "NEEDS_REVIEW"
+            behavior_score = None
+            if run.get("needs_review_since") is None:
+                run["needs_review_since"] = timestamp
+        else:
+            status = "GRADED"
+            behavior_score = aggregate_behavior_score(results)
+            run["needs_review_since"] = None
+            needs_review_reasons = []
+        run["run_status"] = status
+        run["behavior_score"] = behavior_score
+        run["needs_review_reasons"] = sorted(needs_review_reasons)
+        run["unresolved_assertion_ids"] = sorted(unresolved)
+        provenance = _provenance_from_run(run)
+        grading = {
+            "schema_version": RUN_SCHEMA_VERSION,
+            "run_id": run.get("run_id"),
+            "run_status": status,
+            "behavior_score": behavior_score,
+            "assertions": [_assertion_json(result) for result in results],
+            "registered_evidence_ids": registered_ids,
+            "unresolved_assertion_ids": sorted(unresolved),
+            "needs_review_reasons": sorted(needs_review_reasons),
+            "provenance": provenance,
+        }
+        write_json(run_path / "grading.json", grading)
+        if status == "GRADED" and behavior_score in {"PARTIAL", "FAIL"}:
+            _build_diagnosis_request(
+                run_path, run, profile, results, registered_ids
+            )
+        run["artifact_hashes"] = _artifact_hashes(run_path)
+        write_json(run_path / "run.json", run)
+
+        diagnosis_path = run_path / "diagnosis.json"
+        if diagnosis_path.exists():
+            if status != "GRADED" or behavior_score not in {"PARTIAL", "FAIL"}:
+                raise EvalError("Diagnosis is accepted only for a graded PARTIAL/FAIL run")
+            diagnosis = read_json_object(diagnosis_path)
+            _validate_diagnosis(diagnosis, registered_ids)
+            run["artifact_hashes"] = _artifact_hashes(run_path)
+            write_json(run_path / "run.json", run)
+            _freeze_diagnosis(run_path, run, grading, timestamp)
+            manifest, _ = _validate_frozen_run(run_path, run)
+            _validate_patch_decision(run_path, run, manifest)
+            write_json(run_path / "run.json", run)
+        return 0
+    except (EvalError, OSError, UnicodeDecodeError, KeyError, TypeError) as error:
+        return _set_run_error(run_path, run, str(error))

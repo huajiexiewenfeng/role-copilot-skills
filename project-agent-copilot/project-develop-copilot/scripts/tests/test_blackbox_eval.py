@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -984,3 +985,390 @@ class BlackboxEvalEvidenceTest(unittest.TestCase):
         self.assertTrue(expected_diff)
         self.assertIn(b"GIT binary patch", expected_diff)
         self.assertEqual(expected_diff, (run_path / "diff.patch").read_bytes())
+
+
+class BlackboxEvalRunStateTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace = Path(self.temp.name) / "workspace"
+        self.profile = self.runner.load_profile("2")
+
+    def make_run(self, suffix="state"):
+        return self.runner.prepare_run(
+            "2",
+            self.workspace,
+            skill_path=None,
+            run_id=f"eval-002-{suffix}",
+            now=lambda: datetime(2026, 7, 16, 1, 2, 3, tzinfo=timezone.utc),
+        )
+
+    def good_answer(self):
+        return (
+            f"Canonical answer clause. {self.profile.required_path_any_of[0]} "
+            + " ".join(pair.preferred for pair in self.profile.canary_pairs)
+        )
+
+    def valid_judge(self, answer, adopted="preferred"):
+        verdict = {"preferred": "pass", "source": "fail"}[adopted]
+        assertions = [
+            {
+                "id": assertion_id,
+                "verdict": "pass",
+                "evidence_ref": "answer.md",
+                "evidence_quote": "Canonical answer clause.",
+                "reason": "The answer supplies the required semantic behavior.",
+            }
+            for assertion_id in self.profile.semantic_assertion_ids
+        ]
+        literal_by_adoption = {
+            "preferred": lambda pair: pair.preferred,
+            "source": lambda pair: pair.conflicting_source,
+        }
+        assertions.extend(
+            {
+                "id": f"canary-adoption:{pair.id}",
+                "verdict": verdict,
+                "adopted": adopted,
+                "evidence_ref": "answer.md",
+                "evidence_quote": literal_by_adoption[adopted](pair),
+                "reason": "The cited authority was adopted.",
+            }
+            for pair in self.profile.canary_pairs
+        )
+        return {
+            "schema_version": self.runner.JUDGE_SCHEMA_VERSION,
+            "model": "fixture-judge",
+            "temperature": 0,
+            "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+            "profile_version": self.profile.profile_version,
+            "evidence_match_mode": self.runner.QUOTE_MATCH_MODE,
+            "evidence_normalizer_version": self.runner.QUOTE_NORMALIZER_VERSION,
+            "assertions": assertions,
+        }
+
+    def grade(self, run_path, **overrides):
+        values = {
+            "execution_kind": "canned",
+            "agent_product": "canned",
+            "agent_model": "eval-002-good",
+            "now": lambda: datetime(2026, 7, 16, 2, 3, 4, tzinfo=timezone.utc),
+        }
+        values.update(overrides)
+        return self.runner.grade_run(run_path, **values)
+
+    def write_good_judge(self, run_path, answer=None):
+        answer = answer or self.good_answer()
+        self.runner.write_json(run_path / "judge.json", self.valid_judge(answer))
+
+    def test_aggregate_behavior_score_keeps_run_states_separate(self):
+        result = self.runner.AssertionResult
+        self.assertEqual("PASS", self.runner.aggregate_behavior_score([]))
+        self.assertEqual(
+            "PARTIAL",
+            self.runner.aggregate_behavior_score(
+                [result("a", "deterministic", "PARTIAL", "soft", "partial")]
+            ),
+        )
+        self.assertEqual(
+            "FAIL",
+            self.runner.aggregate_behavior_score(
+                [
+                    result("a", "judge", "NEEDS_REVIEW", "soft", "review"),
+                    result("b", "deterministic", "FAIL", "hard", "failed"),
+                ]
+            ),
+        )
+
+    def test_empty_answer_stays_ready_without_recording_skill_fail(self):
+        run_path = self.make_run("empty")
+
+        self.assertEqual(1, self.grade(run_path))
+
+        run = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("READY_FOR_AGENT", run["run_status"])
+        self.assertIsNone(run["answer_sha256"])
+        self.assertFalse((run_path / "grading.json").exists())
+
+    def test_missing_and_uncertain_judge_need_review_with_stable_sorted_state(self):
+        run_path = self.make_run("review")
+        answer = self.good_answer()
+        (run_path / "answer.md").write_text(answer, encoding="utf-8")
+
+        self.assertEqual(0, self.grade(run_path))
+        first = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("NEEDS_REVIEW", first["run_status"])
+        self.assertEqual(sorted(first["unresolved_assertion_ids"]), first["unresolved_assertion_ids"])
+        self.assertEqual(sorted(first["needs_review_reasons"]), first["needs_review_reasons"])
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        repeated = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual(first["needs_review_since"], repeated["needs_review_since"])
+
+        judge = self.valid_judge(answer)
+        judge["assertions"][0]["verdict"] = "uncertain"
+        self.runner.write_json(run_path / "judge.json", judge)
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        uncertain = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("NEEDS_REVIEW", uncertain["run_status"])
+        self.assertEqual(first["needs_review_since"], uncertain["needs_review_since"])
+
+    def test_complete_judge_grades_canned_pass_and_locks_identity_and_answer(self):
+        run_path = self.make_run("pass")
+        answer = self.good_answer()
+        (run_path / "answer.md").write_text(answer, encoding="utf-8")
+        self.write_good_judge(run_path, answer)
+
+        self.assertEqual(0, self.grade(run_path))
+        run = self.runner.read_json_object(run_path / "run.json")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        self.assertEqual("GRADED", run["run_status"])
+        self.assertEqual("PASS", run["behavior_score"])
+        self.assertEqual("PASS", grading["behavior_score"])
+        self.assertEqual("canned", grading["provenance"]["agent_identity"]["execution_kind"])
+        self.assertEqual(run["answer_sha256"], grading["provenance"]["answer_sha256"])
+
+        self.assertEqual(
+            1,
+            self.grade(
+                run_path,
+                execution_kind="agent",
+                agent_product="other",
+                agent_model="other",
+            ),
+        )
+        self.assertEqual("RUN_ERROR", self.runner.read_json_object(run_path / "run.json")["run_status"])
+
+        run_path = self.make_run("answer-mutation")
+        (run_path / "answer.md").write_text(answer, encoding="utf-8")
+        self.write_good_judge(run_path, answer)
+        self.assertEqual(0, self.grade(run_path))
+        (run_path / "answer.md").write_text(answer + " changed", encoding="utf-8")
+        self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+
+    def test_hard_write_fail_grades_without_judge_and_cannot_be_overridden(self):
+        for suffix, with_judge in (("hard-no-judge", False), ("hard-with-judge", True)):
+            with self.subTest(with_judge=with_judge):
+                run_path = self.make_run(suffix)
+                answer = self.good_answer()
+                (run_path / "answer.md").write_text(answer, encoding="utf-8")
+                (run_path / "fixture" / "agent-write.txt").write_text("write\n", encoding="utf-8")
+                if with_judge:
+                    self.write_good_judge(run_path, answer)
+                self.assertEqual(0, self.grade(run_path))
+                run = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("GRADED", run["run_status"])
+                self.assertEqual("FAIL", run["behavior_score"])
+
+    def test_source_adoption_is_behavior_fail_and_malformed_judge_is_run_error(self):
+        run_path = self.make_run("source")
+        answer = (
+            f"Canonical answer clause. {self.profile.required_path_any_of[0]} "
+            + " ".join(pair.conflicting_source for pair in self.profile.canary_pairs)
+        )
+        (run_path / "answer.md").write_text(answer, encoding="utf-8")
+        self.runner.write_json(run_path / "judge.json", self.valid_judge(answer, adopted="source"))
+        self.assertEqual(0, self.grade(run_path))
+        self.assertEqual("FAIL", self.runner.read_json_object(run_path / "run.json")["behavior_score"])
+
+        malformed = self.make_run("malformed")
+        (malformed / "answer.md").write_text(self.good_answer(), encoding="utf-8")
+        judge = self.valid_judge(self.good_answer())
+        judge["schema_version"] = "9.9"
+        self.runner.write_json(malformed / "judge.json", judge)
+        self.assertEqual(1, self.grade(malformed))
+        self.assertEqual("RUN_ERROR", self.runner.read_json_object(malformed / "run.json")["run_status"])
+
+    def diagnosis(self, grading):
+        contract_path, heading = self.profile.contract_refs[0]
+        evidence_id = grading["registered_evidence_ids"][0]
+        return {
+            "schema_version": self.runner.DIAGNOSIS_SCHEMA_VERSION,
+            "failure_type": "evidence",
+            "likely_source": "stage-skill",
+            "violated_contracts": [
+                {"path": contract_path, "heading": heading, "evidence_ids": [evidence_id]}
+            ],
+            "minimal_patch": {
+                "path": contract_path,
+                "heading": heading,
+                "change_intent": "Clarify the evidence boundary without naming fixture literals.",
+            },
+            "eval_gap": "covered",
+            "overfitting_risk": "Keep the rule general and avoid fixture-specific values.",
+            "confidence": "high",
+        }
+
+    def make_failing_run(self, suffix):
+        run_path = self.make_run(suffix)
+        answer = (
+            f"Canonical answer clause. {self.profile.required_path_any_of[0]} "
+            + " ".join(pair.conflicting_source for pair in self.profile.canary_pairs)
+        )
+        (run_path / "answer.md").write_text(answer, encoding="utf-8")
+        self.runner.write_json(run_path / "judge.json", self.valid_judge(answer, adopted="source"))
+        self.assertEqual(0, self.grade(run_path))
+        return run_path
+
+    def test_first_valid_diagnosis_freezes_evidence_before_human_decision(self):
+        run_path = self.make_failing_run("freeze")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        self.runner.write_json(run_path / "diagnosis.json", self.diagnosis(grading))
+
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        run = self.runner.read_json_object(run_path / "run.json")
+        manifest = self.runner.read_json_object(run_path / "freeze-manifest.json")
+        self.assertEqual(self.runner._sha256_file(run_path / "freeze-manifest.json"), run["freeze_manifest_sha256"])
+        self.assertEqual(grading["provenance"], manifest["provenance"])
+        frozen_bytes = {name: (run_path / name).read_bytes() for name in manifest["artifact_hashes"]}
+        self.assertEqual(
+            1,
+            self.grade(
+                run_path,
+                execution_kind="canned",
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+
+        diagnosis_sha = self.runner._sha256_file(run_path / "diagnosis.json")
+        revise = {
+            "schema_version": self.runner.PATCH_DECISION_SCHEMA_VERSION,
+            "decision": "revise",
+            "diagnosis_sha256": diagnosis_sha,
+            "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+            "decided_by": "Human Reviewer",
+            "decided_at": "2026-07-16T03:04:05Z",
+            "note": "Revise the general contract mapping.",
+        }
+        self.runner.write_json(run_path / "patch-decision.json", revise)
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        revised = self.runner.read_json_object(run_path / "run.json")
+        self.assertFalse(revised["level_b_comparison_authorized"])
+
+        revise["decision"] = "approve"
+        revise["note"] = "Approve a human-authored candidate for comparison."
+        self.runner.write_json(run_path / "patch-decision.json", revise)
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        approved = self.runner.read_json_object(run_path / "run.json")
+        self.assertTrue(approved["level_b_comparison_authorized"])
+        self.assertEqual(2, len(approved["patch_decision_history"]))
+        self.assertEqual(frozen_bytes, {name: (run_path / name).read_bytes() for name in manifest["artifact_hashes"]})
+
+        (run_path / "patch-decision.json").unlink()
+        self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        revise["note"] = "Mutated terminal decision."
+        self.runner.write_json(run_path / "patch-decision.json", revise)
+        self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+
+    def test_freeze_detects_artifact_and_provenance_mutation(self):
+        for suffix, mutate in (
+            ("artifact-tamper", lambda path: (path / "answer.md").write_text("tampered", encoding="utf-8")),
+            (
+                "provenance-tamper",
+                lambda path: self.runner.write_json(
+                    path / "run.json",
+                    {
+                        **self.runner.read_json_object(path / "run.json"),
+                        "agent_identity": {
+                            "execution_kind": "canned",
+                            "agent_product": "canned",
+                            "agent_model": "tampered",
+                        },
+                    },
+                ),
+            ),
+        ):
+            with self.subTest(suffix=suffix):
+                run_path = self.make_failing_run(suffix)
+                grading = self.runner.read_json_object(run_path / "grading.json")
+                self.runner.write_json(run_path / "diagnosis.json", self.diagnosis(grading))
+                self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+                mutate(run_path)
+                self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+
+    def test_diagnosis_and_patch_decision_validation_reject_bad_closure(self):
+        run_path = self.make_failing_run("bad-diagnosis")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        diagnosis = self.diagnosis(grading)
+        diagnosis["violated_contracts"][0]["evidence_ids"] = ["invented:evidence"]
+        self.runner.write_json(run_path / "diagnosis.json", diagnosis)
+        self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        self.assertFalse((run_path / "freeze-manifest.json").exists())
+
+    def test_run_versions_git_and_fixture_are_validated_before_grading(self):
+        run_path = self.make_run("invalid-run")
+        run = self.runner.read_json_object(run_path / "run.json")
+        for key, invalid in (
+            ("schema_version", "9.9"),
+            ("profile_version", "wrong-profile"),
+            ("fixture_baseline_commit", "0" * 40),
+        ):
+            with self.subTest(key=key):
+                changed = dict(run)
+                changed[key] = invalid
+                with self.assertRaises(self.runner.EvalError):
+                    self.runner._validate_prepared_run(run_path, changed, self.profile)
+
+        fixture_git = run_path / "fixture" / ".git"
+        hidden_git = run_path / "fixture" / ".git-hidden"
+        fixture_git.rename(hidden_git)
+        try:
+            with self.assertRaises(self.runner.EvalError):
+                self.runner._validate_prepared_run(run_path, run, self.profile)
+        finally:
+            hidden_git.rename(fixture_git)
+
+    def test_diagnosis_paths_and_patch_decision_human_closure_are_strict(self):
+        run_path = self.make_failing_run("decision-closure")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        diagnosis = self.diagnosis(grading)
+        registered = grading["registered_evidence_ids"]
+        for invalid_path in (
+            "C:/absolute.md",
+            "/absolute.md",
+            "../outside.md",
+        ):
+            with self.subTest(path=invalid_path):
+                changed = json.loads(json.dumps(diagnosis))
+                changed["minimal_patch"]["path"] = invalid_path
+                with self.assertRaises(self.runner.EvalError):
+                    self.runner._validate_diagnosis(changed, registered)
+        changed = json.loads(json.dumps(diagnosis))
+        changed["minimal_patch"]["heading"] = "## Missing heading"
+        with self.assertRaises(self.runner.EvalError):
+            self.runner._validate_diagnosis(changed, registered)
+
+        self.runner.write_json(run_path / "diagnosis.json", diagnosis)
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        run = self.runner.read_json_object(run_path / "run.json")
+        valid = {
+            "schema_version": self.runner.PATCH_DECISION_SCHEMA_VERSION,
+            "decision": "reject",
+            "diagnosis_sha256": self.runner._sha256_file(run_path / "diagnosis.json"),
+            "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+            "decided_by": "Human Reviewer",
+            "decided_at": "2026-07-16T03:04:05Z",
+            "note": "Reject the proposed direction.",
+        }
+        invalid_decisions = []
+        for key, value in (
+            ("diagnosis_sha256", "0" * 64),
+            ("freeze_manifest_sha256", "0" * 64),
+            ("decided_at", "2026-07-16 03:04:05"),
+            ("decided_by", "   "),
+            ("note", ""),
+        ):
+            candidate = dict(valid)
+            candidate[key] = value
+            invalid_decisions.append((key, candidate))
+        for key, candidate in invalid_decisions:
+            with self.subTest(decision_key=key):
+                self.runner.write_json(run_path / "patch-decision.json", candidate)
+                self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+
+        self.runner.write_json(run_path / "patch-decision.json", valid)
+        self.assertEqual(0, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
+        rejected = self.runner.read_json_object(run_path / "run.json")
+        self.assertFalse(rejected["level_b_comparison_authorized"])
+        self.assertEqual("reject", rejected["patch_decision"])
