@@ -1787,8 +1787,18 @@ class BlackboxEvalReportTest(unittest.TestCase):
         self.after_commit = self.runner.run_git(
             self.runner.REPO_ROOT, ["rev-parse", "HEAD"]
         ).stdout_text.strip()
-        self.before_fingerprint = "1" * 64
-        self.after_fingerprint = "2" * 64
+        self.before_skill = Path(self.temp.name) / "before-skill"
+        self.after_skill = Path(self.temp.name) / "after-skill"
+        self.before_skill.mkdir()
+        self.after_skill.mkdir()
+        (self.before_skill / "SKILL.md").write_text(
+            "# Before Skill\n", encoding="utf-8"
+        )
+        (self.after_skill / "SKILL.md").write_text(
+            "# After Skill\n", encoding="utf-8"
+        )
+        self.before_fingerprint = self.runner.fingerprint_tree(self.before_skill)
+        self.after_fingerprint = self.runner.fingerprint_tree(self.after_skill)
         self.agent_identity = {
             "execution_kind": "agent",
             "agent_product": "example-agent",
@@ -1833,17 +1843,30 @@ class BlackboxEvalReportTest(unittest.TestCase):
         private_content="PRIVATE-UNTRACKED-CONTENT",
     ):
         profile = self.runner.load_profile(str(eval_id))
-        run_path = self.workspace / f"eval-{int(eval_id):03d}-{suffix}"
-        run_path.mkdir()
-        answer = f"synthetic answer for {suffix}\n".encode("utf-8")
-        (run_path / "answer.md").write_bytes(answer)
         source_commit = source_commit or self.after_commit
         fingerprint = fingerprint if fingerprint is not None else self.after_fingerprint
-        skill_identity = {
-            "status": skill_status,
-            "path": "recorded/verified-skill" if skill_status == "verified" else None,
-            "fingerprint_sha256": fingerprint if skill_status == "verified" else None,
-        }
+        if skill_status == "verified":
+            skill_by_fingerprint = {
+                self.before_fingerprint: self.before_skill,
+                self.after_fingerprint: self.after_skill,
+            }
+            if fingerprint not in skill_by_fingerprint:
+                raise AssertionError("test requested an unknown verified Skill fingerprint")
+            skill_path = skill_by_fingerprint[fingerprint]
+        else:
+            skill_path = None
+        run_id = f"eval-{int(eval_id):03d}-{suffix}"
+        run_path = self.runner.prepare_run(
+            str(eval_id),
+            self.workspace,
+            skill_path=skill_path,
+            run_id=run_id,
+            now=lambda: datetime(2026, 7, 16, 1, 2, 3, tzinfo=timezone.utc),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+        run["skill_source_commit"] = source_commit
+        answer = f"synthetic answer for {suffix}\n".encode("utf-8")
+        (run_path / "answer.md").write_bytes(answer)
         agent_identity = {
             "execution_kind": execution_kind,
             "agent_product": agent_product,
@@ -1854,15 +1877,10 @@ class BlackboxEvalReportTest(unittest.TestCase):
             "temperature": judge_temperature,
             "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
         }
-        provenance = {
-            **self._compatibility(eval_id),
-            "skill_source_commit": source_commit,
-            "skill_identity": skill_identity,
-            "fixture_baseline_commit": "f" * 40,
-            "agent_identity": agent_identity,
-            "answer_sha256": self.runner._sha256_bytes(answer),
-            "judge_identity": judge_identity,
-        }
+        run["agent_identity"] = agent_identity
+        run["answer_sha256"] = self.runner._sha256_bytes(answer)
+        run["judge_identity"] = judge_identity
+        provenance = self.runner._provenance_from_run(run)
         assertion_outcome = "FAIL" if score == "FAIL" else "PARTIAL" if score == "PARTIAL" else "PASS"
         assertions = [
             {
@@ -1918,20 +1936,16 @@ class BlackboxEvalReportTest(unittest.TestCase):
                 ],
             },
         )
-        run = {
-            **provenance,
-            "schema_version": self.runner.RUN_SCHEMA_VERSION,
-            "run_id": run_path.name,
-            "created_at": "2026-07-16T01:02:03Z",
-            "run_status": status,
-            "behavior_score": score,
-            "needs_review_since": None,
-            "needs_review_reasons": [],
-            "unresolved_assertion_ids": [],
-            "patch_decision_history": [],
-            "freeze_manifest_sha256": None,
-            "level_b_comparison_authorized": False,
-        }
+        run.update(
+            {
+                "run_status": status,
+                "behavior_score": score,
+                "needs_review_since": None,
+                "needs_review_reasons": [],
+                "unresolved_assertion_ids": [],
+                "level_b_comparison_authorized": False,
+            }
+        )
         run["artifact_hashes"] = self.runner._artifact_hashes(run_path)
         if frozen:
             self.runner.write_json(run_path / "diagnosis.json", {"synthetic": True})
@@ -1992,22 +2006,33 @@ class BlackboxEvalReportTest(unittest.TestCase):
         return run_path
 
     def _write_pending(self, suffix, status, since=None):
-        run_path = self.workspace / f"eval-002-{suffix}"
-        run_path.mkdir()
-        self.runner.write_json(
-            run_path / "run.json",
+        run_path = self.runner.prepare_run(
+            "2",
+            self.workspace,
+            skill_path=None,
+            run_id=f"eval-002-{suffix}",
+            now=lambda: datetime(2026, 7, 16, 1, 2, 3, tzinfo=timezone.utc),
+        )
+        answer = b"SIBLING-PRIVATE-ANSWER"
+        (run_path / "answer.md").write_bytes(answer)
+        run = self.runner.read_json_object(run_path / "run.json")
+        if status in {"READY_TO_GRADE", "NEEDS_REVIEW", "GRADED"}:
+            run["agent_identity"] = {
+                "execution_kind": "canned",
+                "agent_product": "canned",
+                "agent_model": "pending-fixture",
+            }
+            run["answer_sha256"] = self.runner._sha256_bytes(answer)
+        run.update(
             {
-                "run_id": run_path.name,
                 "run_status": status,
                 "behavior_score": None,
                 "needs_review_since": since,
                 "unresolved_assertion_ids": ["z-assertion", "a-assertion"] if since else [],
                 "needs_review_reasons": ["judge missing"] if since else [],
-            },
+            }
         )
-        (run_path / "answer.md").write_text(
-            "SIBLING-PRIVATE-ANSWER", encoding="utf-8"
-        )
+        self.runner.write_json(run_path / "run.json", run)
         return run_path
 
     def _set_provenance(self, run_path, key, value):
@@ -2235,3 +2260,86 @@ class BlackboxEvalReportTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("regression Agent product/model drift", report)
         self.assertIn("Level B eligible: no", report)
+
+    def test_report_rejects_self_consistent_but_invalid_run_provenance(self):
+        cases = (
+            (
+                "blank-agent",
+                "agent_identity",
+                {
+                    "execution_kind": "agent",
+                    "agent_product": "",
+                    "agent_model": "example-model",
+                },
+            ),
+            ("unknown-source-commit", "skill_source_commit", "f" * 40),
+            (
+                "short-fingerprint",
+                "skill_identity",
+                {
+                    "status": "verified",
+                    "path": "recorded/verified-skill",
+                    "fingerprint_sha256": "abc123",
+                },
+            ),
+        )
+        for suffix, key, value in cases:
+            with self.subTest(suffix=suffix):
+                run_path = self._write_run(f"invalid-{suffix}")
+                run = self.runner.read_json_object(run_path / "run.json")
+                grading = self.runner.read_json_object(run_path / "grading.json")
+                run[key] = value
+                grading["provenance"][key] = json.loads(json.dumps(value))
+                self.runner.write_json(run_path / "run.json", run)
+                self.runner.write_json(run_path / "grading.json", grading)
+
+                with self.assertRaises(self.runner.EvalError):
+                    self.runner._load_report_run(run_path)
+
+    def test_review_backlog_ignores_and_reports_invalid_sibling_runs(self):
+        target = self._write_run("valid-backlog-target")
+        invalid = self.workspace / "eval-002-invalid-sibling"
+        invalid.mkdir()
+        self.runner.write_json(
+            invalid / "run.json",
+            {"run_status": "GRADED", "behavior_score": "PASS"},
+        )
+
+        backlog = self.runner.collect_review_backlog(target)
+
+        self.assertIn("invalid_count", backlog)
+        self.assertEqual(1, backlog["graded_count"])
+        self.assertEqual(1, backlog["attempted_count"])
+        self.assertEqual(1, backlog["pass_count"])
+        self.assertEqual(1, backlog["invalid_count"])
+        self.assertEqual("eval-002-invalid-sibling", backlog["invalid"][0]["directory"])
+        report = self.runner.render_report(target).read_text(encoding="utf-8")
+        self.assertIn("Invalid sibling Run count: 1", report)
+        self.assertIn("eval-002-invalid-sibling", report)
+
+    def test_report_cli_accepts_repeatable_regression_pairs(self):
+        baseline, candidate = self._make_level_b_pair("cli")
+        first = self._make_regression_pair("cli-first")
+        second = self._make_regression_pair("cli-second")
+        self.assertTrue(
+            hasattr(self.runner, "build_cli_parser"),
+            "Task 7 report CLI parser is missing",
+        )
+        argv = [
+            "report",
+            str(candidate),
+            "--baseline",
+            str(baseline),
+            "--regression-pair",
+            str(first[0]),
+            str(first[1]),
+            "--regression-pair",
+            str(second[0]),
+            str(second[1]),
+        ]
+        parsed = self.runner.build_cli_parser().parse_args(argv)
+        self.assertEqual(2, len(parsed.regression_pair))
+        self.assertEqual(0, self.runner.main(argv))
+        report = (candidate / "report.md").read_text(encoding="utf-8")
+        self.assertIn(f"source={first[0].name} -> {first[1].name}", report)
+        self.assertIn(f"source={second[0].name} -> {second[1].name}", report)

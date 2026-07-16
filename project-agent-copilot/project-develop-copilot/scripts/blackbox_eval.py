@@ -1391,7 +1391,8 @@ def _validate_prepared_run(
     }
     for key, value in expected.items():
         if run.get(key) != value:
-            raise EvalError(f"Run {key} mismatch")
+            label = "eval_id/profile_version" if key == "profile_version" else key
+            raise EvalError(f"Run {label} mismatch")
     prompt_path = run_path / "prompt.md"
     fixture_path = run_path / "fixture"
     if not prompt_path.is_file():
@@ -1399,10 +1400,10 @@ def _validate_prepared_run(
     if not fixture_path.is_dir() or not (fixture_path / ".git").is_dir():
         raise EvalError("Run fixture Git repository is missing")
     if _sha256_file(prompt_path) != run.get("effective_prompt_sha256"):
-        raise EvalError("effective Prompt hash mismatch")
+        raise EvalError("effective_prompt_sha256 mismatch")
     canonical = extract_canonical_prompt(profile).encode("utf-8")
     if _sha256_bytes(canonical) != run.get("canonical_prompt_sha256"):
-        raise EvalError("canonical Prompt hash mismatch")
+        raise EvalError("canonical_prompt_sha256 mismatch")
     baseline = _validate_full_commit(
         fixture_path, run.get("fixture_baseline_commit"), "Fixture baseline commit"
     )
@@ -1449,6 +1450,10 @@ def _validate_agent_identity(
     agent_product: str | None,
     agent_model: str | None,
 ) -> None:
+    if not isinstance(answer_sha256, str) or not re.fullmatch(
+        r"[0-9a-f]{64}", answer_sha256
+    ):
+        raise EvalError("answer SHA-256 lock is malformed")
     supplied = (execution_kind, agent_product, agent_model)
     supplied_count = sum(value is not None for value in supplied)
     if supplied_count not in {0, 3}:
@@ -1475,6 +1480,11 @@ def _validate_agent_identity(
         "agent_model",
     }:
         raise EvalError("stored Agent identity is incomplete")
+    if current.get("execution_kind") not in {"agent", "canned"} or any(
+        not isinstance(current.get(key), str) or not current[key].strip()
+        for key in ("agent_product", "agent_model")
+    ):
+        raise EvalError("stored Agent identity labels are invalid")
     if supplied_count == 3:
         candidate = {
             "execution_kind": execution_kind,
@@ -2007,6 +2017,77 @@ def _percentage(numerator: int, denominator: int) -> str:
     return f"{100 * numerator / denominator:.1f}%"
 
 
+def _validate_backlog_run_record(directory: Path, run: Mapping[str, Any]) -> None:
+    run_id = _require_string(run, "run_id")
+    if run_id != directory.name:
+        raise EvalError("Run ID does not match its directory")
+    if run.get("schema_version") != RUN_SCHEMA_VERSION:
+        raise EvalError("unsupported Run schema version")
+    profile = load_profile(_require_string(run, "eval_id"))
+    expected = {
+        "profile_version": profile.profile_version,
+        "fixture_version": profile.fixture_version,
+        "grader_version": GRADER_VERSION,
+    }
+    for key, value in expected.items():
+        if run.get(key) != value:
+            raise EvalError(f"Run {key} mismatch")
+    for key in (
+        "canonical_prompt_sha256",
+        "effective_prompt_sha256",
+        "skill_source_commit",
+        "fixture_baseline_commit",
+    ):
+        if not isinstance(run.get(key), str) or not re.fullmatch(
+            r"(?:[0-9a-f]{40}|[0-9a-f]{64})", run[key]
+        ):
+            raise EvalError(f"Run {key} is malformed")
+    identity = run.get("skill_identity")
+    if not isinstance(identity, dict) or set(identity) != {
+        "fingerprint_sha256",
+        "path",
+        "status",
+    }:
+        raise EvalError("Skill install identity is incomplete")
+    if identity.get("status") == "verified":
+        if not isinstance(identity.get("path"), str) or not identity["path"]:
+            raise EvalError("verified Skill path is missing")
+        if not re.fullmatch(
+            r"[0-9a-f]{64}", str(identity.get("fingerprint_sha256", ""))
+        ):
+            raise EvalError("verified Skill fingerprint is malformed")
+    elif identity.get("status") == "unverified":
+        if identity.get("path") is not None or identity.get("fingerprint_sha256") is not None:
+            raise EvalError("unverified Skill identity must not claim a fingerprint")
+    else:
+        raise EvalError("unknown Skill identity status")
+    status = run.get("run_status")
+    if status not in {
+        "READY_FOR_AGENT",
+        "READY_TO_GRADE",
+        "NEEDS_REVIEW",
+        "GRADED",
+        "RUN_ERROR",
+    }:
+        raise EvalError("unknown Run status")
+    if status in {"READY_TO_GRADE", "NEEDS_REVIEW", "GRADED"}:
+        _validate_agent_identity(
+            dict(run),
+            _require_string(run, "answer_sha256"),
+            None,
+            None,
+            None,
+        )
+    if status == "GRADED" and run.get("behavior_score") not in {
+        "PASS",
+        "PARTIAL",
+        "FAIL",
+    }:
+        raise EvalError("graded Run behavior score is malformed")
+    if status == "NEEDS_REVIEW":
+        _parse_report_timestamp(run.get("needs_review_since"))
+
+
 def collect_review_backlog(
     run_path: Path,
     now: Callable[[], datetime] | None = None,
@@ -2018,6 +2099,7 @@ def collect_review_backlog(
     current = instant.astimezone(timezone.utc)
     runs: list[dict[str, Any]] = []
     pending: list[dict[str, Any]] = []
+    invalid: list[dict[str, str]] = []
     counts = {"PASS": 0, "PARTIAL": 0, "FAIL": 0}
     graded_count = 0
     needs_review_count = 0
@@ -2025,7 +2107,12 @@ def collect_review_backlog(
         run_file = sibling / "run.json"
         if not sibling.is_dir() or not run_file.is_file():
             continue
-        run = read_json_object(run_file)
+        try:
+            run = read_json_object(run_file)
+            _validate_backlog_run_record(sibling, run)
+        except (EvalError, OSError, UnicodeDecodeError) as error:
+            invalid.append({"directory": sibling.name, "reason": str(error)})
+            continue
         status = run.get("run_status")
         score = run.get("behavior_score")
         run_id = str(run.get("run_id") or sibling.name)
@@ -2073,6 +2160,8 @@ def collect_review_backlog(
         "oldest_needs_review_since": (
             pending[0]["needs_review_since"] if pending else None
         ),
+        "invalid": invalid,
+        "invalid_count": len(invalid),
         **{f"{key.lower()}_count": value for key, value in counts.items()},
     }
 
@@ -2101,6 +2190,8 @@ def _validate_judge_identity(value: Any) -> dict[str, Any] | None:
 def _load_report_run(run_path: Path) -> dict[str, Any]:
     run_path = run_path.expanduser().resolve(strict=True)
     run = read_json_object(run_path / "run.json")
+    profile = load_profile(_require_string(run, "eval_id"))
+    _validate_prepared_run(run_path, run, profile)
     grading = read_json_object(run_path / "grading.json")
     provenance = grading.get("provenance")
     if not isinstance(provenance, dict) or _provenance_from_run(run) != provenance:
@@ -2115,6 +2206,13 @@ def _load_report_run(run_path: Path) -> dict[str, Any]:
         or _sha256_file(answer_path) != answer_hash
     ):
         raise EvalError("report answer bytes differ from grading provenance")
+    _validate_agent_identity(
+        run,
+        answer_hash,
+        None,
+        None,
+        None,
+    )
     if (
         run.get("run_status") != grading.get("run_status")
         or run.get("behavior_score") != grading.get("behavior_score")
@@ -2131,6 +2229,13 @@ def _load_report_run(run_path: Path) -> dict[str, Any]:
         }
         if current_judge != judge_identity:
             raise EvalError("judge.json differs from grading provenance")
+    freeze_pointer = run.get("freeze_manifest_sha256")
+    if freeze_pointer is None and (run_path / "freeze-manifest.json").exists():
+        raise EvalError("freeze manifest exists but its Run pointer is missing")
+    if freeze_pointer is not None:
+        manifest, _ = _validate_frozen_run(run_path, run)
+        run_copy = json.loads(json.dumps(run))
+        _validate_patch_decision(run_path, run_copy, manifest)
     evidence = (
         read_json_object(run_path / "evidence.json")
         if (run_path / "evidence.json").is_file()
@@ -2501,6 +2606,7 @@ def render_report(
             "",
             f"NEEDS_REVIEW count: {backlog['needs_review_count']}",
             f"Unresolved assertion count: {backlog['unresolved_assertion_count']}",
+            f"Invalid sibling Run count: {backlog['invalid_count']}",
             (
                 "First pending needs_review_since: "
                 f"{backlog['oldest_needs_review_since'] or 'n/a'}"
@@ -2522,6 +2628,20 @@ def render_report(
     )
     if not backlog["pending"]:
         lines.append("| none | n/a | n/a | none | none |")
+    if backlog["invalid"]:
+        lines.extend(
+            [
+                "",
+                "Invalid sibling Runs:",
+                "",
+                "| Directory | Reason |",
+                "|---|---|",
+            ]
+        )
+        lines.extend(
+            f"| {item['directory']} | {item['reason']} |"
+            for item in backlog["invalid"]
+        )
     lines.extend(
         [
             "",
@@ -2595,3 +2715,38 @@ def render_report(
     temporary.write_bytes(payload.encode("utf-8"))
     os.replace(temporary, report_path)
     return report_path
+
+
+def build_cli_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Project Develop Copilot black-box evaluator")
+    commands = parser.add_subparsers(dest="command", required=True)
+    report = commands.add_parser("report", help="render a validated Run report")
+    report.add_argument("run_path", type=Path)
+    report.add_argument("--baseline", dest="baseline_path", type=Path)
+    report.add_argument(
+        "--regression-pair",
+        action="append",
+        default=[],
+        nargs=2,
+        type=Path,
+        metavar=("BEFORE", "AFTER"),
+    )
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_cli_parser().parse_args(argv)
+    if args.command == "report":
+        render_report(
+            args.run_path,
+            baseline_path=args.baseline_path,
+            regression_pairs=tuple(
+                (before, after) for before, after in args.regression_pair
+            ),
+        )
+        return 0
+    raise EvalError(f"unsupported command: {args.command}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
