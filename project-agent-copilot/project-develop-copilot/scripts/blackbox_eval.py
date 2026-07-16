@@ -145,6 +145,36 @@ def run_git(cwd: Path, args: Sequence[str], check: bool = True) -> GitResult:
     return result
 
 
+def parse_porcelain_v1_z(raw: bytes) -> list[dict[str, str | None]]:
+    """Parse porcelain v1 -z records; rename paths are destination then source."""
+    entries: list[dict[str, str | None]] = []
+    cursor = 0
+    while cursor < len(raw):
+        if cursor + 3 > len(raw) or raw[cursor + 2:cursor + 3] != b" ":
+            raise EvalError("invalid porcelain v1 -z record")
+        status = raw[cursor:cursor + 2].decode("ascii", errors="strict")
+        end = raw.find(b"\0", cursor + 3)
+        if end < 0:
+            raise EvalError("unterminated porcelain path")
+        path = raw[cursor + 3:end].decode("utf-8", errors="strict")
+        cursor = end + 1
+        original_path = None
+        if status[0] in "RC" or status[1] in "RC":
+            original_end = raw.find(b"\0", cursor)
+            if original_end < 0:
+                raise EvalError("unterminated porcelain rename source")
+            original_path = raw[cursor:original_end].decode("utf-8", errors="strict")
+            cursor = original_end + 1
+        entries.append(
+            {
+                "status": status,
+                "path": path.replace("\\", "/"),
+                "original_path": original_path,
+            }
+        )
+    return entries
+
+
 def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
@@ -160,6 +190,120 @@ def _sha256_file(path: Path) -> str:
 def _is_reparse_point(file_stat: os.stat_result) -> bool:
     reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
     return bool(getattr(file_stat, "st_file_attributes", 0) & reparse_flag)
+
+
+def _normalize_untracked_path(value: str) -> str:
+    normalized = unicodedata.normalize("NFC", value.replace("\\", "/"))
+    relative = Path(normalized)
+    if (
+        not normalized
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or any(part in {"", "."} for part in normalized.split("/"))
+    ):
+        raise EvalError(f"invalid untracked path: {value}")
+    return normalized
+
+
+def _read_regular_for_capture(
+    path: Path, expected_stat: os.stat_result
+) -> tuple[int, str, bytes | None]:
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise EvalError(f"cannot open untracked file {path}: {error}") from error
+    try:
+        opened_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(opened_stat.st_mode):
+            raise EvalError(f"untracked entry is not a regular file: {path}")
+        expected_identity = (expected_stat.st_dev, expected_stat.st_ino)
+        opened_identity = (opened_stat.st_dev, opened_stat.st_ino)
+        if expected_identity != opened_identity:
+            raise EvalError(f"untracked entry changed while opening: {path}")
+        digest = hashlib.sha256()
+        size = 0
+        captured: bytearray | None = bytearray()
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            for block in iter(lambda: stream.read(64 * 1024), b""):
+                digest.update(block)
+                size += len(block)
+                if captured is not None:
+                    if size <= MAX_UNTRACKED_FILE_BYTES:
+                        captured.extend(block)
+                    else:
+                        captured = None
+        return size, digest.hexdigest(), None if captured is None else bytes(captured)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def collect_untracked_content(
+    fixture_path: Path, paths: Iterable[str]
+) -> list[dict[str, Any]]:
+    normalized_paths = sorted(_normalize_untracked_path(path) for path in paths)
+    manifest: list[dict[str, Any]] = []
+    captured_bytes = 0
+    for relative_path in normalized_paths:
+        path = fixture_path.joinpath(*relative_path.split("/"))
+        try:
+            file_stat = path.lstat()
+        except OSError as error:
+            raise EvalError(f"cannot stat untracked entry {path}: {error}") from error
+        if path.is_symlink() or _is_reparse_point(file_stat):
+            try:
+                target = os.readlink(path)
+            except OSError as error:
+                raise EvalError(f"cannot read untracked link {path}: {error}") from error
+            target_bytes = target.encode("utf-8")
+            manifest.append(
+                {
+                    "capture": {"reason": "link", "status": "omitted"},
+                    "kind": "link",
+                    "path": relative_path,
+                    "sha256": _sha256_bytes(target_bytes),
+                    "size": len(target_bytes),
+                    "target": target,
+                }
+            )
+            continue
+        if not stat.S_ISREG(file_stat.st_mode):
+            raise EvalError(f"untracked entry is not a regular file: {path}")
+
+        size, digest, content = _read_regular_for_capture(path, file_stat)
+        entry: dict[str, Any] = {
+            "kind": "regular",
+            "path": relative_path,
+            "sha256": digest,
+            "size": size,
+        }
+        if content is None:
+            entry["capture"] = {"reason": "file-too-large", "status": "omitted"}
+        elif captured_bytes + size > MAX_UNTRACKED_TOTAL_BYTES:
+            entry["capture"] = {"reason": "run-cap-exceeded", "status": "omitted"}
+        else:
+            captured_bytes += size
+            try:
+                text = content.decode("utf-8", errors="strict")
+            except UnicodeDecodeError:
+                encoding = "base64"
+                captured_content = base64.b64encode(content).decode("ascii")
+            else:
+                if "\0" in text:
+                    encoding = "base64"
+                    captured_content = base64.b64encode(content).decode("ascii")
+                else:
+                    encoding = "utf-8"
+                    captured_content = text
+            entry["capture"] = {
+                "content": captured_content,
+                "encoding": encoding,
+                "status": "captured",
+            }
+        manifest.append(entry)
+    return manifest
 
 
 def fingerprint_tree(root: Path) -> str:
@@ -492,3 +636,45 @@ def prepare_run(
         },
     )
     return run_path
+
+
+def collect_git_evidence(run_path: Path) -> dict[str, Any]:
+    run = read_json_object(run_path / "run.json")
+    baseline = _require_string(run, "fixture_baseline_commit")
+    fixture_path = run_path / "fixture"
+
+    status_raw = run_git(
+        fixture_path,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    ).stdout
+    current_head = run_git(fixture_path, ["rev-parse", "HEAD"]).stdout_text.strip()
+    diff = run_git(
+        fixture_path,
+        [
+            "diff",
+            "--binary",
+            "--no-ext-diff",
+            "--no-textconv",
+            baseline,
+            "--",
+        ],
+    ).stdout
+
+    statuses = parse_porcelain_v1_z(status_raw)
+    untracked_paths = [
+        entry["path"] for entry in statuses if entry["status"] == "??"
+    ]
+    untracked_manifest = collect_untracked_content(fixture_path, untracked_paths)
+    (run_path / "diff.patch").write_bytes(diff)
+    evidence = {
+        "baseline_head": baseline,
+        "current_head": current_head,
+        "diff_patch_sha256": _sha256_bytes(diff),
+        "diff_patch_size": len(diff),
+        "has_any_write": current_head != baseline or bool(statuses) or bool(diff),
+        "head_changed": current_head != baseline,
+        "statuses": statuses,
+        "untracked_manifest": untracked_manifest,
+    }
+    write_json(run_path / "evidence.json", evidence)
+    return evidence
