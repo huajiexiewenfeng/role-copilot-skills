@@ -1091,6 +1091,40 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         self.assertIsNone(run["answer_sha256"])
         self.assertFalse((run_path / "grading.json").exists())
 
+        missing = self.make_run("missing")
+        (missing / "answer.md").unlink()
+        self.assertEqual(1, self.grade(missing))
+        missing_run = self.runner.read_json_object(missing / "run.json")
+        self.assertEqual("READY_FOR_AGENT", missing_run["run_status"])
+        self.assertIn("answer.md", missing_run["operator_error"])
+        self.assertIsNone(missing_run["answer_sha256"])
+
+    def test_locked_answer_missing_or_empty_is_run_error(self):
+        for suffix, mutate in (
+            ("locked-answer-missing", lambda path: (path / "answer.md").unlink()),
+            ("locked-answer-empty", lambda path: (path / "answer.md").write_bytes(b"")),
+        ):
+            with self.subTest(suffix=suffix):
+                run_path = self.make_run(suffix)
+                answer = self.good_answer()
+                (run_path / "answer.md").write_text(answer, encoding="utf-8")
+                self.write_good_judge(run_path, answer)
+                self.assertEqual(0, self.grade(run_path))
+
+                mutate(run_path)
+
+                self.assertEqual(
+                    1,
+                    self.grade(
+                        run_path,
+                        execution_kind=None,
+                        agent_product=None,
+                        agent_model=None,
+                    ),
+                )
+                locked = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("RUN_ERROR", locked["run_status"])
+
     def test_missing_and_uncertain_judge_need_review_with_stable_sorted_state(self):
         run_path = self.make_run("review")
         answer = self.good_answer()
@@ -1210,6 +1244,41 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         self.assertEqual(0, self.grade(run_path))
         return run_path
 
+    def make_terminal_run(self, suffix):
+        run_path = self.make_failing_run(suffix)
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        self.runner.write_json(run_path / "diagnosis.json", self.diagnosis(grading))
+        self.assertEqual(
+            0,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+        decision = {
+            "schema_version": self.runner.PATCH_DECISION_SCHEMA_VERSION,
+            "decision": "reject",
+            "diagnosis_sha256": self.runner._sha256_file(run_path / "diagnosis.json"),
+            "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+            "decided_by": "Human Reviewer",
+            "decided_at": "2026-07-16T03:04:05Z",
+            "note": "Reject this candidate.",
+        }
+        self.runner.write_json(run_path / "patch-decision.json", decision)
+        self.assertEqual(
+            0,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        return run_path, decision
+
     def test_first_valid_diagnosis_freezes_evidence_before_human_decision(self):
         run_path = self.make_failing_run("freeze")
         grading = self.runner.read_json_object(run_path / "grading.json")
@@ -1303,6 +1372,8 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
             ("schema_version", "9.9"),
             ("profile_version", "wrong-profile"),
             ("fixture_baseline_commit", "0" * 40),
+            ("fixture_baseline_commit", "HEAD"),
+            ("skill_source_commit", "0" * 40),
         ):
             with self.subTest(key=key):
                 changed = dict(run)
@@ -1318,6 +1389,121 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
                 self.runner._validate_prepared_run(run_path, run, self.profile)
         finally:
             hidden_git.rename(fixture_git)
+
+    def test_verified_skill_identity_requires_live_path_and_matching_fingerprint(self):
+        skill_path = Path(self.temp.name) / "verified-skill"
+        skill_path.mkdir()
+        (skill_path / "SKILL.md").write_text("# Verified skill\n", encoding="utf-8")
+        run_path = self.runner.prepare_run(
+            "2",
+            self.workspace,
+            skill_path=skill_path,
+            run_id="eval-002-verified-provenance",
+            now=lambda: datetime(2026, 7, 16, 1, 2, 3, tzinfo=timezone.utc),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+
+        missing = json.loads(json.dumps(run))
+        missing["skill_identity"]["path"] = str(Path(self.temp.name) / "missing-skill")
+        with self.assertRaises(self.runner.EvalError):
+            self.runner._validate_prepared_run(run_path, missing, self.profile)
+
+        (skill_path / "SKILL.md").write_text("# Tampered skill\n", encoding="utf-8")
+        with self.assertRaises(self.runner.EvalError):
+            self.runner._validate_prepared_run(run_path, run, self.profile)
+
+    def test_terminal_decision_uses_independent_anchor_and_rejects_pointer_bypass(self):
+        run_path, decision = self.make_terminal_run("terminal-anchor")
+        anchor_path = run_path / "terminal-patch-decision.json"
+        self.assertTrue(anchor_path.is_file())
+
+        tampered_run = self.runner.read_json_object(run_path / "run.json")
+        tampered_run["terminal_patch_decision_sha256"] = None
+        self.runner.write_json(run_path / "run.json", tampered_run)
+        decision["decision"] = "approve"
+        decision["note"] = "Attempt to re-authorize after terminal rejection."
+        self.runner.write_json(run_path / "patch-decision.json", decision)
+
+        self.assertEqual(
+            1,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        failed = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("RUN_ERROR", failed["run_status"])
+        self.assertFalse(failed.get("level_b_comparison_authorized", False))
+
+    def test_terminal_anchor_and_pointers_are_individually_immutable(self):
+        mutations = (
+            (
+                "anchor-delete",
+                lambda path: (path / "terminal-patch-decision.json").unlink(),
+            ),
+            (
+                "anchor-modify",
+                lambda path: (path / "terminal-patch-decision.json").write_text(
+                    "{}\n", encoding="utf-8"
+                ),
+            ),
+            (
+                "decision-pointer-delete",
+                lambda path: self._mutate_run_key(
+                    path, "terminal_patch_decision_sha256", delete=True
+                ),
+            ),
+            (
+                "decision-pointer-modify",
+                lambda path: self._mutate_run_key(
+                    path, "terminal_patch_decision_sha256", "0" * 64
+                ),
+            ),
+            (
+                "anchor-pointer-delete",
+                lambda path: self._mutate_run_key(
+                    path, "terminal_patch_decision_anchor_sha256", delete=True
+                ),
+            ),
+            (
+                "anchor-pointer-modify",
+                lambda path: self._mutate_run_key(
+                    path, "terminal_patch_decision_anchor_sha256", "0" * 64
+                ),
+            ),
+            (
+                "authorization-modify",
+                lambda path: self._mutate_run_key(
+                    path, "level_b_comparison_authorized", True
+                ),
+            ),
+        )
+        for suffix, mutate in mutations:
+            with self.subTest(suffix=suffix):
+                run_path, _ = self.make_terminal_run(suffix)
+                mutate(run_path)
+                self.assertEqual(
+                    1,
+                    self.grade(
+                        run_path,
+                        execution_kind=None,
+                        agent_product=None,
+                        agent_model=None,
+                    ),
+                )
+                failed = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("RUN_ERROR", failed["run_status"])
+                self.assertFalse(failed["level_b_comparison_authorized"])
+
+    def _mutate_run_key(self, run_path, key, value=None, delete=False):
+        run = self.runner.read_json_object(run_path / "run.json")
+        if delete:
+            run.pop(key, None)
+        else:
+            run[key] = value
+        self.runner.write_json(run_path / "run.json", run)
 
     def test_diagnosis_paths_and_patch_decision_human_closure_are_strict(self):
         run_path = self.make_failing_run("decision-closure")

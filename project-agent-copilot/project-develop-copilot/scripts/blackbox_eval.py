@@ -29,6 +29,7 @@ RUN_SCHEMA_VERSION = "0.1"
 JUDGE_SCHEMA_VERSION = "0.1"
 DIAGNOSIS_SCHEMA_VERSION = "0.1"
 PATCH_DECISION_SCHEMA_VERSION = "0.1"
+TERMINAL_PATCH_DECISION_SCHEMA_VERSION = "0.1"
 JUDGE_PROMPT_VERSION = "judge-prompt-0.1"
 QUOTE_MATCH_MODE = "normalized-substring"
 QUOTE_NORMALIZER_VERSION = "quote-normalization-v1"
@@ -175,6 +176,30 @@ def write_json(path: Path, value: Mapping[str, Any]) -> None:
     temporary = path.with_name(f"{path.name}.tmp")
     temporary.write_bytes((payload + "\n").encode("utf-8"))
     os.replace(temporary, path)
+
+
+def _write_json_exclusive(path: Path, value: Mapping[str, Any]) -> None:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        indent=2,
+    )
+    try:
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as error:
+        raise EvalError(f"refusing to rewrite immutable JSON object: {path}") from error
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write((payload + "\n").encode("utf-8"))
+            output.flush()
+            os.fsync(output.fileno())
+    except BaseException:
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def git_environment() -> dict[str, str]:
@@ -1278,8 +1303,20 @@ def _set_run_error(run_path: Path, run: dict[str, Any], reason: str) -> int:
     run["needs_review_since"] = None
     run["needs_review_reasons"] = []
     run["unresolved_assertion_ids"] = []
+    run["level_b_comparison_authorized"] = False
     write_json(run_path / "run.json", run)
     return 1
+
+
+def _validate_full_commit(repository: Path, value: Any, label: str) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", value):
+        raise EvalError(f"{label} must be an immutable full commit ID")
+    resolved = run_git(
+        repository, ["rev-parse", "--verify", f"{value}^{{commit}}"]
+    ).stdout_text.strip()
+    if resolved != value:
+        raise EvalError(f"{label} does not resolve to its recorded full commit ID")
+    return resolved
 
 
 def _validate_prepared_run(
@@ -1297,10 +1334,9 @@ def _validate_prepared_run(
         if run.get(key) != value:
             raise EvalError(f"Run {key} mismatch")
     prompt_path = run_path / "prompt.md"
-    answer_path = run_path / "answer.md"
     fixture_path = run_path / "fixture"
-    if not prompt_path.is_file() or not answer_path.is_file():
-        raise EvalError("Run prompt.md and answer.md must exist")
+    if not prompt_path.is_file():
+        raise EvalError("Run prompt.md must exist")
     if not fixture_path.is_dir() or not (fixture_path / ".git").is_dir():
         raise EvalError("Run fixture Git repository is missing")
     if _sha256_file(prompt_path) != run.get("effective_prompt_sha256"):
@@ -1308,10 +1344,18 @@ def _validate_prepared_run(
     canonical = extract_canonical_prompt(profile).encode("utf-8")
     if _sha256_bytes(canonical) != run.get("canonical_prompt_sha256"):
         raise EvalError("canonical Prompt hash mismatch")
-    baseline = _require_string(run, "fixture_baseline_commit")
-    run_git(fixture_path, ["cat-file", "-e", f"{baseline}^{{commit}}"])
-    if not re.fullmatch(r"[0-9a-f]{40,64}", _require_string(run, "skill_source_commit")):
-        raise EvalError("Skill source commit is malformed")
+    baseline = _validate_full_commit(
+        fixture_path, run.get("fixture_baseline_commit"), "Fixture baseline commit"
+    )
+    baseline_record = run_git(
+        fixture_path, ["rev-list", "--parents", "-n", "1", baseline]
+    ).stdout_text.split()
+    if baseline_record != [baseline]:
+        raise EvalError("Fixture baseline commit is not the repository baseline root")
+    run_git(fixture_path, ["merge-base", "--is-ancestor", baseline, "HEAD"])
+    _validate_full_commit(
+        REPO_ROOT, run.get("skill_source_commit"), "Skill source commit"
+    )
     identity = run.get("skill_identity")
     if not isinstance(identity, dict) or set(identity) != {
         "fingerprint_sha256",
@@ -1327,6 +1371,14 @@ def _validate_prepared_run(
             raise EvalError("verified Skill fingerprint is malformed")
         if not isinstance(identity.get("path"), str) or not identity["path"]:
             raise EvalError("verified Skill path is missing")
+        try:
+            verified_path = Path(identity["path"]).expanduser().resolve(strict=True)
+        except (OSError, RuntimeError) as error:
+            raise EvalError("verified Skill path does not exist") from error
+        if not verified_path.is_dir():
+            raise EvalError("verified Skill path is not a directory")
+        if fingerprint_tree(verified_path) != identity["fingerprint_sha256"]:
+            raise EvalError("verified Skill fingerprint does not match current content")
     else:
         raise EvalError("unknown Skill identity status")
 
@@ -1562,9 +1614,43 @@ def _validate_patch_decision(
     manifest: Mapping[str, Any],
 ) -> None:
     decision_path = run_path / "patch-decision.json"
+    anchor_path = run_path / "terminal-patch-decision.json"
     terminal_hash = run.get("terminal_patch_decision_sha256")
+    terminal_anchor_hash = run.get("terminal_patch_decision_anchor_sha256")
+    anchor: dict[str, Any] | None = None
+    if anchor_path.exists():
+        if not anchor_path.is_file():
+            raise EvalError("terminal Patch decision anchor must be a regular file")
+        if not isinstance(terminal_anchor_hash, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", terminal_anchor_hash
+        ):
+            raise EvalError("terminal Patch decision anchor pointer is missing or malformed")
+        if _sha256_file(anchor_path) != terminal_anchor_hash:
+            raise EvalError("terminal Patch decision anchor pointer mismatch")
+        anchor = read_json_object(anchor_path)
+        required_anchor = {
+            "schema_version",
+            "decision",
+            "decision_sha256",
+            "diagnosis_sha256",
+            "freeze_manifest_sha256",
+        }
+        if (
+            set(anchor) != required_anchor
+            or anchor.get("schema_version") != TERMINAL_PATCH_DECISION_SCHEMA_VERSION
+            or anchor.get("decision") not in {"approve", "reject"}
+        ):
+            raise EvalError("terminal Patch decision anchor does not match schema 0.1")
+        if terminal_hash != anchor.get("decision_sha256"):
+            raise EvalError("terminal Patch decision pointer differs from independent anchor")
+        if anchor.get("freeze_manifest_sha256") != run.get("freeze_manifest_sha256"):
+            raise EvalError("terminal Patch decision anchor freeze pointer mismatch")
+        if anchor.get("diagnosis_sha256") != manifest["artifact_hashes"].get("diagnosis.json"):
+            raise EvalError("terminal Patch decision anchor Diagnosis pointer mismatch")
+    elif terminal_hash is not None or terminal_anchor_hash is not None:
+        raise EvalError("terminal Patch decision anchor is missing")
     if not decision_path.exists():
-        if terminal_hash is not None:
+        if terminal_hash is not None or anchor is not None:
             raise EvalError("terminal patch decision is missing")
         return
     if not decision_path.is_file():
@@ -1590,6 +1676,27 @@ def _validate_patch_decision(
         raise EvalError("patch decision Diagnosis hash mismatch")
     if decision.get("freeze_manifest_sha256") != run.get("freeze_manifest_sha256"):
         raise EvalError("patch decision freeze manifest hash mismatch")
+    if anchor is not None:
+        if decision["decision"] != anchor["decision"]:
+            raise EvalError("terminal Patch decision differs from independent anchor")
+        expected_history_record = {
+            "sha256": decision_hash,
+            "decision": decision["decision"],
+            "decided_by": decision["decided_by"],
+            "decided_at": decision["decided_at"],
+            "note": decision["note"],
+        }
+        history = run.get("patch_decision_history")
+        if not isinstance(history, list) or not history or history[-1] != expected_history_record:
+            raise EvalError("terminal Patch decision history differs from independent anchor")
+        if (
+            run.get("patch_decision") != decision["decision"]
+            or run.get("patch_decision_sha256") != decision_hash
+            or run.get("level_b_comparison_authorized")
+            != (decision["decision"] == "approve")
+        ):
+            raise EvalError("terminal Patch decision metadata differs from independent anchor")
+        return
     history = run.setdefault("patch_decision_history", [])
     if not isinstance(history, list):
         raise EvalError("patch decision history is malformed")
@@ -1605,7 +1712,16 @@ def _validate_patch_decision(
     run["patch_decision_sha256"] = decision_hash
     run["level_b_comparison_authorized"] = decision["decision"] == "approve"
     if decision["decision"] in {"approve", "reject"}:
+        anchor = {
+            "schema_version": TERMINAL_PATCH_DECISION_SCHEMA_VERSION,
+            "decision": decision["decision"],
+            "decision_sha256": decision_hash,
+            "diagnosis_sha256": diagnosis_hash,
+            "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+        }
+        _write_json_exclusive(anchor_path, anchor)
         run["terminal_patch_decision_sha256"] = decision_hash
+        run["terminal_patch_decision_anchor_sha256"] = _sha256_file(anchor_path)
 
 
 def grade_run(
@@ -1640,8 +1756,19 @@ def grade_run(
         profile = load_profile(eval_id)
         _validate_prepared_run(run_path, run, profile)
 
-        answer_bytes = (run_path / "answer.md").read_bytes()
+        answer_path = run_path / "answer.md"
+        answer_locked = run.get("agent_identity") is not None or run.get("answer_sha256") is not None
+        if not answer_path.is_file():
+            if answer_locked:
+                raise EvalError("answer.md is missing after answer identity was locked")
+            run["operator_error"] = "answer.md is missing"
+            run["run_status"] = "READY_FOR_AGENT"
+            write_json(run_path / "run.json", run)
+            return 1
+        answer_bytes = answer_path.read_bytes()
         if not answer_bytes.strip():
+            if answer_locked:
+                raise EvalError("answer.md is empty after answer identity was locked")
             run["operator_error"] = "answer.md is empty"
             run["run_status"] = "READY_FOR_AGENT"
             write_json(run_path / "run.json", run)
