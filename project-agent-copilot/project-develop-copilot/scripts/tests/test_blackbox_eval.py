@@ -1180,6 +1180,44 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         (run_path / "answer.md").write_text(answer + " changed", encoding="utf-8")
         self.assertEqual(1, self.grade(run_path, execution_kind=None, agent_product=None, agent_model=None))
 
+    def test_existing_grading_binds_run_identity_and_answer_locks(self):
+        cases = (
+            ("identity-null", True, False, False),
+            ("answer-hash-missing", False, True, False),
+            ("both-missing-answer-changed", True, True, True),
+        )
+        for suffix, clear_identity, clear_answer_hash, change_answer in cases:
+            with self.subTest(suffix=suffix):
+                run_path = self.make_run(suffix)
+                answer = self.good_answer()
+                (run_path / "answer.md").write_text(answer, encoding="utf-8")
+                self.write_good_judge(run_path, answer)
+                self.assertEqual(0, self.grade(run_path))
+                grading_bytes = (run_path / "grading.json").read_bytes()
+                run = self.runner.read_json_object(run_path / "run.json")
+                if clear_identity:
+                    run["agent_identity"] = None
+                if clear_answer_hash:
+                    run.pop("answer_sha256")
+                self.runner.write_json(run_path / "run.json", run)
+                if change_answer:
+                    (run_path / "answer.md").write_text(
+                        answer + " changed", encoding="utf-8"
+                    )
+
+                self.assertEqual(
+                    1,
+                    self.grade(
+                        run_path,
+                        execution_kind="agent",
+                        agent_product="replacement-agent",
+                        agent_model="replacement-model",
+                    ),
+                )
+                failed = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("RUN_ERROR", failed["run_status"])
+                self.assertEqual(grading_bytes, (run_path / "grading.json").read_bytes())
+
     def test_hard_write_fail_grades_without_judge_and_cannot_be_overridden(self):
         for suffix, with_judge in (("hard-no-judge", False), ("hard-with-judge", True)):
             with self.subTest(with_judge=with_judge):
@@ -1278,6 +1316,54 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
             ),
         )
         return run_path, decision
+
+    def make_revised_terminal_run(self, suffix):
+        run_path = self.make_failing_run(suffix)
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        self.runner.write_json(run_path / "diagnosis.json", self.diagnosis(grading))
+        self.assertEqual(
+            0,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+        decision = {
+            "schema_version": self.runner.PATCH_DECISION_SCHEMA_VERSION,
+            "decision": "revise",
+            "diagnosis_sha256": self.runner._sha256_file(run_path / "diagnosis.json"),
+            "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+            "decided_by": "Human Reviewer",
+            "decided_at": "2026-07-16T03:04:05Z",
+            "note": "Revise before reaching a terminal decision.",
+        }
+        self.runner.write_json(run_path / "patch-decision.json", decision)
+        self.assertEqual(
+            0,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        decision["decision"] = "reject"
+        decision["decided_at"] = "2026-07-16T04:05:06Z"
+        decision["note"] = "Reject after requested revision."
+        self.runner.write_json(run_path / "patch-decision.json", decision)
+        self.assertEqual(
+            0,
+            self.grade(
+                run_path,
+                execution_kind=None,
+                agent_product=None,
+                agent_model=None,
+            ),
+        )
+        return run_path
 
     def test_first_valid_diagnosis_freezes_evidence_before_human_decision(self):
         run_path = self.make_failing_run("freeze")
@@ -1578,6 +1664,44 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
         self.assertEqual("RUN_ERROR", failed["run_status"])
         self.assertFalse(failed["level_b_comparison_authorized"])
         self.assertFalse((run_path / "terminal-patch-decision.json").exists())
+
+    def test_terminal_anchor_binds_complete_patch_decision_history(self):
+        def modify(history):
+            history[0]["note"] = "Tampered earlier revise record."
+
+        def delete(history):
+            del history[0]
+
+        def insert(history):
+            history.insert(0, dict(history[0]))
+
+        for suffix, mutate in (
+            ("history-modify", modify),
+            ("history-delete", delete),
+            ("history-insert", insert),
+        ):
+            with self.subTest(suffix=suffix):
+                run_path = self.make_revised_terminal_run(suffix)
+                run = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual(
+                    ["revise", "reject"],
+                    [record["decision"] for record in run["patch_decision_history"]],
+                )
+                mutate(run["patch_decision_history"])
+                self.runner.write_json(run_path / "run.json", run)
+
+                self.assertEqual(
+                    1,
+                    self.grade(
+                        run_path,
+                        execution_kind=None,
+                        agent_product=None,
+                        agent_model=None,
+                    ),
+                )
+                failed = self.runner.read_json_object(run_path / "run.json")
+                self.assertEqual("RUN_ERROR", failed["run_status"])
+                self.assertFalse(failed["level_b_comparison_authorized"])
 
     def _mutate_run_key(self, run_path, key, value=None, delete=False):
         run = self.runner.read_json_object(run_path / "run.json")

@@ -280,6 +280,16 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _sha256_json(value: Any) -> str:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return _sha256_bytes(payload.encode("utf-8"))
+
+
 def _is_reparse_point(file_stat: os.stat_result) -> bool:
     reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
     return bool(getattr(file_stat, "st_file_attributes", 0) & reparse_flag)
@@ -1308,6 +1318,44 @@ def _set_run_error(run_path: Path, run: dict[str, Any], reason: str) -> int:
     return 1
 
 
+def _validate_existing_grading_identity(
+    run_path: Path, run: Mapping[str, Any]
+) -> None:
+    graded_artifacts = (
+        "grading.json",
+        "diff.patch",
+        "evidence.json",
+        "judge-request.json",
+        "diagnosis-request.json",
+        "freeze-manifest.json",
+        "terminal-patch-decision.json",
+    )
+    if not any((run_path / name).exists() for name in graded_artifacts):
+        return
+    identity = run.get("agent_identity")
+    answer_hash = run.get("answer_sha256")
+    if (
+        not isinstance(identity, dict)
+        or set(identity) != {"execution_kind", "agent_product", "agent_model"}
+        or not isinstance(answer_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", answer_hash)
+    ):
+        raise EvalError("graded artifacts exist but Agent identity or answer lock is missing")
+    answer_path = run_path / "answer.md"
+    if not answer_path.is_file() or _sha256_file(answer_path) != answer_hash:
+        raise EvalError("graded answer bytes differ from the locked answer hash")
+    grading_path = run_path / "grading.json"
+    if grading_path.exists():
+        grading = read_json_object(grading_path)
+        provenance = grading.get("provenance")
+        if (
+            not isinstance(provenance, dict)
+            or provenance.get("agent_identity") != identity
+            or provenance.get("answer_sha256") != answer_hash
+        ):
+            raise EvalError("Run identity locks differ from grading provenance")
+
+
 def _validate_full_commit(repository: Path, value: Any, label: str) -> str:
     if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", value):
         raise EvalError(f"{label} must be an immutable full commit ID")
@@ -1634,6 +1682,7 @@ def _validate_patch_decision(
             "decision_sha256",
             "diagnosis_sha256",
             "freeze_manifest_sha256",
+            "patch_decision_history_sha256",
         }
         if (
             set(anchor) != required_anchor
@@ -1703,7 +1752,12 @@ def _validate_patch_decision(
             "note": decision["note"],
         }
         history = run.get("patch_decision_history")
-        if not isinstance(history, list) or not history or history[-1] != expected_history_record:
+        if (
+            not isinstance(history, list)
+            or not history
+            or history[-1] != expected_history_record
+            or anchor.get("patch_decision_history_sha256") != _sha256_json(history)
+        ):
             raise EvalError("terminal Patch decision history differs from independent anchor")
         if (
             run.get("patch_decision") != decision["decision"]
@@ -1734,6 +1788,7 @@ def _validate_patch_decision(
             "decision_sha256": decision_hash,
             "diagnosis_sha256": diagnosis_hash,
             "freeze_manifest_sha256": run["freeze_manifest_sha256"],
+            "patch_decision_history_sha256": _sha256_json(history),
         }
         _write_json_exclusive(anchor_path, anchor)
         run["terminal_patch_decision_sha256"] = decision_hash
@@ -1757,6 +1812,7 @@ def grade_run(
         freeze_pointer = run.get("freeze_manifest_sha256")
         if freeze_pointer is None and (run_path / "freeze-manifest.json").exists():
             raise EvalError("freeze manifest exists but its Run pointer is missing")
+        _validate_existing_grading_identity(run_path, run)
         if freeze_pointer is not None:
             manifest, _ = _validate_frozen_run(run_path, run)
             if run.get("schema_version") != RUN_SCHEMA_VERSION:
