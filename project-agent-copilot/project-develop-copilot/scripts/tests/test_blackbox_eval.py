@@ -2317,6 +2317,36 @@ class BlackboxEvalReportTest(unittest.TestCase):
         self.assertIn("Invalid sibling Run count: 1", report)
         self.assertIn("eval-002-invalid-sibling", report)
 
+    def test_review_backlog_diagnoses_malformed_needs_review_fields(self):
+        target = self._write_run("malformed-review-target")
+        valid = self._write_pending(
+            "valid-review-sibling", "NEEDS_REVIEW", "2026-07-15T01:02:00Z"
+        )
+        invalid = self._write_pending(
+            "invalid-review-sibling", "NEEDS_REVIEW", "2026-07-15T02:03:00Z"
+        )
+        invalid_run = self.runner.read_json_object(invalid / "run.json")
+        invalid_run["unresolved_assertion_ids"] = "not-a-list"
+        self.runner.write_json(invalid / "run.json", invalid_run)
+
+        try:
+            backlog = self.runner.collect_review_backlog(target)
+        except self.runner.EvalError as error:
+            self.fail(f"malformed sibling aborted backlog collection: {error}")
+
+        self.assertEqual(1, backlog["graded_count"])
+        self.assertEqual(1, backlog["needs_review_count"])
+        self.assertEqual(2, backlog["attempted_count"])
+        self.assertEqual([valid.name], [item["run_id"] for item in backlog["pending"]])
+        self.assertEqual(1, backlog["invalid_count"])
+        self.assertEqual(invalid.name, backlog["invalid"][0]["directory"])
+        self.assertIn("unresolved assertions", backlog["invalid"][0]["reason"])
+
+        report = self.runner.render_report(target).read_text(encoding="utf-8")
+        self.assertIn(valid.name, report)
+        self.assertIn(invalid.name, report)
+        self.assertIn("Invalid sibling Run count: 1", report)
+
     def test_report_cli_accepts_repeatable_regression_pairs(self):
         baseline, candidate = self._make_level_b_pair("cli")
         first = self._make_regression_pair("cli-first")

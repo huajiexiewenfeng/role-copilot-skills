@@ -2086,6 +2086,16 @@ def _validate_backlog_run_record(directory: Path, run: Mapping[str, Any]) -> Non
         raise EvalError("graded Run behavior score is malformed")
     if status == "NEEDS_REVIEW":
         _parse_report_timestamp(run.get("needs_review_since"))
+        unresolved = run.get("unresolved_assertion_ids")
+        reasons = run.get("needs_review_reasons")
+        if not isinstance(unresolved, list) or not all(
+            isinstance(item, str) for item in unresolved
+        ):
+            raise EvalError("Run unresolved assertions are malformed")
+        if not isinstance(reasons, list) or not all(
+            isinstance(item, str) for item in reasons
+        ):
+            raise EvalError("Run review reasons are malformed")
 
 
 def collect_review_backlog(
@@ -2125,16 +2135,8 @@ def collect_review_backlog(
             needs_review_count += 1
             since = run.get("needs_review_since")
             started = _parse_report_timestamp(since)
-            unresolved = run.get("unresolved_assertion_ids", [])
-            reasons = run.get("needs_review_reasons", [])
-            if not isinstance(unresolved, list) or not all(
-                isinstance(item, str) for item in unresolved
-            ):
-                raise EvalError(f"Run {run_id} unresolved assertions are malformed")
-            if not isinstance(reasons, list) or not all(
-                isinstance(item, str) for item in reasons
-            ):
-                raise EvalError(f"Run {run_id} review reasons are malformed")
+            unresolved = run["unresolved_assertion_ids"]
+            reasons = run["needs_review_reasons"]
             pending.append(
                 {
                     "run_id": run_id,
