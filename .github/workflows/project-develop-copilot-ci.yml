@@ -28,5 +28,37 @@ jobs:
       - name: Run doctor unit tests
         run: python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
 
+      - name: Check repository text quality
+        run: python project-agent-copilot/project-develop-copilot/scripts/check_text_quality.py --root project-agent-copilot/project-develop-copilot
+
+      - name: Check repository document integrity
+        run: python project-agent-copilot/project-develop-copilot/scripts/check_doc_integrity.py --root project-agent-copilot/project-develop-copilot
+
+      - name: Check scaffold drift
+        run: python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check
+
+  repository-integrity-windows:
+    name: Repository integrity on Windows
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run repository integrity unit tests
+        run: python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
+
+      - name: Check repository text quality
+        run: python project-agent-copilot/project-develop-copilot/scripts/check_text_quality.py --root project-agent-copilot/project-develop-copilot
+
+      - name: Check repository document integrity
+        run: python project-agent-copilot/project-develop-copilot/scripts/check_doc_integrity.py --root project-agent-copilot/project-develop-copilot
+
       - name: Check scaffold drift
         run: python project-agent-copilot/project-develop-copilot/scripts/sync-doctor.py --check

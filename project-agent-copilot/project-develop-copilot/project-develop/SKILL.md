@@ -186,7 +186,7 @@ Workflow:
 - user request and explicit decisions
 - Change Brief
 - PRD/design/source proxy
-- `.llm-wiki/index.md`, modules, ingest index, requirements, working-context
+- `.llm-wiki/README.md` and `.llm-wiki/index.md` when present, modules, ingest index, requirements, working-context
 - active/read-only/candidate/excluded scopes
 - acceptance criteria and non-goals
 

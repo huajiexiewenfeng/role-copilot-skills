@@ -1,7 +1,6 @@
 # Capability Gap Audit
 
-Use this audit after
-orth-star.md`, `full-lifecycle-implementation-plan.zh.md`, and `dry-run-report-2026-06-04.md` when deciding what remains before broad testing.
+Use this audit after [north-star.md](north-star.md), `full-lifecycle-implementation-plan.zh.md`, and `dry-run-report-2026-06-04.md` when deciding what remains before broad testing.
 
 This file reflects the current Level 3.5 documentation implementation state. It distinguishes implemented documentation contracts from behavior that still needs real or fixture project validation.
 
@@ -46,7 +45,7 @@ Not yet proven in runtime:
 | Artifact Registry | Strengthened | Artifact row format exists in `lifecycle-gates.md` and dashboard protocol; real artifact sync still needs dry run. |
 | Progress Dashboard | Protocol implemented | `progress-dashboard.md` exists; finish/review include dashboard evidence and drift rules. Real HTML fixture remains. |
 | Continuous Skill Evolution | Protocol implemented | `continuous-evolution.md`, `evals/`, `cases/failures/`, and `cases/golden/` exist; review exposes Lifecycle Quality output. |
-| Acceptance Pressure Cases | Updated | `acceptance-cases.md` covers router, lightweight, bridge, dashboard, review drift, evaluator, and Dolores; simulated dry run recorded. |
+| Acceptance Pressure Cases | Updated | `acceptance-cases.md` covers numeric Cases 1-36 plus 9A/9B/9C, totaling 39 definitions; simulated dry run recorded. |
 | Install Discovery | Passed | `npx.cmd skills add . --list` from repository root finds 13 skills, including root router and seven project child skills. |
 
 ## Skill-Level Status
@@ -168,8 +167,7 @@ Remaining validation:
 
 | Reference | Status | Notes |
 |---|---|---|
-|
-orth-star.md` | Updated | Defines Level 3.5 target and done means. |
+| [north-star.md](north-star.md) | Updated | Defines Level 3.5 target and done means. |
 | `full-lifecycle-implementation-plan.zh.md` | Added | Main implementation plan. |
 | `lifecycle-router.md` | Added | Router decisions, routing records, resume behavior, handoff contract. |
 | `lifecycle-gates.md` | Added | Shared Gate Stack. |
@@ -192,7 +190,7 @@ orth-star.md` | Updated | Defines Level 3.5 target and done means. |
 
 ## Do Not Do Yet
 
-- Do not build automated CI integration before Case 10 passes.
+- Do not build automated Agent lifecycle or Runtime Eval CI integration before Case 10 passes; deterministic repository-integrity CI is allowed.
 - Do not add reminder automation as a core dependency.
 - Do not require codegraph generation.
 - Do not implement a full OpenSpec clone.

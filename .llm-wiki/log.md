@@ -1,0 +1,10 @@
+# LLM Wiki Log
+
+| Date | Flow | Event | Evidence |
+|---|---|---|---|
+| 2026-07-15 | `pdc-phase0-repository-integrity` | 修复后独立 whole-branch re-review 完成：Critical 0、Important 0、`Ready to merge: Yes`。Controller fresh verification 再次通过 7/12/66 tests、两 checker、sync-doctor、diff check、四项 Skill validation、CI static contract 与 exact 24-file encoding/privacy audit；清理测试生成的 `__pycache__` 后 union 恢复为 tracked 12 + untracked 12。Wiki Integrity Gate 完成，`archive` 标记 done；GitHub 托管 CI 仍未运行，当前分支仍未提交。 | `handoff/pdc-phase0-repository-integrity-handoff.md` |
+| 2026-07-15 | `pdc-phase0-repository-integrity` | 初次 whole-branch review 的三个 Important finding 已修复：根 index 更新当前 lifecycle，handoff 不再持久化 workstation path 且 Step 4 增加可执行 privacy rules，Markdown parser 以两个新增测试完成 RED/GREEN。Fresh 通过 7/12/66 tests（19 focused）、两 checker、sync-doctor、diff check、CI static contract、四项 Skill validation 与 24 文件 encoding/privacy audit；等待 whole-branch re-review，`archive` 保持 pending。 | `handoff/pdc-phase0-repository-integrity-handoff.md` |
+| 2026-07-15 | `pdc-phase0-repository-integrity` | Tasks 1–7 完成逐任务独立复核；Task 8 当时通过 7/10/64 tests、两项 repository checker、sync-doctor、diff check、四项 Skill validation及 24 文件 encoding audit。其 scope 结论包含人工文件列表复核，但尚未机器化拒绝任意工作站绝对路径，后由 whole-branch fixes 补齐。用户/项目 owner 对三组新旧行为 Viewer 回复 `通过`；`archive` 保持 pending。 | `handoff/pdc-phase0-repository-integrity-handoff.md` |
+| 2026-07-15 | `pdc-phase0-repository-integrity` | 独立计划审阅发现并修正 baseline 快照、检查器完整实现、连接列表引用语法、39 Case/32 Eval 可执行集合断言、Skill Creator 目录契约及 tracked/untracked 审计缺口；从计划抽取的 17 个临时测试全部通过，预执行扫描还确认 `references/change-brief.md` 的 BOM 与 Case 12 围栏缺陷，均已纳入后续任务；最终复核结论为无阻断。 | `working-context/pdc-phase0-repository-integrity.md` |
+| 2026-07-15 | `pdc-phase0-repository-integrity` | 用户授权进入 `writing-plans`；生成 8 任务的候选实施计划，校准 Acceptance 为 39 个定义，尚未修改 Skill、检查器、测试或 CI。 | `working-context/pdc-phase0-repository-integrity.md` |
+| 2026-07-15 | `pdc-phase0-repository-integrity` | 用户批准以独立 Repository Integrity Gate 实施 Phase 0；创建 Change Brief、来源摘要和正式改进计划，尚未进入实施计划或代码修改。 | `requirements/pdc-phase0-repository-integrity.md` |

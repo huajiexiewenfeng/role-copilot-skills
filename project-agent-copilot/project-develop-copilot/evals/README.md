@@ -6,8 +6,10 @@ Do not store raw private conversations, customer data, credentials, or sensitive
 
 ## Current Eval Set
 
-- `project-develop-copilot-evals.md`: P0 lifecycle and routing regression cases.
+- `project-develop-copilot-evals.md`: 32 manual P0 lifecycle and routing regression definitions.
 - `runbook.md`: how to run and score the evals manually.
+
+The manual Eval set has no automated Agent runner. Deterministic repository-integrity CI may validate static text, link, and canonical definition facts; automated Agent lifecycle and Runtime Eval CI remain deferred.
 
 ## Required Rule
 

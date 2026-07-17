@@ -340,7 +340,7 @@ Prompt:
 Expected:
 
 - router selects `project-query`, not `project-develop`
-- reads `.llm-wiki/index.md` and lightweight indexes first
+- resolves `.llm-wiki/` as the wiki root, then reads available entrypoints such as `README.md`, `index.md` when present, and lightweight indexes first
 - finds related requirement, bug, source proxy, working-context, artifact, or dashboard pages when present
 - returns a Project Context Pack with pages used and confidence
 - does not create Change Brief, Bug Brief, working-context, artifact rows, dashboard updates, or code changes by default
@@ -350,9 +350,8 @@ Failure signals:
 
 - routes directly to implementation or planning
 - creates lifecycle state for exploratory discussion
-- deep-reads raw source before checking `.llm-wiki` indexes
+- deep-reads raw source before checking relevant available `.llm-wiki` entrypoints
 - answers without naming wiki pages used
-```
 
 ## Case 12: Project API Integration Query Must Start From Wiki
 
@@ -365,7 +364,7 @@ Prompt:
 Expected:
 
 - router selects `project-query` before CodeGraph, grep-only exploration, or implementation skills
-- reads `.llm-wiki/index.md` and lightweight indexes first, then the smallest relevant requirement, source proxy, working-context, or artifact pages
+- resolves `.llm-wiki/` as the wiki root, reads available entrypoints such as `README.md`, `index.md` when present, and lightweight indexes first, then the smallest relevant requirement, source proxy, working-context, or artifact pages
 - identifies that this is read-only project question answering, not `project-develop`, `project-fix`, or `project-review`
 - may inspect source code after wiki recovery to verify current endpoints, MQTT topics, controllers, or service behavior
 - separates wiki-sourced facts from code-verified facts and inference
@@ -373,7 +372,7 @@ Expected:
 
 Failure signals:
 
-- jumps straight to source search or CodeGraph without checking `.llm-wiki`
+- jumps straight to source search or CodeGraph without checking relevant available `.llm-wiki` entrypoints
 - treats "how to call the API" as an implementation request
 - answers from memory only without project-local wiki/source evidence
 - omits related requirement/source/working-context pages when they exist

@@ -73,6 +73,13 @@ The injected step is:
 5. If graph evidence is missing, stale, draft, or indirect, verify from source before making implementation decisions.
 
 This is a router navigation rule, not a validator guarantee. Do not claim Project Graph was the primary workflow unless the actual trace shows it was used before source exploration.
+
+## LLM Wiki Discovery Rule
+
+Treat a discovered `.llm-wiki/` directory as proof that the project has an LLM Wiki. Do not use `.llm-wiki/index.md` as the existence sentinel.
+
+When `.llm-wiki/index.md` is missing, report only that the root index is missing or optional, then continue with available wiki targets such as `.llm-wiki/README.md`, `.llm-wiki/log.md`, `.llm-wiki/modules/index.md`, `.llm-wiki/requirements/`, `.llm-wiki/bugs/`, `.llm-wiki/sources/`, `.llm-wiki/working-context/`, `.llm-wiki/artifacts/index.md`, and Project Graph files. Fall back to source only after checking the relevant available wiki entries or when the wiki evidence is insufficient or stale.
+
 ## Required First Check
 
 Before doing project work:
@@ -183,10 +190,10 @@ Use `lifecycle-quality` mode when the user explicitly uses language such as:
 
 - skill-evaluator, evaluator, evaluate this skill, eval gap, failure case, golden case
 - self-review, conversation self-review, Dolores, lifecycle trace, routing trace, gate trace
-- "杩欎釜 skill 涓轰粈涔堣窇鍋?, "杩欎釜娴佺▼鏄笉鏄窇鍋忎簡", "鍏堜笉瑕佺洿鎺ユ敼锛岃瘎浼颁竴涓?
+- "这个 skill 为什么跑偏？", "这个流程是不是跑偏了", "先不要直接改，评估一下"
 - "review the conversation trace", "did this lifecycle go wrong", "find the smallest patch"
 
-Do not trigger lifecycle-quality for ordinary delivery requests such as "缁х画", "淇?bug", "review 浠ｇ爜", "瀹屾垚浜嗗悧", or "鎬荤粨涓€涓? unless the user also asks to evaluate the process or review the conversation lifecycle.
+Do not trigger lifecycle-quality for ordinary delivery requests such as "继续", "修 bug", "review 代码", "完成了吗", or "总结一下" unless the user also asks to evaluate the process or review the conversation lifecycle.
 
 ## Inputs
 

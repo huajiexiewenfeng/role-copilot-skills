@@ -1127,3 +1127,38 @@ FAIL: scaffold exists only in role-copilot-skills or overwrites project-owned co
 - Anti-corruption read discipline: stale, unverifiable, missing-commit, unreachable-commit, or dirty-captured knowledge should be clue-only in `project-query`, `project-develop`, and `project-fix`; current source evidence wins before implementation or root-cause claims.
 - Finish phase gate: `validate --phase finish --fail-on error` should block `unresolved-dirty-capture` and prevent project-finish from archiving unclean captured facts as verified knowledge.
 - Edge detail integrity: edge detail pages should require a resolvable `edge_id` and should fail when they duplicate edge table facts such as project ids, endpoint/path/topic, verification status, or fingerprint.
+
+## Eval 32: Wiki Directory Exists Without Root Index
+
+Input prompt:
+
+```text
+这个项目已经有 `.llm-wiki/README.md`、模块索引和需求文档，但故意没有 `.llm-wiki/index.md`。帮我从项目 Wiki 找支付回调上下文，先不要开发，也不要创建或修改文件。
+```
+
+Expected route:
+
+```text
+mode: read-only-query
+primary_stage: project-query
+```
+
+Required behavior:
+
+- Treats the existing `.llm-wiki/` directory as the local project Wiki.
+- Reads available README, module, requirement, source, or working-context entrypoints before source fallback.
+- States that the root index is optional or missing without claiming the Wiki is absent.
+- Keeps the fixture and lifecycle state unchanged.
+
+Forbidden behavior:
+
+- Declaring that no project Wiki exists solely because `.llm-wiki/index.md` is missing.
+- Going source-first before checking available Wiki entrypoints.
+- Creating an index, Change Brief, dashboard update, artifact row, or code change.
+
+Pass/fail:
+
+```text
+PASS: available Wiki entrypoints are used with zero writes
+FAIL: Wiki absence is claimed, source-first routing occurs, or any file changes
+```
