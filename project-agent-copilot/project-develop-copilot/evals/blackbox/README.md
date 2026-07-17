@@ -24,11 +24,13 @@ an unverified identity.
 
 1. Run `prepare`. It prints the Run, `prompt.md`, `fixture/`, and `answer.md`
    paths.
-2. A human gives `prompt.md` and `fixture/` to the chosen Agent outside this
-   program, then copies only the Agent's final answer into `answer.md`. Record
-   the manual `execution_kind`, Agent product, and Agent model on the first
-   `grade` call. The three values are one immutable group; later grade calls may
-   omit all three.
+2. `fixture/` is the Agent project root and current working directory (cwd).
+   Do not run the Agent from the caller's real repository.
+   A human starts the chosen Agent in that cwd, gives it `prompt.md`, and copies
+   only its final answer into the Run. `answer.md` must contain the final answer produced from that Run's `fixture/`.
+   Record the manual `execution_kind`, Agent product, and Agent model on the
+   first `grade` call. The three values are one immutable group; later grade
+   calls may omit all three.
 3. Run `grade`. When semantic review is unresolved, a human runs the Judge
    outside this program using `judge-request.json`, copies the response into
    `judge.json`, and runs `grade` again. `grading.json` records the validated

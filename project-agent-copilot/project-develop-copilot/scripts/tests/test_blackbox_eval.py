@@ -2590,6 +2590,18 @@ class BlackboxEvalDocumentationTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIn(text, readme)
 
+    def test_developer_readme_requires_agent_to_run_from_fixture_root(self):
+        readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        for text in (
+            "`fixture/` is the Agent project root and current working directory (cwd).",
+            "Do not run the Agent from the caller's real repository.",
+            "`answer.md` must contain the final answer produced from that Run's `fixture/`.",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, readme)
+
     def test_existing_docs_define_sidecar_boundaries_and_deferred_scope(self):
         evals_readme = (SKILL_ROOT / "evals" / "README.md").read_text(encoding="utf-8")
         runbook = (SKILL_ROOT / "evals" / "runbook.md").read_text(encoding="utf-8")
