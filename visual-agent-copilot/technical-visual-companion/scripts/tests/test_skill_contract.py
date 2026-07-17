@@ -61,6 +61,24 @@ class TechnicalVisualCompanionContractTest(unittest.TestCase):
         ):
             self.assertIn(phrase, text)
 
+    def test_workflow_preserves_sources_and_requires_visual_verification(self):
+        text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        for phrase in (
+            "Confirmed Input Gate",
+            "Visual Fact Model",
+            "Diagram Selection",
+            "Generate One HTML",
+            "Deterministic Validation",
+            "Desktop Visual Review",
+            "390px Mobile Review",
+            "Completion Gate",
+            "docs/visuals/<topic-slug>.html",
+            "do not scan",
+            "do not overwrite",
+            "visual verification pending",
+        ):
+            self.assertIn(phrase, text)
+
 
 if __name__ == "__main__":
     unittest.main()
