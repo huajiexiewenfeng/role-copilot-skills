@@ -1,0 +1,53 @@
+{
+  "skill_name": "technical-visual-companion",
+  "evals": [
+    {
+      "id": 1,
+      "name": "complex-confirmed-runtime-orchestration",
+      "prompt": "Use the explicitly confirmed source file complex-runtime-orchestration.md to create the final static HTML visual companion. Automatically select the diagrams, preserve all names and counts, and do not inspect other repository files.",
+      "files": [
+        "evals/files/complex-runtime-orchestration.md"
+      ],
+      "expected_output": "One verified offline static HTML containing two or three complementary diagrams for the confirmed runtime orchestration.",
+      "expectations": [
+        "Produces exactly one user-facing HTML file and no additional deliverable format.",
+        "Uses two or three complementary diagrams that explain system boundaries, the synchronous two-phase sequence, and success or rollback states without duplicating the same relationship.",
+        "Preserves exactly nine persistent services and exactly three dynamic services, including the names file, device-mapping, and smarthub-mediakit-client.",
+        "Includes the confirmed success, failure, and rollback behavior and does not add init execution or asynchronous workers.",
+        "Passes the offline HTML contract and provides a meaningful desktop and 390px responsive composition."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "simple-confirmed-cache-migration",
+      "prompt": "Use the confirmed source file simple-cache-migration.md to create one concise static HTML visual companion. Select only the diagrams needed for this small flow and do not inspect other files.",
+      "files": [
+        "evals/files/simple-cache-migration.md"
+      ],
+      "expected_output": "One verified offline static HTML containing one or two diagrams for the confirmed three-step cache migration.",
+      "expectations": [
+        "Produces exactly one user-facing HTML file.",
+        "Uses one diagram when sufficient and never more than two diagrams for this simple relationship.",
+        "Preserves exactly two components and exactly three ordered steps.",
+        "Does not invent a state machine, rollback branch, third component, or third diagram.",
+        "Passes the offline HTML contract and remains readable at desktop and 390px widths."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "unresolved-conflicting-release-order",
+      "prompt": "Read conflicting-release-flow.md as an unresolved source. Apply the visual companion workflow, but do not choose between its pending alternatives and do not inspect other files.",
+      "files": [
+        "evals/files/conflicting-release-flow.md"
+      ],
+      "expected_output": "No HTML is produced; the response stops at the confirmed-input gate and identifies the unresolved startup-order conflict.",
+      "expectations": [
+        "Produces no HTML or other visual deliverable.",
+        "Reports that Alternative A and Alternative B define mutually exclusive startup orders and remain pending selection.",
+        "Does not merge the alternatives, choose one, or invent a compromise.",
+        "Requests a human decision before generation.",
+        "Demonstrates correct diagram restraint by stopping rather than visualizing an unconfirmed sequence."
+      ]
+    }
+  ]
+}
