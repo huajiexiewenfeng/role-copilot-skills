@@ -1149,10 +1149,12 @@ def grade_judge(
 
 def _answer_has_standalone_path(answer: str, paths: Iterable[str]) -> bool:
     normalized_answer = answer.replace("\\", "/")
-    token_character = r"[\w./-]"
+    left_token_character = r"[\w.-]"
+    right_token_character = r"[\w./-]"
     return any(
         re.search(
-            rf"(?<!{token_character}){re.escape(path)}(?!{token_character})",
+            rf"(?<!{left_token_character}){re.escape(path)}"
+            rf"(?!{right_token_character})",
             normalized_answer,
         )
         is not None

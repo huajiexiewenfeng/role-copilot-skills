@@ -293,6 +293,20 @@ class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
             self.assertion_by_id(assertions, "wiki-path-citation").outcome,
         )
 
+    def test_wiki_path_matches_inside_an_absolute_file_link(self):
+        path = self.profile.required_path_any_of[0]
+        answer = (
+            "See [requirements](D:/eval/run/fixture/"
+            f"{path}:3)."
+        )
+
+        assertions, _ = self.run_assertions(answer)
+
+        self.assertEqual(
+            "PASS",
+            self.assertion_by_id(assertions, "wiki-path-citation").outcome,
+        )
+
     def test_eval_032_rejects_fixture_baseline_that_contains_root_index(self):
         profile = self.runner.load_profile("32")
         run_path, _ = self.make_eval_032_run(baseline_has_root_index=True)
