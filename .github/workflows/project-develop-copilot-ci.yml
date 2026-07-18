@@ -4,12 +4,16 @@ on:
   pull_request:
     paths:
       - "project-agent-copilot/project-develop-copilot/**"
+      - "docs/superpowers/specs/2026-07-16-minimum-skill-improvement-loop-design.md"
+      - "docs/superpowers/plans/2026-07-16-minimum-skill-improvement-loop.md"
       - ".github/workflows/project-develop-copilot-ci.yml"
   push:
     branches:
       - main
     paths:
       - "project-agent-copilot/project-develop-copilot/**"
+      - "docs/superpowers/specs/2026-07-16-minimum-skill-improvement-loop-design.md"
+      - "docs/superpowers/plans/2026-07-16-minimum-skill-improvement-loop.md"
       - ".github/workflows/project-develop-copilot-ci.yml"
 
 jobs:

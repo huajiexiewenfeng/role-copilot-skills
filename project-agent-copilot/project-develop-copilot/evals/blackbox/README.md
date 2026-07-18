@@ -103,8 +103,14 @@ credentials, or sensitive project material as fixtures.
 
 ## Claim boundary
 
-- **Level A** reports one validated Run and its deterministic/Judge evidence. It
-  can describe that Run, not a Skill improvement.
+- A single validated Run is run-level evidence only. It can describe that Run,
+  but it is not the Level A completion claim and does not prove a Skill
+  improvement.
+- **Level A / Harness Ready** requires the complete offline Harness coverage,
+  Developer-reviewed real Agent Runs for both Eval 2 and Eval 32, passing
+  static gates, and no final behavior `FAIL`. Only then may the project report
+  `Harness Ready / Improvement Loop Unproven`, as defined by design Section
+  15.1.
 - **Level B** is a before/after claim. It requires compatible real Agent Runs,
   verified but changed Skill identity, matching Agent and Judge identities, an
   approved frozen baseline, and declared regression coverage from the other

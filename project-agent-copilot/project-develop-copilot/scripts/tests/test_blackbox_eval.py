@@ -1099,6 +1099,18 @@ class BlackboxEvalRunStateTest(unittest.TestCase):
             ),
         )
 
+    def test_grade_turns_a_nonnumeric_eval_id_into_run_error(self):
+        run_path = self.make_run("invalid-eval-id")
+        run = self.runner.read_json_object(run_path / "run.json")
+        run["eval_id"] = "invalid"
+        self.runner.write_json(run_path / "run.json", run)
+
+        self.assertEqual(1, self.grade(run_path))
+
+        failed = self.runner.read_json_object(run_path / "run.json")
+        self.assertEqual("RUN_ERROR", failed["run_status"])
+        self.assertIn("invalid Eval ID", failed["run_error_reason"])
+
     def test_empty_answer_stays_ready_without_recording_skill_fail(self):
         run_path = self.make_run("empty")
 
@@ -2123,6 +2135,39 @@ class BlackboxEvalReportTest(unittest.TestCase):
         )
         self.assertEqual(original_pending, (pending / "run.json").read_bytes())
 
+    def test_report_omits_absolute_install_paths_and_invalid_sibling_details(self):
+        fingerprint = "a" * 64
+        for _, private_path in (
+            ("windows", r"C:\Users\alice\private\project-develop-copilot"),
+            ("posix", "/home/alice/private/project-develop-copilot"),
+        ):
+            with self.subTest(private_path=private_path):
+                rendered = self.runner._report_skill_install(
+                    {
+                        "status": "verified",
+                        "path": private_path,
+                        "fingerprint_sha256": fingerprint,
+                    }
+                )
+                self.assertNotIn(private_path, rendered)
+                self.assertIn("verified", rendered)
+                self.assertIn(fingerprint, rendered)
+
+        target = self._write_run("privacy-report")
+        install_path = self.runner.read_json_object(target / "run.json")[
+            "skill_identity"
+        ]["path"]
+        invalid = self._write_run("privacy-invalid-sibling")
+        invalid_run = self.runner.read_json_object(invalid / "run.json")
+        invalid_run["eval_id"] = "999"
+        self.runner.write_json(invalid / "run.json", invalid_run)
+
+        report = self.runner.render_report(target).read_text(encoding="utf-8")
+
+        self.assertNotIn(install_path, report)
+        self.assertNotIn(str(self.runner.REPO_ROOT), report)
+        self.assertIn("invalid Run metadata; inspect local artifacts", report)
+
     def _make_level_b_pair(self, suffix="level-b", **overrides):
         baseline_args = overrides.pop("baseline", {})
         candidate_args = overrides.pop("candidate", {})
@@ -2334,6 +2379,19 @@ class BlackboxEvalReportTest(unittest.TestCase):
         report = self.runner.render_report(target).read_text(encoding="utf-8")
         self.assertIn("Invalid sibling Run count: 1", report)
         self.assertIn("eval-002-invalid-sibling", report)
+
+    def test_review_backlog_reports_a_nonnumeric_sibling_eval_id(self):
+        target = self._write_run("invalid-eval-id-target")
+        invalid = self._write_run("invalid-eval-id-sibling")
+        run = self.runner.read_json_object(invalid / "run.json")
+        run["eval_id"] = "invalid"
+        self.runner.write_json(invalid / "run.json", run)
+
+        backlog = self.runner.collect_review_backlog(target)
+
+        self.assertEqual(1, backlog["invalid_count"])
+        self.assertEqual(invalid.name, backlog["invalid"][0]["directory"])
+        self.assertIn("invalid Eval ID", backlog["invalid"][0]["reason"])
 
     def test_review_backlog_diagnoses_malformed_needs_review_fields(self):
         target = self._write_run("malformed-review-target")
@@ -2615,6 +2673,32 @@ class BlackboxEvalDocumentationTest(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertIn(text, readme)
+
+    def test_level_a_docs_require_both_manual_evals_and_trigger_ci(self):
+        readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        workflow = (
+            REPO_ROOT
+            / ".github"
+            / "workflows"
+            / "project-develop-copilot-ci.yml"
+        ).read_text(encoding="utf-8")
+
+        for text in (
+            "A single validated Run is run-level evidence only",
+            "both Eval 2 and Eval 32",
+            "no final behavior `FAIL`",
+            "Harness Ready / Improvement Loop Unproven",
+        ):
+            with self.subTest(document="README", text=text):
+                self.assertIn(text, readme)
+        for path in (
+            "docs/superpowers/specs/2026-07-16-minimum-skill-improvement-loop-design.md",
+            "docs/superpowers/plans/2026-07-16-minimum-skill-improvement-loop.md",
+        ):
+            with self.subTest(document="workflow", path=path):
+                self.assertEqual(2, workflow.count(path))
 
     def test_judge_docs_allow_provider_controlled_temperature_without_faking_zero(self):
         readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(

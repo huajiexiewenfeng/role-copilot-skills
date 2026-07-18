@@ -498,8 +498,12 @@ def validate_judge_adoption_fields(judge: Mapping[str, Any]) -> None:
 
 
 def load_profile(eval_id: str) -> EvalProfile:
-    normalized_id = str(int(eval_id))
-    path = BLACKBOX_ROOT / "profiles" / f"eval-{int(normalized_id):03d}.json"
+    try:
+        numeric_id = int(eval_id)
+    except (TypeError, ValueError) as error:
+        raise EvalError("invalid Eval ID") from error
+    normalized_id = str(numeric_id)
+    path = BLACKBOX_ROOT / "profiles" / f"eval-{numeric_id:03d}.json"
     raw = read_json_object(path)
     if raw.get("schema_version") != PROFILE_SCHEMA_VERSION:
         raise EvalError(f"unsupported profile schema: {raw.get('schema_version')}")
@@ -2499,6 +2503,11 @@ def _render_assertion_comparison(
     return lines
 
 
+def _report_skill_install(skill: Mapping[str, Any]) -> str:
+    fingerprint = skill.get("fingerprint_sha256") or "n/a"
+    return f"- Skill install: {skill.get('status')} / {fingerprint}"
+
+
 def render_report(
     run_path: Path,
     baseline_path: Path | None = None,
@@ -2526,10 +2535,7 @@ def render_report(
             "- Runner: "
             f"{agent['execution_kind']} / {agent['agent_product']} / {agent['agent_model']}"
         ),
-        (
-            "- Skill install: "
-            f"{skill['status']} / {skill.get('path')} / {skill.get('fingerprint_sha256')}"
-        ),
+        _report_skill_install(skill),
         (
             "- Project fixture: "
             f"{provenance['fixture_version']} / {provenance['fixture_baseline_commit']}"
@@ -2644,7 +2650,7 @@ def render_report(
             ]
         )
         lines.extend(
-            f"| {item['directory']} | {item['reason']} |"
+            f"| {item['directory']} | invalid Run metadata; inspect local artifacts |"
             for item in backlog["invalid"]
         )
     lines.extend(
