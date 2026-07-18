@@ -2616,6 +2616,48 @@ class BlackboxEvalDocumentationTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIn(text, readme)
 
+    def test_judge_docs_allow_provider_controlled_temperature_without_faking_zero(self):
+        readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        design = (
+            REPO_ROOT
+            / "docs"
+            / "superpowers"
+            / "specs"
+            / "2026-07-16-minimum-skill-improvement-loop-design.md"
+        ).read_text(encoding="utf-8")
+        plan = (
+            REPO_ROOT
+            / "docs"
+            / "superpowers"
+            / "plans"
+            / "2026-07-16-minimum-skill-improvement-loop.md"
+        ).read_text(encoding="utf-8")
+
+        for text in (
+            "`gpt-5.6-sol/high`",
+            "`temperature: null`",
+            "provider-controlled/unavailable",
+            "model label, temperature, and prompt version",
+        ):
+            with self.subTest(document="README", text=text):
+                self.assertIn(text, readme)
+        for text in (
+            '"model": "gpt-5.6-sol/high"',
+            '"temperature": null',
+            "provider-controlled/unavailable",
+        ):
+            with self.subTest(document="design", text=text):
+                self.assertIn(text, design)
+        for text in (
+            "`gpt-5.6-sol/high`",
+            "`temperature: null`",
+            "provider-controlled/unavailable",
+        ):
+            with self.subTest(document="plan", text=text):
+                self.assertIn(text, plan)
+
     def test_existing_docs_define_sidecar_boundaries_and_deferred_scope(self):
         evals_readme = (SKILL_ROOT / "evals" / "README.md").read_text(encoding="utf-8")
         runbook = (SKILL_ROOT / "evals" / "runbook.md").read_text(encoding="utf-8")
