@@ -1485,14 +1485,14 @@ candidate.behavior_score == PASS
 baseline.agent_identity.execution_kind == candidate.agent_identity.execution_kind == agent
 baseline.skill_identity.status == candidate.skill_identity.status == verified
 baseline.agent product/model == candidate.agent product/model
-baseline Judge model/temperature/prompt version == candidate Judge model/temperature/prompt version
+baseline Judge complete model label/temperature/prompt version == candidate Judge complete model label/temperature/prompt version
 baseline.skill_source_commit != candidate.skill_source_commit
 baseline.skill_identity.fingerprint_sha256 != candidate.skill_identity.fingerprint_sha256
 ```
 
 Any Run with `execution_kind: canned` is Harness-only evidence and is Level B ineligible even when all scores look favorable.
 
-Accept repeatable regression pairs from the CLI as `--regression-pair BEFORE AFTER`. Validate each pair with the same `COMPARISON_KEYS`; require verified `execution_kind: agent` provenance; require both sides to use the same Agent product/model and Judge model/temperature/prompt version as the target comparison; require each regression BEFORE Run to share the target baseline Skill source commit/install fingerprint; and require each regression AFTER Run to share the target candidate source commit/install fingerprint. Both sides must be GRADED. A transition from PASS/PARTIAL to FAIL is a new regression and makes Level B ineligible. For Phase 1 Level B, require the other in-scope Eval (2 or 32) as at least one regression pair; if none is supplied, render `Regression: not supplied; Level B ineligible` rather than inferring status from nearby files.
+Accept repeatable regression pairs from the CLI as `--regression-pair BEFORE AFTER`. Validate each pair with the same `COMPARISON_KEYS`; require verified `execution_kind: agent` provenance; require both sides to use the same Agent product/model and complete Judge model label/temperature/prompt version as the target comparison (a `null` temperature is a value that must also match exactly); require each regression BEFORE Run to share the target baseline Skill source commit/install fingerprint; and require each regression AFTER Run to share the target candidate source commit/install fingerprint. Both sides must be GRADED. A transition from PASS/PARTIAL to FAIL is a new regression and makes Level B ineligible. For Phase 1 Level B, require the other in-scope Eval (2 or 32) as at least one regression pair; if none is supplied, render `Regression: not supplied; Level B ineligible` rather than inferring status from nearby files.
 
 - [ ] **Step 5: Render report.md without private content payloads**
 
@@ -1639,7 +1639,7 @@ Run `prepare` for Eval 2 and Eval 32 with an explicit tested Skill path. Copy ea
 
 - [ ] **Step 2: Create valid Judge files for canned-good answers**
 
-Record the actual model metadata used. Include all Profile semantic IDs and all three `canary-adoption:<pair-id>` IDs. Set each canary `adopted` to `preferred` and use normalized-substring evidence quotes copied from the canned answer.
+Record the actual model metadata used. The model label includes any product-visible reasoning effort (for example `gpt-5.6-sol/high`). If the product exposes temperature, record its actual value (0 is recommended); if Codex Desktop does not expose it, use `temperature: null` to mean `provider-controlled/unavailable`, never a fabricated 0. Include all Profile semantic IDs and all three `canary-adoption:<pair-id>` IDs. Set each canary `adopted` to `preferred` and use normalized-substring evidence quotes copied from the canned answer.
 
 - [ ] **Step 3: Grade and report both good Runs**
 
@@ -1663,7 +1663,7 @@ Prepare one additional Run, save a non-empty answer, supply the complete canned 
 
 Prepare fresh Eval 2 and Eval 32 Runs. For each Run, present the generated `prompt.md` (the labeled effective Prompt) to the Developer, who executes it with any one Agent product and stores the unedited answer in the external Run's `answer.md`. On first grade, pass `--execution-kind agent` and the actual `--agent-product`/`--agent-model` labels; assert that `grading.json.provenance` and the report record those labels, Skill source commit, verified actual installed Skill fingerprint, canonical/effective Prompt hashes, answer hash, and Grader version, with matching `run.json` fields. The core Runner must not call or import that Agent product.
 
-Generate `judge-request.json`; the Developer supplies a schema-valid `judge.json` using a fixed model and temperature 0, then run `grade` and `report`. The Developer reviews the original answer, Git evidence, Judge output, and report for both Eval IDs. A behavior FAIL is valid evidence about the Skill, but it blocks the Level A completion claim while it remains the final result; do not alter that Run and stop at the Human Patch Gate. If diagnosis proceeds, the Runner freezes the baseline upon accepting `diagnosis.json`, before any Human decision. A RUN_ERROR is not a completed smoke Run and must be corrected and rerun. Claim `Harness Ready / Improvement Loop Unproven` only when the Section 15.1 acceptance boundary is met, including no final Eval 2/32 FAIL.
+Generate `judge-request.json`; the Developer supplies a schema-valid `judge.json` using one fixed Judge configuration: the complete model label (including any product-visible reasoning effort, for example `gpt-5.6-sol/high`), temperature, and prompt version. When temperature is configurable, record the actual value (0 is recommended); when Codex Desktop does not expose it, record `temperature: null` for `provider-controlled/unavailable`, never a fabricated 0. Before/after and regression comparisons require all three values to match exactly. Then run `grade` and `report`. The Developer reviews the original answer, Git evidence, Judge output, and report for both Eval IDs. A behavior FAIL is valid evidence about the Skill, but it blocks the Level A completion claim while it remains the final result; do not alter that Run and stop at the Human Patch Gate. If diagnosis proceeds, the Runner freezes the baseline upon accepting `diagnosis.json`, before any Human decision. A RUN_ERROR is not a completed smoke Run and must be corrected and rerun. Claim `Harness Ready / Improvement Loop Unproven` only when the Section 15.1 acceptance boundary is met, including no final Eval 2/32 FAIL.
 
 - [ ] **Step 7: Run final verification**
 
@@ -1712,5 +1712,5 @@ If Task 9 exposes a real defect, return to the owning Task, add a failing regres
 - [ ] CI invokes no live Agent or LLM.
 - [ ] Ordinary user Skill files and flow are unchanged.
 - [ ] One product-agnostic manual Agent smoke Run for each of Eval 2 and Eval 32 has Developer-reviewed evidence.
-- [ ] Level B rejects canned/unverified Runs and enforces real GRADED PARTIAL/FAIL -> GRADED PASS with stable Agent/Judge configuration and changed Skill identity.
+- [ ] Level B rejects canned/unverified Runs and enforces real GRADED PARTIAL/FAIL -> GRADED PASS with stable Agent/Judge configuration (complete model label, temperature, and prompt version exactly match) and changed Skill identity.
 - [ ] Level A/B claim is honest.

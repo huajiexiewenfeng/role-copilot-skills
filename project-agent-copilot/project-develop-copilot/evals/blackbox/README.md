@@ -36,6 +36,13 @@ an unverified identity.
    `judge.json`, and runs `grade` again. `grading.json` records the validated
    assertions and full provenance, including Agent, answer, Skill, prompt,
    fixture, and Judge identities.
+   Use one fixed Judge configuration for comparable Runs: the complete model
+   label (including any product-visible reasoning effort, for example
+   `gpt-5.6-sol/high`), temperature, and prompt version. When a product exposes
+   temperature, record the actual value (0 is recommended). Codex Desktop does
+   not expose temperature; for that Judge use `temperature: null`, meaning
+   `provider-controlled/unavailable`, rather than pretending it was 0. A
+   before/after or regression comparison requires the same model label, temperature, and prompt version exactly.
 4. For a behavior `PARTIAL` or `FAIL`, the sidecar may emit
    `diagnosis-request.json`. A human or offline diagnostic tool supplies
    `diagnosis.json`; a later grade freezes the diagnosis and evidence in the

@@ -289,8 +289,8 @@ Runner 生成包含 Eval Profile、Skill 契约摘录、回答和证据索引的
 ```json
 {
   "schema_version": "0.1",
-  "model": "provider/model-id",
-  "temperature": 0,
+  "model": "gpt-5.6-sol/high",
+  "temperature": null,
   "prompt_version": "judge-prompt-0.1",
   "profile_version": "eval-002-0.1",
   "evidence_match_mode": "normalized-substring",
@@ -326,7 +326,7 @@ Runner 生成包含 Eval Profile、Skill 契约摘录、回答和证据索引的
 
 规范化不会忽略大小写、删除标点、替换同义词或改变词序。规范化后的 `evidence_quote` 必须非空、至少包含一个 Unicode 字母或数字，并且是 `evidence_ref` 所指单一已登记证据的连续子串；不得跨 `answer.md` 与 `diff.patch` 串接匹配。原始 quote 仍保留在 Judge 文件中。合法 quote 无法匹配时进入 NEEDS_REVIEW，并记录 `evidence-quote-unmatched`；空 quote、纯标点 quote 或未知 `evidence_ref` 属于 Judge Schema/Input 错误，进入 RUN_ERROR。
 
-Judge 必须记录模型、temperature、Judge Prompt 版本、Profile 版本、匹配模式和规范化器版本，便于解释波动。未知的匹配模式或规范化器版本进入 RUN_ERROR；Phase 1 不要求 Runner 固定供应商。
+Judge 必须记录完整模型标签（含产品可见的 reasoning effort，例如 `gpt-5.6-sol/high`）、temperature、Judge Prompt 版本、Profile 版本、匹配模式和规范化器版本，便于解释波动。产品能够配置 temperature 时记录实际数值（推荐 0）；Codex Desktop 不暴露该设置时记录 `temperature: null`，明确表示 `provider-controlled/unavailable`，不得伪造为 0。用于 before/after 或回归比较的 Judge 固定配置要求完整模型标签、temperature 和 Prompt 版本完全一致。未知的匹配模式或规范化器版本进入 RUN_ERROR；Phase 1 不要求 Runner 固定供应商。
 
 ### 8.3 运行状态与行为评分
 
