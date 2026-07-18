@@ -64,6 +64,8 @@ role-copilot-skills/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
     hr-interview-question-generator-copilot/
+  visual-agent-copilot/
+    technical-visual-companion/
 ```
 
 当前仓库已经包含：
@@ -83,6 +85,8 @@ hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
   hr-interview-question-generator-copilot/
+visual-agent-copilot/
+  technical-visual-companion/
 ```
 
 后续会逐步补充更多角色和 skill。
@@ -144,6 +148,14 @@ Project Graph 维护拆成三个显式技能，方便 agent 明确调用对应�
 | `hr-candidate-detail-report-copilot` | 输出候选人明细报告，解释得分原因、优势、短板、风险点和面试验证点。 |
 | `hr-interview-question-generator-copilot` | 为候选人生成定制化面试题、参考答案要点、追问和弱回答信号。 |
 
+### Visual Agent Copilot
+
+[角色 README](./visual-agent-copilot/README.zh.md) | [English](./visual-agent-copilot/README.md)
+
+| Skill | 使用场景 |
+|---|---|
+| `technical-visual-companion` | 将已确认技术方案转化为一份经过离线、响应式和浏览器验收的 Visual Companion HTML。 |
+
 ## 安装
 
 安装单个 skill：
@@ -162,6 +174,12 @@ npx skills add huajiexiewenfeng/role-copilot-skills/hr-agent-copilot/hr-resume-s
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+```
+
+安装 Visual Companion skill：
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/visual-agent-copilot/technical-visual-companion
 ```
 
 本地开发时，在仓库根目录执行：
@@ -190,6 +208,12 @@ npx skills add .
 
 ```text
 换成 v1.3.1 再打一次
+```
+
+把已确认技术方案生成视觉说明：
+
+```text
+把这份已确认的部署方案生成一个静态 HTML，自动选择最合适的图。
 ```
 
 skill 会读取项目本地打包文档：

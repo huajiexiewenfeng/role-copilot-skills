@@ -1,0 +1,26 @@
+name: Visual Agent Copilot CI
+
+on:
+  push:
+    paths:
+      - 'visual-agent-copilot/**'
+      - '.github/workflows/visual-agent-copilot-ci.yml'
+  pull_request:
+    paths:
+      - 'visual-agent-copilot/**'
+      - '.github/workflows/visual-agent-copilot-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run visual companion tests
+        run: python -m unittest discover visual-agent-copilot/technical-visual-companion/scripts/tests -p "test_*.py" -v

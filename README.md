@@ -64,6 +64,8 @@ role-copilot-skills/
     hr-resume-screening-copilot/
     hr-candidate-detail-report-copilot/
     hr-interview-question-generator-copilot/
+  visual-agent-copilot/
+    technical-visual-companion/
 ```
 
 Current repository contents:
@@ -83,6 +85,8 @@ hr-agent-copilot/
   hr-resume-screening-copilot/
   hr-candidate-detail-report-copilot/
   hr-interview-question-generator-copilot/
+visual-agent-copilot/
+  technical-visual-companion/
 ```
 
 Planned role groups and skills may be added incrementally.
@@ -144,6 +148,14 @@ Planned Project skills:
 | `hr-candidate-detail-report-copilot` | Candidate detail reports with score reasons, strengths, weaknesses, risks, and interview verification points. |
 | `hr-interview-question-generator-copilot` | Candidate-specific interview questions, reference answer points, follow-up probes, and weak-answer signals. |
 
+### Visual Agent Copilot
+
+[Role README](./visual-agent-copilot/README.md) | [简体中文](./visual-agent-copilot/README.zh.md)
+
+| Skill | Use When |
+|---|---|
+| `technical-visual-companion` | Turn confirmed technical designs into one verified offline Visual Companion HTML with automatically selected diagrams. |
+
 ## Installation
 
 Install one skill:
@@ -162,6 +174,12 @@ Install a Project skill:
 
 ```bash
 npx skills add huajiexiewenfeng/role-copilot-skills/project-agent-copilot/project-develop-copilot/project-develop
+```
+
+Install the Visual Companion skill:
+
+```bash
+npx skills add huajiexiewenfeng/role-copilot-skills/visual-agent-copilot/technical-visual-companion
 ```
 
 For local development from the repository root:
@@ -190,6 +208,12 @@ Use the DevOps package skill naturally:
 
 ```text
 换成 v1.3.1 再打一次
+```
+
+Turn a confirmed technical design into one visual companion:
+
+```text
+把这份已确认的部署方案生成一个静态 HTML，自动选择最合适的图。
 ```
 
 The skill reads project-local packaging docs:
