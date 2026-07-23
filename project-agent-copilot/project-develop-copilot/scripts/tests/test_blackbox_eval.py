@@ -1809,14 +1809,52 @@ class BlackboxEvalReportTest(unittest.TestCase):
         self.runner = load_runner()
         self.temp = TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        self.source_repo = Path(self.temp.name) / "source-repo"
+        self.source_repo.mkdir()
+        self.runner.run_git(self.source_repo, ["init"])
+        self.runner.run_git(self.source_repo, ["config", "core.autocrlf", "false"])
+        source_marker = self.source_repo / "source.txt"
+        source_marker.write_text("before\n", encoding="utf-8")
+        self.runner.run_git(self.source_repo, ["add", "--all"])
+        self.runner.run_git(
+            self.source_repo,
+            [
+                "-c",
+                "user.name=Blackbox Eval",
+                "-c",
+                "user.email=blackbox-eval@example.invalid",
+                "-c",
+                "commit.gpgSign=false",
+                "commit",
+                "-m",
+                "Before Skill",
+            ],
+        )
+        self.before_commit = self.runner.run_git(
+            self.source_repo, ["rev-parse", "HEAD"]
+        ).stdout_text.strip()
+        source_marker.write_text("after\n", encoding="utf-8")
+        self.runner.run_git(self.source_repo, ["add", "--all"])
+        self.runner.run_git(
+            self.source_repo,
+            [
+                "-c",
+                "user.name=Blackbox Eval",
+                "-c",
+                "user.email=blackbox-eval@example.invalid",
+                "-c",
+                "commit.gpgSign=false",
+                "commit",
+                "-m",
+                "After Skill",
+            ],
+        )
+        self.after_commit = self.runner.run_git(
+            self.source_repo, ["rev-parse", "HEAD"]
+        ).stdout_text.strip()
+        self.runner.REPO_ROOT = self.source_repo
         self.workspace = Path(self.temp.name) / "workspace"
         self.workspace.mkdir()
-        self.before_commit = self.runner.run_git(
-            self.runner.REPO_ROOT, ["rev-parse", "HEAD~1"]
-        ).stdout_text.strip()
-        self.after_commit = self.runner.run_git(
-            self.runner.REPO_ROOT, ["rev-parse", "HEAD"]
-        ).stdout_text.strip()
         self.before_skill = Path(self.temp.name) / "before-skill"
         self.after_skill = Path(self.temp.name) / "after-skill"
         self.before_skill.mkdir()
