@@ -2529,7 +2529,7 @@ class BlackboxEvalCliTest(unittest.TestCase):
         )
         self.assertEqual(0, status)
         self.assertEqual("", stderr)
-        run_path = next(workspace.iterdir())
+        run_path = next(workspace.resolve().iterdir())
         self.assertEqual(
             [
                 f"Run: {run_path}",
