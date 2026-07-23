@@ -22,6 +22,28 @@ If a session contains real PRD, design document, URL, log, or meeting note links
 - Context Recovery Gate
 - Finish Sync Gate when ingest updates source indexes, source proxies, artifacts, or log entries
 
+## Initialization Gate
+
+Run after resolving the project root and before reading source material or writing ingest state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-ingest`
+- Preserve the user's original request and source-selection constraints as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, ingest index, source proxy, or source copy inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved user request and source constraints>
+  pending_primary_stage: project-ingest
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required Shared References
 
 Read these role-level references:
@@ -43,7 +65,7 @@ Reference availability policy:
 
 ## Workflow
 
-1. Resolve `project_root`.
+1. Resolve `project_root`, then run the Initialization Gate before continuing.
 2. Resolve output language using `llm-wiki-mvp.md` and `north-star.md`; preserve existing `.llm-wiki` page language on refresh/update.
 3. Resolve the source path, URL, or pasted material.
 4. Normalize the source identity before writing wiki metadata: use repository-relative paths for in-project files, stable labels such as `external/<source-set>/<filename>` for external local folders, and URLs for remote sources. Do not write workstation-specific absolute paths into long-lived wiki indexes or source proxy metadata.

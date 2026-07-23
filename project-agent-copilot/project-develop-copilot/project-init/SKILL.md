@@ -60,6 +60,16 @@ Use when the router or user needs to:
    - keep code identifiers, paths, command names, status ids, and protocol terms unchanged;
    - if the project is bilingual, use the user-facing language for prose and preserve technical English terms inline.
 
+## Bootstrap Return Contract
+
+When the router enters `project-init` because a business repository has no `.llm-wiki/`:
+
+- Accept and preserve `pending_intent` and `pending_primary_stage` from the Context Handoff.
+- Return the achieved `initialization_level`, remaining context gaps, and evidence-backed `next_gate`.
+- Keep the original user goal pending; do not replace it with a generic initialization task.
+- A Level 1 or Level 2 result must not automatically invoke `project-develop`, `project-fix`, or another pending stage. Return control to the router, which decides whether the next gate is scoped context completion, work definition, or the preserved stage.
+- Do not claim that creating the standard wiki skeleton proves feature readiness or full project understanding.
+
 ## Core Process
 
 Read as needed:
@@ -97,7 +107,7 @@ Workflow:
 14. Produce a context completion plan with recommended scoped contexts, missing architecture/source-map facts, source evidence, and suggested next action.
 15. Preserve existing statuses unless evidence or user instruction changes them.
 16. Write a `.llm-wiki/log.md` entry.
-17. Return a concise handoff with the current init completion level.
+17. Return a concise handoff with the current init completion level, preserved pending route, readiness gaps, and next gate.
 18. If this is a refresh, never downgrade an existing richer wiki structure to a smaller skeleton.
 
 ## Language Policy
@@ -309,8 +319,11 @@ When called by the root router, accept:
 ```markdown
 ## Context Handoff
 
+- project_root:
 - lifecycle_session:
 - user_intent:
+- pending_intent:
+- pending_primary_stage:
 - active_sources:
 - active_scope:
 - read_only_scope:
@@ -328,6 +341,7 @@ Return:
 ```markdown
 ## Return Handoff
 
+- project_root:
 - stage_or_bridge_used: project-init
 - result_summary:
 - changed_assumptions:
@@ -335,6 +349,9 @@ Return:
 - artifacts:
 - verification_notes:
 - lifecycle_updates_needed:
+- pending_intent:
+- pending_primary_stage:
+- initialization_level:
 - next_gate:
 ```
 

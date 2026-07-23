@@ -80,17 +80,35 @@ Treat a discovered `.llm-wiki/` directory as proof that the project has an LLM W
 
 When `.llm-wiki/index.md` is missing, report only that the root index is missing or optional, then continue with available wiki targets such as `.llm-wiki/README.md`, `.llm-wiki/log.md`, `.llm-wiki/modules/index.md`, `.llm-wiki/requirements/`, `.llm-wiki/bugs/`, `.llm-wiki/sources/`, `.llm-wiki/working-context/`, `.llm-wiki/artifacts/index.md`, and Project Graph files. Fall back to source only after checking the relevant available wiki entries or when the wiki evidence is insufficient or stale.
 
+## Initialization Gate
+
+Run this gate after resolving the business-project root and intended route, but before creating or resuming lifecycle state or invoking a wiki-backed child skill.
+
+- `wiki_required_for: full-lifecycle-or-wiki-backed`
+- `on_missing_wiki: route project-init`
+- `excluded_mode: lightweight-answer`
+- `read_only_missing_wiki: confirm-before-init`
+- Preserve the original request as `pending_intent` and the selected route as `pending_primary_stage`.
+- If `<project_root>/.llm-wiki/` is absent, stop the pending stage and hand off to `project-init`. Do not create a partial wiki, Change Brief, Bug Brief, routing record, plan, or code change first.
+- Keep the bootstrap routing handoff in memory until `project-init` creates the standard wiki; then persist the routing record in the appropriate lifecycle session.
+- Resume the pending stage only when the `project-init` return handoff identifies a supported `next_gate`. Initialization Level 1 or 2 alone must not be treated as feature-ready.
+- Explicit `project-init` and `project-base-init` requests are gate destinations, not inputs to this gate.
+- If the pending request is explicitly read-only or forbids writes, report the missing wiki and ask before `project-init` writes; offer a source-only `lightweight-answer` alternative without losing the pending intent.
+- A source-only answer stays `lightweight-answer`. A clearly source/diff-only review may use the narrow `quick-diff-review` exception, but it must not claim lifecycle or wiki integrity.
+
 ## Required First Check
 
 Before doing project work:
 
 1. Decide whether the request is `lightweight-answer` or `full-lifecycle`.
 2. If lightweight-answer applies, answer from available evidence without creating lifecycle state.
-3. If full lifecycle applies, resolve or ask for the project root when it is not obvious.
-4. Create or resume a Lifecycle Session: Change Brief, Bug Brief, or working-context.
-5. Save or update a short routing record.
-6. Select one primary stage skill.
-7. Select optional external bridge skills only after project scope is known.
+3. If full lifecycle or any wiki-backed route applies, resolve or ask for the project root when it is not obvious.
+4. Select the intended primary stage without invoking it.
+5. Run the Initialization Gate for business-project full-lifecycle or wiki-backed work.
+6. If the gate routes to `project-init`, wait for its return handoff and keep `pending_intent` plus `pending_primary_stage` intact.
+7. Create or resume a Lifecycle Session: Change Brief, Bug Brief, or working-context.
+8. Save or update a short routing record.
+9. Invoke one primary stage skill, then select optional external bridge skills only after project scope is known.
 
 ## Core Process
 
@@ -256,8 +274,11 @@ When handing off to a child stage skill or external bridge, use a short structur
 ```markdown
 ## Context Handoff
 
+- project_root:
 - lifecycle_session:
 - user_intent:
+- pending_intent:
+- pending_primary_stage:
 - active_sources:
 - active_scope:
 - read_only_scope:

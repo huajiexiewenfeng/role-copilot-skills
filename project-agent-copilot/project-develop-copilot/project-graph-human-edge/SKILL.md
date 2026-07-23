@@ -11,6 +11,28 @@ Confirm, reject, or manually enter Project Graph edges under human control. This
 
 Use it when the user says to accept or reject a proposal, manually register a cross-project relation, confirm an auto-edge result, or write a known edge and pin it for navigation.
 
+## Initialization Gate
+
+Run after resolving the current project root and before reading proposals or writing confirmed graph state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-graph-human-edge`
+- Preserve the user's requested proposal or manual edge action as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, edge, proposal update, candidate update, cross-ref pin, or log inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved proposal or manual edge request>
+  pending_primary_stage: project-graph-human-edge
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required Reads
 
 Read only as much as needed for the requested edge action:

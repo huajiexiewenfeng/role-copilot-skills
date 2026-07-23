@@ -31,6 +31,22 @@ Lightweight-answer must not create Change Brief, Bug Brief, working-context, Flo
 
 Use `full-lifecycle` when the user asks to develop, fix, ingest, finish, review, continue, update status, execute a plan, commit, or handle project evidence such as PRDs, logs, diffs, failed tests, or verification results.
 
+## Initialization Gate
+
+After the routing decision selects a business-project stage, resolve the project root and apply this bootstrap contract before invoking the pending stage and before creating or resuming lifecycle state:
+
+- `wiki_required_for: full-lifecycle-or-wiki-backed`
+- `on_missing_wiki: route project-init`
+- `excluded_mode: lightweight-answer`
+- `read_only_missing_wiki: confirm-before-init`
+- Preserve the user's real goal as `pending_intent` and the selected stage as `pending_primary_stage`.
+- If `<project_root>/.llm-wiki/` is absent, hand off to `project-init` first. Do not let the pending child create a partial wiki or its own lifecycle record as a substitute for initialization.
+- Because the wiki does not exist yet, keep the routing handoff in memory and pass it through the `project-init` Context Handoff. Persist it only after the standard wiki exists.
+- After init returns, use `initialization_level`, readiness evidence, and `next_gate` to decide whether to resume, complete scoped context, or stop with a limitation. Do not automatically enter implementation from a Level 1 or Level 2 skeleton.
+- Explicit `project-init` and `project-base-init` requests bypass this check because they are bootstrap routes. `lightweight-answer` never triggers it.
+- For an explicitly read-only or zero-write request, report the missing wiki and ask before init writes; preserve the pending route while offering a source-only `lightweight-answer` alternative.
+- Source-only questions stay `lightweight-answer`. A clearly source/diff-only `quick-diff-review` may run without a wiki, but it must not claim lifecycle or wiki integrity.
+
 ## Routing Table
 
 | User signal | Primary route | Notes |
@@ -111,6 +127,8 @@ lightweight-answer < project-query < dashboard-refresh < project-maintain < full
 
 Ask one minimal routing question only when this order still leaves two plausible routes with different write behavior.
 
+After the decision tree identifies a route, treat that route as `pending_primary_stage` and run the Initialization Gate before any wiki-backed child handoff.
+
 ## Ambiguous Pair Rules
 
 | Ambiguous request | Route | Why |
@@ -187,6 +205,8 @@ A secondary bridge receives Context Handoff and returns Return Handoff. It must 
 ## Routing Record
 
 For every full lifecycle entry, save a short routing record in the relevant lifecycle session.
+
+When `.llm-wiki/` is absent, do not manufacture the target lifecycle file before bootstrap. Keep the routing handoff in memory, route to `project-init`, and save the record after init returns and the standard wiki exists.
 
 Requirement / feature:
 

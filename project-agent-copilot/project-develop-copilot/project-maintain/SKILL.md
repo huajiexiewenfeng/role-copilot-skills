@@ -43,15 +43,38 @@ Use when the user asks to:
 - Finish Sync Gate when maintenance repairs indexes, artifacts, logs, or dashboard projection data
 - Review & Wiki Integrity Gate
 
+## Initialization Gate
+
+Run after resolving the project root and before auditing or repairing project-local wiki state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-maintain`
+- Preserve the user's original audit or repair request as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, maintenance template, graph file, dashboard file, or repair log inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved user request and repair boundary>
+  pending_primary_stage: project-maintain
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve the project root.
-2. Resolve optional shared references from either `../references/` in the bundled top-level install or `references/` in a direct child-skill install. If `flow-record.md` or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep repairs narrow and evidence-backed.
-3. Confirm `.llm-wiki` exists in the project root.
-4. Decide whether the request is read-only maintenance audit or approved repair.
-5. Identify the target scope: whole wiki, one `flow_id`, one module, one dashboard, one page group, or one symptom.
-6. Before edits, state the repair scope and keep it narrow.
-7. For Base Graph fleet audits, resolve the Base Graph root, read its catalog and local registry, and treat all project repositories as read-only unless the user explicitly approves a per-project repair.
+2. Run the Initialization Gate before resolving child references or maintenance state.
+3. Resolve optional shared references from either `../references/` in the bundled top-level install or `references/` in a direct child-skill install. If `flow-record.md` or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep repairs narrow and evidence-backed.
+4. Confirm `.llm-wiki` exists in the project root.
+5. Decide whether the request is read-only maintenance audit or approved repair.
+6. Identify the target scope: whole wiki, one `flow_id`, one module, one dashboard, one page group, or one symptom.
+7. Before edits, state the repair scope and keep it narrow.
+8. For Base Graph fleet audits, resolve the Base Graph root, read its catalog and local registry, and treat all project repositories as read-only unless the user explicitly approves a per-project repair.
 
 ## Core Process
 

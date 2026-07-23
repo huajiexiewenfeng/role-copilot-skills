@@ -32,15 +32,38 @@ Use when the user says:
 - Verification Gate
 - Finish Sync Gate
 
+## Initialization Gate
+
+Run after resolving the project root and before reading or updating lifecycle completion state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-finish`
+- Preserve the user's original finish request as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, completion record, handoff, dashboard status, or verification claim inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved user request>
+  pending_primary_stage: project-finish
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve project root.
-2. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `templates.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and update only evidence-backed wiki state.
-3. Identify active Change Brief, Bug Brief, or working-context.
-4. Check verification evidence, provenance, raw output, and whether any accepted limitation has a non-agent acceptor.
-5. Inspect changed files, including whether production code and tests/mocks changed together.
-6. Decide whether the Verification Gate test-integrity sub-check is required before updating testing status.
-7. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
+2. Run the Initialization Gate before resolving child references or completion state.
+3. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `templates.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and update only evidence-backed wiki state.
+4. Identify active Change Brief, Bug Brief, or working-context.
+5. Check verification evidence, provenance, raw output, and whether any accepted limitation has a non-agent acceptor.
+6. Inspect changed files, including whether production code and tests/mocks changed together.
+7. Decide whether the Verification Gate test-integrity sub-check is required before updating testing status.
+8. Decide affected wiki pages, artifacts, dashboard sections, and handoff path.
 
 ## Core Process
 

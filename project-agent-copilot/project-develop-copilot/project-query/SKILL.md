@@ -59,15 +59,41 @@ Example triggers:
 - Context Recovery Gate
 - Finish Sync Gate in explicit `dashboard-refresh` mode
 
+## Initialization Gate
+
+Run after resolving the project root and before a wiki query, cross-project lookup, or dashboard refresh.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-query`
+- Preserve the requested evidence question or dashboard action as `pending_intent`.
+- `source-only_without_wiki: lightweight-answer`
+- `read_only_missing_wiki: confirm-before-init`
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`. Do not present source fallback as a successful wiki query or dashboard refresh.
+- If the request is read-only or forbids file changes, do not let `project-init` write until the user confirms initialization.
+- If the user explicitly wants only a small source-based answer with no lifecycle state, return to the router as `lightweight-answer` instead of continuing in `project-query`.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved evidence question or dashboard request>
+  pending_primary_stage: project-query
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve project root.
-2. Resolve optional shared references from `../references/` or local `references/`. If `lifecycle-router.md`, `flow-record.md`, or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep answers read-only unless the user explicitly asks to write dashboard state.
-3. Confirm `.llm-wiki/` exists. The directory itself proves that the project has a local LLM Wiki; `.llm-wiki/index.md` is an optional navigation page, not the existence sentinel.
-4. Decide whether this is read-only project query or full lifecycle work.
-5. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, session-digests, log.
-6. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
-7. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
+2. Run the Initialization Gate before resolving child references or wiki targets.
+3. Resolve optional shared references from `../references/` or local `references/`. If `lifecycle-router.md`, `flow-record.md`, or `progress-dashboard.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep answers read-only unless the user explicitly asks to write dashboard state.
+4. Confirm `.llm-wiki/` exists. The directory itself proves that the project has a local LLM Wiki; `.llm-wiki/index.md` is an optional navigation page, not the existence sentinel.
+5. Decide whether this is read-only project query or full lifecycle work.
+6. Identify likely query targets: requirements, bugs, sources, working-context, modules, artifacts, dashboard, session-digests, log.
+7. If the user asks only to refresh dashboard/progress state, enter `dashboard-refresh` mode.
+8. If the user asks to act beyond dashboard refresh, route to the appropriate lifecycle stage after answering or ask one minimal clarification.
 
 ## Core Process
 

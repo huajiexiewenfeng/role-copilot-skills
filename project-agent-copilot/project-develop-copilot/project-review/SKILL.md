@@ -48,16 +48,50 @@ It may evaluate:
 
 It must not become a general-purpose Dolores or `skill-evaluator` replacement. For non-project skill failures, use the appropriate external review skill. For project workflow failures, report project skill improvement recommendations inside `project-review`.
 
+## Initialization Gate
+
+Run after resolving the project root and before lifecycle-quality, wiki-integrity, dashboard-drift, or full-lifecycle review.
+
+- `wiki_required_for: lifecycle-or-wiki-review`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-review`
+- Preserve the requested review scope as `pending_intent`.
+- `allowed_without_wiki: quick-diff-review`
+- The exception applies only when the user explicitly limits the task to source or diff findings. It stays read-only with respect to lifecycle state and must not claim lifecycle or wiki integrity.
+- Otherwise, if `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`. Do not create a partial wiki or review record inside this child as a substitute for initialization.
+
+On the missing-wiki branch outside the read-only exception, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved review scope>
+  pending_primary_stage: project-review
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
+## Source / Diff Only Review
+
+When `review_mode: quick-diff-review` is selected for a repository without `.llm-wiki/`:
+
+1. Inspect only git status/diff, changed source, related tests, test-integrity risk, and available verification evidence.
+2. Stay read-only with respect to project lifecycle state.
+3. Explicitly skip wiki, artifact, dashboard, and Flow Record integrity checks.
+4. Report that lifecycle and wiki integrity were not assessed.
+5. Stop after findings, open questions, verification gaps, and source-level residual risk; do not continue into the lifecycle-review workflow below.
+
 ## Required First Check
 
 1. Resolve project root.
-2. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `continuous-evolution.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep findings grounded in available diff, wiki, and evidence.
-3. Inspect git status and diff.
-4. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry.
-5. Check verification evidence, raw output, exit code, executor, authority, trust level, and limitation acceptor.
-6. Check whether production code and tests/mocks/fixtures/expected values changed together.
-7. Check artifact registry and dashboard evidence when present.
-8. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
+2. Run the Initialization Gate, or explicitly record the `quick-diff-review` exception.
+3. Resolve optional shared references from `../references/` or local `references/`. If `flow-record.md`, `progress-dashboard.md`, or `continuous-evolution.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep findings grounded in available diff, wiki, and evidence.
+4. Inspect git status and diff.
+5. Identify active Change Brief, Bug Brief, working-context, or relevant `.llm-wiki/log.md` entry when lifecycle review is in scope.
+6. Check verification evidence, raw output, exit code, executor, authority, trust level, and limitation acceptor.
+7. Check whether production code and tests/mocks/fixtures/expected values changed together.
+8. Check artifact registry and dashboard evidence when present, unless `quick-diff-review` is active.
+9. If process risk is present, identify the lifecycle step and whether the failure is an artifact issue, lifecycle issue, context integrity issue, project skill rule gap, eval gap, or user-decision gap.
 
 ## Core Process
 
@@ -76,13 +110,14 @@ Reference availability policy:
 
 - Shared references are deep references, not startup requirements.
 - Do not stop solely because `../references/` is missing.
-- In degraded mode, review must still check diff, verification evidence, scope drift, wiki drift, Flow Record evidence, and dashboard claims when files are available.
+- In degraded mode, review must still check diff, verification evidence, scope drift, wiki drift, Flow Record evidence, and dashboard claims when files are available. The separate `quick-diff-review` exception skips lifecycle/wiki checks rather than treating absent wiki state as degraded lifecycle evidence.
 - Do not propose project-skill evolution patches from missing deep references alone; only report the missing reference as a process gap.
 
 Workflow:
 
 1. Resolve project root.
 2. Inspect current git status and diff.
+   - If `quick-diff-review` is active, use the reduced workflow above and stop before step 3.
 3. Identify active requirement, bug, working context, source, artifact, or dashboard context.
 4. Check code risk and behavior correctness.
 5. Check verification gaps.

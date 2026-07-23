@@ -36,17 +36,40 @@ Use when the user asks to:
 - Scope Lock Gate
 - External Bridge Gate
 
+## Initialization Gate
+
+Run after resolving the project root and before any lifecycle or source work in this child.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-develop`
+- Preserve the user's original request as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, Change Brief, working-context, plan, or code change inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved user request>
+  pending_primary_stage: project-develop
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve project root.
-2. Resolve optional shared references from `../references/` or local `references/`. If `change-brief.md` or `flow-record.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references, keep the Change Brief and Flow Record conservative, and do not invent unsupported lifecycle facts.
-3. Confirm this is full lifecycle requirement work, not lightweight-answer.
-4. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
-5. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
-6. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
-7. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
-8. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
-9. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
+2. Run the Initialization Gate before resolving child references or creating lifecycle state.
+3. Resolve optional shared references from `../references/` or local `references/`. If `change-brief.md` or `flow-record.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references, keep the Change Brief and Flow Record conservative, and do not invent unsupported lifecycle facts.
+4. Confirm this is full lifecycle requirement work, not lightweight-answer.
+5. Before any code edit, decide and state the documentation mode: update existing Change Brief, create new Change Brief, create child Change Brief, or no durable doc needed only when the user explicitly requests throwaway/exploratory work.
+6. Create or resume Change Brief in `.llm-wiki/requirements/<change-id>.md`.
+7. Recover relevant `.llm-wiki`, source proxies, modules, and working-context.
+8. If the requirement involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
+9. Identify active, read-only, candidate, and excluded scopes before planning or implementation.
+10. Before writing any execution plan, verify the Change Brief exists, contains `flow_id`, acceptance criteria, scope, non-goals, and a `## Flow Record` table. If it does not, create or update the Change Brief first.
 
 
 ## Lifecycle Anchor Gate

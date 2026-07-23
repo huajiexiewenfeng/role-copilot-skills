@@ -11,6 +11,28 @@ Turn Project Graph candidates into evidence-backed edge proposals for human revi
 
 Use it when the user asks the agent to resolve a candidate through Base Graph, find the corresponding project/class/method/interface, or automatically prepare an edge while keeping human confirmation in the loop.
 
+## Initialization Gate
+
+Run after resolving the current project root and before reading a candidate or writing proposal state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-graph-auto-edge`
+- Preserve the user's requested candidate or relationship as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, proposal, candidate update, scan report, or log inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved candidate or relationship request>
+  pending_primary_stage: project-graph-auto-edge
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required Reads
 
 Read only as much as needed for the target candidate or request:
@@ -46,21 +68,22 @@ If a proposal looks ready to confirm, stop and tell the user to run `project-gra
 
 ## Process
 
-1. Resolve the target candidate by id, fingerprint, or user-described signal.
-2. Read the Project Graph contract and existing candidates/proposals/edges.
-3. If the candidate has `remote_project=unknown` or a non-canonical hint, resolve a canonical project id through Base Graph when available.
-4. Verify local evidence from repo-relative files, classes, methods, endpoints, topics, config keys, or wiki anchors.
-5. Verify remote evidence read-only when a remote project is resolved. Use exact anchors when possible; do not scan whole remote repositories by default.
-6. Classify proposal `verification_status`:
+1. Resolve the current project root and run the Initialization Gate.
+2. Resolve the target candidate by id, fingerprint, or user-described signal.
+3. Read the Project Graph contract and existing candidates/proposals/edges.
+4. If the candidate has `remote_project=unknown` or a non-canonical hint, resolve a canonical project id through Base Graph when available.
+5. Verify local evidence from repo-relative files, classes, methods, endpoints, topics, config keys, or wiki anchors.
+6. Verify remote evidence read-only when a remote project is resolved. Use exact anchors when possible; do not scan whole remote repositories by default.
+7. Classify proposal `verification_status`:
    - `source-verified`: local and remote source/endpoint/topic evidence both match in this session.
    - `runtime-verified`: runtime/log evidence proves the relation in addition to source evidence.
    - `unverified`: evidence is incomplete or wiki-only.
-7. Generate a stable `fingerprint` using the confirmed direction from `project-graph.md`.
-8. Select the next `proposal_id` and a `proposed_edge_id`. The proposed edge id is not a confirmed reservation; `project-graph-human-edge` must re-check collisions before writing.
-9. Fill proposed cross-ref fields: `proposed_cross_ref_id`, `proposed_local_entry`, and `proposed_why_pinned`.
-10. Write or update one `proposals.md` row with `human_status=pending` unless the user explicitly asks to flag it as `needs-more-evidence`.
-11. Move the linked candidate from `pending` to `proposed`; keep `edge_id` empty.
-12. Append a concise log entry with proposal id, candidate id, canonical project id, verification status, and evidence summary.
+8. Generate a stable `fingerprint` using the confirmed direction from `project-graph.md`.
+9. Select the next `proposal_id` and a `proposed_edge_id`. The proposed edge id is not a confirmed reservation; `project-graph-human-edge` must re-check collisions before writing.
+10. Fill proposed cross-ref fields: `proposed_cross_ref_id`, `proposed_local_entry`, and `proposed_why_pinned`.
+11. Write or update one `proposals.md` row with `human_status=pending` unless the user explicitly asks to flag it as `needs-more-evidence`.
+12. Move the linked candidate from `pending` to `proposed`; keep `edge_id` empty.
+13. Append a concise log entry with proposal id, candidate id, canonical project id, verification status, and evidence summary.
 
 ## Proposal Rules
 

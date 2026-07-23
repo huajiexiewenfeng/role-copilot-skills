@@ -35,15 +35,38 @@ Use when the user reports or wants to fix:
 - External Bridge Gate
 - Verification Gate before fix completion claims
 
+## Initialization Gate
+
+Run after resolving the project root and before any lifecycle or source work in this child.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-fix`
+- Preserve the user's original request as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, Bug Brief, working-context, test, or code change inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved user request>
+  pending_primary_stage: project-fix
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve project root.
-2. Resolve optional shared references from `../references/` or local `references/`. If `bug-brief.md`, `flow-record.md`, or `scoped-working-context.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep bug evidence, scope, and Flow Record updates conservative.
-3. Create or resume Bug Brief.
-4. Capture or ingest external bug source.
-5. Identify active, read-only, candidate, and excluded scopes.
-6. If the bug involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
-7. Run Work Definition Gate before broad diagnosis or edits.
+2. Run the Initialization Gate before resolving child references or creating lifecycle state.
+3. Resolve optional shared references from `../references/` or local `references/`. If `bug-brief.md`, `flow-record.md`, or `scoped-working-context.md` is missing, continue in degraded mode using the minimum rules in this skill; report the missing deep references and keep bug evidence, scope, and Flow Record updates conservative.
+4. Create or resume Bug Brief.
+5. Capture or ingest external bug source.
+6. Identify active, read-only, candidate, and excluded scopes.
+7. If the bug involves external calls, upstream/downstream services, Feign, MQTT, HTTP, RPC, shared DB, or shared config, check Project Graph pins/edges/candidates and perform the cross-project boundary check before relying on external contract behavior.
+8. Run Work Definition Gate before broad diagnosis or edits.
 
 ## Core Process
 

@@ -1162,3 +1162,54 @@ Pass/fail:
 PASS: available Wiki entrypoints are used with zero writes
 FAIL: Wiki absence is claimed, source-first routing occurs, or any file changes
 ```
+
+## Eval 33: Uninitialized Business Repository Bootstraps Before Development
+
+Input prompt:
+
+```text
+请在 `src/config.py` 中新增 `read_timeout_seconds()`：从环境变量 `PROJECT_READ_TIMEOUT_SECONDS` 读取正整数，未配置时返回 30。业务代码改动只限这个模块和对应测试；项目流程所需的文档不计入业务代码范围。
+```
+
+Fixture:
+
+- The resolved root is a Git business repository with bounded source and build files.
+- `src/config.py` contains existing configuration helpers and `tests/test_config.py` contains their tests.
+- `<project_root>/.llm-wiki/` does not exist.
+- `project-init` has never run for this repository.
+- The missing-wiki fact is fixture-only and is not disclosed in the input prompt.
+
+Expected route:
+
+```text
+mode: full-lifecycle
+bootstrap_stage: project-init
+pending_primary_stage: project-develop
+checkpoint_order: root-check -> project-init -> lifecycle-anchor -> implementation
+```
+
+Required behavior:
+
+- Detects the missing `.llm-wiki/` after resolving the project root and before creating lifecycle state.
+- Preserves the exact `read_timeout_seconds()` behavior, environment variable, default, file boundary, and test boundary as `pending_intent`, with `project-develop` as the pending primary stage.
+- Routes first to `project-init` and creates the standard wiki structure rather than a child-specific partial directory.
+- Does not create a Change Brief, working-context, implementation plan, test, or code change before init returns.
+- Uses the init return handoff's `initialization_level`, readiness gaps, and `next_gate` to decide whether to resume development or complete scoped context first.
+- Persists the routing record only after the standard wiki exists; the user does not need to repeat the original feature request.
+- Treats Initialization Level 1 or 2 as navigation/context-plan readiness, not automatic feature readiness.
+- Records observable checkpoints showing root detection before init, init return before lifecycle anchor creation, and lifecycle anchor creation before implementation. Final file state alone is not sufficient ordering evidence.
+
+Forbidden behavior:
+
+- Invoking `project-develop` before `project-init` returns.
+- Letting `project-develop` create `.llm-wiki/requirements/` or an ad-hoc wiki skeleton as a substitute for init.
+- Treating missing `.llm-wiki/` as the shared-reference degraded mode from Eval 4.
+- Dropping the original intent, forcing the user to restate it, or implementing immediately from a Level 1/2 skeleton.
+- Passing only because the response repeats an initialization hint from the prompt; no such hint is present.
+
+Pass/fail:
+
+```text
+PASS: project-init bootstraps first, pending intent survives, and the next gate follows readiness evidence
+FAIL: a child stage or lifecycle write starts before init, or init loses/overclaims the pending goal
+```

@@ -974,3 +974,36 @@ Failure signals:
 
 - detail files become a second source of truth for edge identity or status.
 - an invalid detail file passes `validate --fail-on error`.
+
+## Case 37: Uninitialized Business Repository Bootstraps Before Development
+
+Prompt:
+
+```text
+请在 `src/config.py` 中新增 `read_timeout_seconds()`：从环境变量 `PROJECT_READ_TIMEOUT_SECONDS` 读取正整数，未配置时返回 30。业务代码改动只限这个模块和对应测试；项目流程所需的文档不计入业务代码范围。
+```
+
+Fixture:
+
+- the resolved root is a Git business repository with bounded source/build files.
+- `src/config.py` contains existing configuration helpers and `tests/test_config.py` contains their tests.
+- `<project_root>/.llm-wiki/` is absent.
+- no earlier `project-init` result exists for this repository.
+- the missing-wiki fact is hidden fixture state and is not disclosed in the prompt.
+
+Expected:
+
+- router classifies the request as `full-lifecycle`, preserves the exact function, environment variable, default, source file, and test boundary as `pending_intent`, and records `pending_primary_stage: project-develop`.
+- router uses `project-init` as the bootstrap stage before creating or resuming any lifecycle session.
+- init creates the standard `.llm-wiki/` structure and returns `initialization_level`, readiness gaps, and an evidence-backed `next_gate`.
+- only after init returns may the router persist the routing record and resume the original goal.
+- Level 1 or Level 2 init routes to scoped context completion or another supported gate when feature readiness is not proven.
+- the user does not need to repeat the original feature request.
+- review evidence records checkpoint order `root-check -> project-init -> lifecycle-anchor -> implementation`; final files alone do not prove this order.
+
+Failure signals:
+
+- `project-develop` creates `.llm-wiki/requirements/*`, a Change Brief, working-context, plan, test, or code change before init returns.
+- a child creates an ad-hoc or partial `.llm-wiki/` instead of routing to `project-init`.
+- missing wiki is confused with missing optional shared references and enters degraded development mode.
+- the router forgets the original feature intent, requires the user to restate it, or treats a Level 1/2 skeleton as feature-ready.

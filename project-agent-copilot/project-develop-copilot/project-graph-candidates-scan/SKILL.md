@@ -11,6 +11,28 @@ Scan the current project for potential Project Graph relationship candidates and
 
 Use it when the user explicitly asks to scan `project-graph/candidates.md`, discover missing upstream/downstream relationships, refresh candidate findings, or run a Project Graph candidate scanner.
 
+## Initialization Gate
+
+Run after resolving the current project root and before reading scan inputs or writing candidate state.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-graph-candidates-scan`
+- Preserve the user's requested scan scope as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
+- Do not create a partial `.llm-wiki/`, candidates file, scan report, scan state, or log inside this child as a substitute for initialization.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved scan request and scope>
+  pending_primary_stage: project-graph-candidates-scan
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required Reads
 
 Read only as much as needed for the requested scan scope:
@@ -44,7 +66,7 @@ If the scan finds enough evidence for an edge, stop at a `pending` candidate and
 
 ## Process
 
-1. Resolve the current project root and confirm `.llm-wiki` exists.
+1. Resolve the current project root, run the Initialization Gate, and then confirm `.llm-wiki` exists.
 2. Read `project-graph.md` for current schemas, status values, fingerprint rules, pending timeout, and write boundaries.
 3. Read existing `candidates.md` and build a fingerprint set.
 4. Collect local relationship signals from:
