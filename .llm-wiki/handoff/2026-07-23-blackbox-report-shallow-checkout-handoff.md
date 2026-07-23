@@ -4,9 +4,9 @@
 
 - flow_id: `2026-07-23-blackbox-report-shallow-checkout`
 - development: done
-- testing: active
-- archive: active
-- next_gate: verify the Windows path-normalization follow-up and push it
+- testing: done (`ci-backed`)
+- archive: done
+- next_gate: none for this bug
 
 ## Implementation Summary
 
@@ -27,6 +27,8 @@ Production eval behavior, GitHub Actions checkout depth, and user-facing Skill b
 | corrected prepare CLI test | passed, 1/1 | 0 |
 | complete `BlackboxEvalCliTest` after follow-up | passed, 3/3 | 0 |
 | post-follow-up full local discovery | exceeded 20-minute command budget; no failure emitted before termination | 124 |
+| GitHub Actions Ubuntu job | tests and all repository gates passed | 0 |
+| GitHub Actions Windows job | tests and all repository gates passed | 0 |
 | `check_text_quality.py` | no findings | 0 |
 | `check_doc_integrity.py` | no findings | 0 |
 | `sync-doctor.py --check` | clean | 0 |
@@ -38,8 +40,8 @@ Verification provenance:
 - Python: bundled Codex runtime
 - reproduction: local clone with `--depth 1 --no-local` and exactly one reachable commit
 - authority: current source, tests, Git, and command output
-- trust level: passed-agent-local
-- GitHub-hosted CI: first-fix Ubuntu passed; first-fix Windows exposed the short-path assertion; follow-up run pending push
+- trust level: ci-backed
+- GitHub-hosted CI: run `29982382466` completed successfully on Ubuntu and Windows
 - LLM Wiki Doctor finish command: not applicable; this repository has no `.llm-wiki/tools/llm_wiki_doctor.py`
 
 ## Test Integrity
@@ -53,7 +55,7 @@ Verification provenance:
 
 ## Residual Risk
 
-Hosted Ubuntu passed the first fix. Hosted Windows reached all 153 tests, then exposed the separate short-path/long-path test assertion. The affected CLI class passes locally after the correction, but a new full local discovery exceeded the command budget; final complete verification is pending the follow-up hosted run.
+GitHub Actions run `29982382466` passed the complete workflow on both Ubuntu and Windows. A non-blocking warning notes that actions targeting Node.js 20 are being forced onto Node.js 24; updating action major versions can be handled separately.
 
 ## Return Handoff
 
@@ -62,6 +64,6 @@ Hosted Ubuntu passed the first fix. Hosted Windows reached all 153 tests, then e
 - changed_assumptions: report tests do not require source checkout history
 - recommended_scope_changes: none
 - artifacts: Bug Brief, this handoff, isolated test fixture change
-- verification_notes: 153/153 tests and all local repository gates passed
-- lifecycle_updates_needed: record hosted CI outcome externally after push
-- next_gate: direct push to `main`, then GitHub Actions observation
+- verification_notes: initial local 153/153 passed; follow-up CLI tests and local gates passed; final complete Ubuntu and Windows workflows passed in GitHub Actions
+- lifecycle_updates_needed: none for this bug
+- next_gate: none

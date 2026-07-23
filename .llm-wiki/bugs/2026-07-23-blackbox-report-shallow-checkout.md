@@ -3,7 +3,7 @@
 ## Summary
 
 - title: Black-box report tests require an unavailable parent commit in shallow CI checkouts
-- status: verified
+- status: done
 - flow_id: 2026-07-23-blackbox-report-shallow-checkout
 - severity: CI blocking
 - owner: Codex
@@ -74,11 +74,11 @@ Create a two-commit source repository inside the test temporary directory, point
 
 ## Verification
 
-- status: partial
+- status: passed
 - commands_or_checks: selected report test; complete report test class; full unittest discovery; text quality; document integrity; scaffold drift; one-commit shallow-clone regression
 - result_summary: first fix passed the selected test, 11/11 report tests, 153/153 full tests, all three repository gates, the one-commit shallow regression, and hosted Ubuntu; after the Windows finding, the corrected selected CLI test and complete CLI class passed 1/1 and 3/3, and all repository gates passed again
-- limitation: post-follow-up full local discovery exceeded the 20-minute command budget without emitting a failure; hosted CI is required for the final complete run
-- residual_risk: Windows path-normalization follow-up requires hosted verification
+- limitation: post-follow-up full local discovery exceeded the 20-minute command budget without emitting a failure; GitHub Actions supplied the final complete Linux and Windows verification
+- residual_risk: non-blocking GitHub Actions warning that Node.js 20 actions are being forced onto Node.js 24
 
 ## Flow Record
 
@@ -88,8 +88,8 @@ Create a two-commit source repository inside the test temporary directory, point
 | design | done | full-history versus shallow-clone comparison | 2026-07-23 |
 | plan | done | test-owned two-commit source repository | 2026-07-23 |
 | development | done | report tests own a two-commit temporary source repository; Windows CLI expectation now uses a resolved path | 2026-07-23 |
-| testing | active | first fix passed locally and on Ubuntu; Windows follow-up pending | 2026-07-23 |
-| archive | active | `handoff/2026-07-23-blackbox-report-shallow-checkout-handoff.md` requires final hosted result | 2026-07-23 |
+| testing | done | GitHub Actions run 29982382466 passed both Ubuntu and Windows jobs, including tests and all repository gates | 2026-07-23 |
+| archive | done | `handoff/2026-07-23-blackbox-report-shallow-checkout-handoff.md` | 2026-07-23 |
 
 ## Artifacts
 
@@ -102,4 +102,4 @@ None.
 
 ## Residual Risk
 
-Only the post-push GitHub Actions run remains to confirm the hosted environment.
+The fix is verified by GitHub Actions on both Ubuntu and Windows. The Node.js action-runtime deprecation warning is unrelated and remains a future maintenance item.
