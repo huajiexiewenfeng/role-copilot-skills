@@ -1,0 +1,24 @@
+scp_version: v0.1
+
+skill:
+  id: hr-interview-question-generator-copilot
+  domain: hr
+
+llm_wiki:
+  profile: hr
+  required: false
+  fallback_mode: markdown
+
+trust:
+  level: internal_sensitive
+  source_type: user_local_data
+  instruction_policy: trusted_content
+
+query:
+  primary_domain: hr
+  supports: []
+
+ingest:
+  produces:
+    - domain: hr
+      artifact_type: interview_plan

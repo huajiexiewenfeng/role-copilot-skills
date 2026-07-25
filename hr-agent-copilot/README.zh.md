@@ -22,10 +22,15 @@ HR Agent Copilot 是 Role Copilot Skills 里的 HR 招聘角色组。
 
 ```text
 hr-agent-copilot/
+  SKILL.md
   references/
     scoring-rubric.md
     report-template.md
     interview-template.md
+    llm-wiki-integration.md
+    llm-wiki-ingest.md
+  llm-wiki-profile.yml
+  ingest-mapping.yml
   scripts/
     extract_resumes.py
     requirements.txt
@@ -33,6 +38,27 @@ hr-agent-copilot/
     sample-jd.md
     sample-output.md
 ```
+
+## 可选 LLM Wiki Runtime
+
+每个 HR Skill 都携带 SCP v0.1 manifest，并遵循共享的
+[LLM Wiki 接入契约](./references/llm-wiki-integration.md)。Runtime
+是可选后端：启用时在执行前查询 HR 上下文、执行后写入已声明产物；未安装、
+禁用或异常时继续原有流程。
+
+包根的 `SKILL.md` 是可发现的 router，只选择一个业务子 Skill，不自行执行
+SCP；被选中的子 Skill 负责 preflight、query、ingest 和 fallback。
+
+安装时应保留完整的 `hr-agent-copilot/` 目录结构，确保子 Skill 能找到共享的
+`references/` 和 `scripts/`。
+
+### 历史 JD 入库
+
+HR 包通过 `ingest-mapping.yml` 和 `references/llm-wiki-ingest.md` 定义 JD
+业务语义；`llm-wiki-core` 只提供通用的初始化、入库、查询和维护流程。
+
+Phase 1 在写入前展示 JD 原文证据，只导入 JD，不导入简历、候选人事实、
+评分或面试结果。
 
 ## 安装
 

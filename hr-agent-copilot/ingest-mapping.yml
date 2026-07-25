@@ -1,0 +1,12 @@
+mapping:
+  id: hr-jd-codex-thread
+  version: v0.1
+  domain: hr
+  owner_skill_id: hr-resume-screening-copilot
+  source_types: [codex_thread_jd_excerpt]
+  instruction_ref: references/llm-wiki-ingest.md
+
+produces:
+  - record_type: job_profile
+  - record_type: jd_version
+  - log_type: hr_jd_import

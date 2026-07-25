@@ -1,0 +1,14 @@
+version: v0.1
+domain_id: hr
+display_name: HR Talent Pool
+defaults:
+  label_field: display_name
+  subtype_field: record_type
+  summary_field: summary
+  status_field: status
+  tags_field: tags
+  metadata_allowlist: [age, years_experience, education_level]
+subtype_map:
+  candidate_profile: candidate
+  job_profile: job
+  jd_version: job-description-version

@@ -1,0 +1,37 @@
+scp_version: v0.1
+
+skill:
+  id: hr-resume-screening-copilot
+  domain: hr
+
+llm_wiki:
+  profile: hr
+  required: false
+  fallback_mode: markdown
+
+trust:
+  level: internal_sensitive
+  source_type: user_local_data
+  instruction_policy: trusted_content
+
+query:
+  primary_domain: hr
+  supports:
+    - domain: ai-radar
+      record_types: [tool_trend]
+      optional: true
+
+ingest:
+  produces:
+    - domain: hr
+      record_type: candidate_profile
+    - domain: hr
+      record_type: job_profile
+    - domain: hr
+      record_type: jd_version
+    - domain: hr
+      artifact_type: screening_report
+    - domain: hr
+      log_type: screening_run
+    - domain: hr
+      log_type: hr_jd_import

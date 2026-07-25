@@ -1,6 +1,6 @@
 ---
 name: hr-resume-screening-copilot
-description: Use this skill whenever the user wants to screen resumes, analyze PDF resumes from one or more folders, compare candidates against a JD, rank candidates, score candidates out of 100, or produce an interview recommendation list. This is the first-stage HR screening skill and should be used before candidate detail reports or interview question generation.
+description: Use when the user wants to screen resumes, is preparing to screen resumes, asks what materials or inputs are required for screening, wants PDF resumes analyzed, compares candidates against a JD, ranks or scores candidates, or requests an interview recommendation list.
 ---
 
 # HR Resume Screening
@@ -24,6 +24,21 @@ Accept:
 
 If the JD or resume source is missing, ask for it.
 
+## Preparation Gate
+
+Preparation-only requests still use this skill. Treat "do not start screening"
+as a workflow gate, not as a request to bypass the skill.
+
+For a preparation-only request:
+
+- Ask for the JD, resume file or folder paths, and any optional output
+  preferences.
+- Explain the accepted input formats when useful.
+- Do not read resumes, run extraction, score candidates, or write screening
+  results until the user asks to begin.
+- Defer the optional LLM Wiki preflight until screening begins unless the user
+  explicitly asks to initialize or check it.
+
 ## Shared Resources
 
 Use HR Agent Copilot shared files:
@@ -33,6 +48,14 @@ Use HR Agent Copilot shared files:
 - `../references/report-template.md`
 
 If the skill is installed in a flattened environment, locate equivalent `scripts/` and `references/` paths near the skill root.
+
+## Optional LLM Wiki Augmentation
+
+This skill declares its memory contract in `scp.yml`. Before the main business
+workflow, read `../references/llm-wiki-integration.md`, run the
+`resolve-config` preflight, and apply the declared query flow when HR memory is
+enabled. If any runtime step fails, follow the shared fallback contract and
+complete the original workflow.
 
 ## Workflow
 

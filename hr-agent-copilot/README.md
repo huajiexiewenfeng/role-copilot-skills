@@ -22,10 +22,15 @@ It helps HR teams, hiring managers, and technical interviewers turn recruiting w
 
 ```text
 hr-agent-copilot/
+  SKILL.md
   references/
     scoring-rubric.md
     report-template.md
     interview-template.md
+    llm-wiki-integration.md
+    llm-wiki-ingest.md
+  llm-wiki-profile.yml
+  ingest-mapping.yml
   scripts/
     extract_resumes.py
     requirements.txt
@@ -33,6 +38,30 @@ hr-agent-copilot/
     sample-jd.md
     sample-output.md
 ```
+
+## Optional LLM Wiki Runtime
+
+Each HR skill carries an SCP v0.1 manifest and follows the shared
+[LLM Wiki integration contract](./references/llm-wiki-integration.md). The
+runtime is optional: enabled runs query HR context before work and persist
+declared outputs afterward; unavailable or disabled runs keep the original
+workflow.
+
+The package-level `SKILL.md` is a discoverable router. It selects one child
+skill and does not run SCP operations itself; the selected child owns preflight,
+query, ingest, and fallback.
+
+Keep the complete `hr-agent-copilot/` directory together when installing the
+package so child skills can resolve shared `references/` and `scripts/`.
+
+### Historical JD Import
+
+The HR package owns the JD semantics in `ingest-mapping.yml` and
+`references/llm-wiki-ingest.md`. `llm-wiki-core` supplies the generic init,
+ingest, query, and maintenance workflow.
+
+The import previews verbatim JD evidence before writing and excludes resumes,
+candidate facts, scores, and interview outcomes in Phase 1.
 
 ## Install
 

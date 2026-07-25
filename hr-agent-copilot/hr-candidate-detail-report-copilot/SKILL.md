@@ -31,6 +31,14 @@ Use HR Agent Copilot shared files:
 
 If installed in a flattened environment, locate equivalent `references/` paths near the skill root.
 
+## Optional LLM Wiki Augmentation
+
+This skill declares its memory contract in `scp.yml`. Before the main business
+workflow, read `../references/llm-wiki-integration.md`, run the
+`resolve-config` preflight, and apply the declared query flow when HR memory is
+enabled. If any runtime step fails, follow the shared fallback contract and
+complete the original workflow.
+
 ## Workflow
 
 For each candidate:
