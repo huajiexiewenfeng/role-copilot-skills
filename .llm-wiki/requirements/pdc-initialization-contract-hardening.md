@@ -3,7 +3,7 @@
 ## Summary
 
 - title: Project Develop Copilot Initialization Contract Hardening
-- status: ready
+- status: done
 - flow_id: `pdc-initialization-contract-hardening`
 
 ## Sources
@@ -57,7 +57,7 @@
 - secondary_bridges: `skill-creator`, `writing-skills`, `test-driven-development`
 - confidence: high
 - reason: 用户已确认前一轮提出的最小补强范围。
-- next_gate: RED contract tests
+- next_gate: none
 - routed_at: 2026-07-25
 
 ## Flow Record
@@ -69,7 +69,7 @@
 | plan | done | 用户确认的最小补强方案 | 2026-07-25 |
 | development | done | 两个初始化 Gate、Eval 34–35、Case 38–39、`project-graph-visualize` 完整包、根路由、README 与契约测试 | 2026-07-25 |
 | testing | done | 最终契约 11/11；非 Blackbox 77/77；Blackbox 81/81；Visualizer smoke 18/18；checkers、sync、diff 与 Skill validation | 2026-07-25 |
-| archive | pending | 待 finish/review | 2026-07-25 |
+| archive | done | `handoff/pdc-initialization-contract-hardening-handoff.md`；核心提交 `3719ef2`；升级说明提交 `8174375` | 2026-07-25 |
 
 ## Open Questions
 
@@ -81,3 +81,4 @@
 - 验证证据：初始化 Gate 定向测试先产生预期失败，迁移 visualizer 后最终 11/11 通过；非 Blackbox 77/77、Blackbox 81/81、Visualizer smoke 18/18；文本质量与文档完整性均无 findings；`sync-doctor.py --check`、`git diff --check` 以及根 Skill / visualizer 的 `quick_validate.py` 均退出 0。
 - 用户已明确批准把 `project-graph-visualize` mechanical-artifact 扩展纳入源码并统一提交 GitHub。
 - 安装目录同步后重新运行初始化契约测试为 11/11；源码与安装目录全树 SHA-256 对照差异数为 0。
+- 本轮升级已经归档；真实多模型认证属于后续独立 Flow，不应被写成当前 Flow 已完成的验证。

@@ -17,3 +17,4 @@
 ## Implemented Plan
 
 - [`pdc-phase0-repository-integrity`](working-context/pdc-phase0-repository-integrity.md)：8 个 TDD/验证任务已执行；修复后 whole-branch re-review 为 Critical 0、Important 0、`Ready to merge: Yes`，Wiki Integrity Gate 已归档。GitHub 托管 CI 仍待运行。
+- [`pdc-initialization-contract-hardening`](requirements/pdc-initialization-contract-hardening.md)：补齐初始化 Gate、子 Skill 初始化策略覆盖和 `project-graph-visualize` mechanical-artifact 路由；本地回归完成并已提交 GitHub，详见 [`handoff`](handoff/pdc-initialization-contract-hardening-handoff.md) 与 [`升级复盘`](../project-agent-copilot/project-develop-copilot/references/upgrades/2026-07-25-project-develop-copilot-upgrade-retrospective.zh.md)。
