@@ -42,6 +42,10 @@ complete the original workflow.
 
 ## Workflow
 
+When the user names a candidate without supplying the resume again, apply the
+shared Candidate Resolution flow before concluding that the resume is missing.
+Do not search Graph output or candidate directories as a fallback.
+
 For each selected candidate:
 
 1. Read the JD requirements.

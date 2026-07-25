@@ -46,6 +46,17 @@ read_rules:
     exclude: [sources/originals/**, .meta/**]
     max_files: 30
     max_chars_per_file: 4000
+  record_lookup:
+    candidate_profile:
+      identity_field: candidate_id
+      display_field: display_name
+      match_fields: [display_name, aliases]
+      return_fields:
+        - candidate_id
+        - display_name
+        - aliases
+        - current_resume_version_id
+      max_results: 20
 
 artifacts:
   types: [screening_report, candidate_detail_report, interview_plan]

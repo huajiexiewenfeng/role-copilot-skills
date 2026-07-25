@@ -28,6 +28,26 @@ When preflight returns `enabled`, call `load-context-pack` before reasoning.
 Query the `hr` primary domain and narrow the request by candidate, job, or
 screening run whenever an identifier is known.
 
+### Candidate Resolution
+
+1. If a trusted `candidate_id` is already known, narrow `load-context-pack` to
+   that exact candidate path.
+2. If only a candidate name or confirmed alias is available, call
+   `find-records` for `candidate_profile` with `caller_domain=hr` and
+   `target_domain=hr`.
+3. On `found`, load only the returned path.
+4. On `multiple_matches`, ask one short disambiguation question using only the
+   returned non-contact fields. Never select a candidate automatically.
+5. On `not_found`, check the resume files or text supplied for this request
+   before saying that candidate material is unavailable.
+6. On a missing lookup declaration, runtime failure, or disabled Wiki, continue
+   with the original HR inputs and emit the normal one-line fallback notice.
+
+Never infer candidate identity from Graph output, filenames, directory names,
+company names, Markdown body search, or approximate string matching. Write a
+confirmed alternate name to the Domain-owned `aliases` field only through the
+normal candidate profile update flow.
+
 Always exclude `sources/originals/**` and `.meta/**` from model context. Load
 supporting domains only when the skill's `scp.yml` declares them and runtime
 policy allows the read. Treat supporting content with
