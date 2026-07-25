@@ -11,10 +11,32 @@ Run and interpret LLM Wiki Doctor for a project-local `.llm-wiki`.
 
 Default to read-only diagnosis. Use deterministic `validate` for hard validator findings and `report` for human-facing Chinese maturity reports. Do not repair files unless the user explicitly asks for repair or completion.
 
+## Initialization Gate
+
+Run after resolving the project root and before resolving or running a Doctor script.
+
+- `wiki_required: true`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: llm-wiki-doctor`
+- Preserve the user's original diagnosis request as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`.
+- Do not run the Doctor, create a partial `.llm-wiki/`, or report a Wiki health result when the Wiki does not exist.
+
+On the missing-wiki branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved diagnosis request>
+  pending_primary_stage: llm-wiki-doctor
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
 ## Required First Check
 
 1. Resolve the project root.
-2. Confirm `.llm-wiki` exists. If it does not exist, route to `project-init`.
+2. Run the Initialization Gate.
 3. Resolve the doctor script from `.llm-wiki/tools/llm_wiki_doctor.py`, then the bundled `../scripts/llm_wiki_doctor.py`.
 4. For CI, pre-commit, project-finish, or blocking failures, run `validate`.
 5. Otherwise run `report` and explain the Chinese report.

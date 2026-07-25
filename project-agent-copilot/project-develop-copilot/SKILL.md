@@ -11,7 +11,7 @@ description: Use when the user wants project development help from natural inten
 
 It helps users enter naturally without choosing a child skill first. It decides whether the request should stay lightweight or enter the full project lifecycle, then routes full work into the right stage while preserving scope, lifecycle state, handoff, verification, knowledge sync, artifact sync, dashboard sync, and review.
 
-It does not replace `project-query`, `project-base-init`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
+It does not replace `project-query`, `project-base-init`, `project-graph-visualize`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
 
 ## When to Use
 
@@ -30,6 +30,7 @@ Use this skill when the user asks for project development help from natural lang
 - Scanning Project Graph candidates through `project-graph-candidates-scan`.
 - Resolving candidates into evidence-backed edge proposals through `project-graph-auto-edge`.
 - Confirming, rejecting, manually registering, or pinning Project Graph edges through `project-graph-human-edge`.
+- Generating, refreshing, rebuilding, previewing, or validating an offline Base Graph / Project Graph interactive HTML through `project-graph-visualize`.
 - Auditing or repairing Project Graph structure through `project-maintain`.
 - Initializing an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories, including Chinese requests such as 初始化 Base Graph、初始化项目图谱仓库、创建跨项目导航层、注册多项目目录、跨项目总览仓库.
 - Reviewing before commit, merge, PR, handoff, release, or broader testing.
@@ -86,7 +87,7 @@ Run this gate after resolving the business-project root and intended route, but 
 
 - `wiki_required_for: full-lifecycle-or-wiki-backed`
 - `on_missing_wiki: route project-init`
-- `excluded_mode: lightweight-answer`
+- `excluded_mode: lightweight-answer-or-mechanical-artifact`
 - `read_only_missing_wiki: confirm-before-init`
 - Preserve the original request as `pending_intent` and the selected route as `pending_primary_stage`.
 - If `<project_root>/.llm-wiki/` is absent, stop the pending stage and hand off to `project-init`. Do not create a partial wiki, Change Brief, Bug Brief, routing record, plan, or code change first.
@@ -102,13 +103,14 @@ Before doing project work:
 
 1. Decide whether the request is `lightweight-answer` or `full-lifecycle`.
 2. If lightweight-answer applies, answer from available evidence without creating lifecycle state.
-3. If full lifecycle or any wiki-backed route applies, resolve or ask for the project root when it is not obvious.
-4. Select the intended primary stage without invoking it.
-5. Run the Initialization Gate for business-project full-lifecycle or wiki-backed work.
-6. If the gate routes to `project-init`, wait for its return handoff and keep `pending_intent` plus `pending_primary_stage` intact.
-7. Create or resume a Lifecycle Session: Change Brief, Bug Brief, or working-context.
-8. Save or update a short routing record.
-9. Invoke one primary stage skill, then select optional external bridge skills only after project scope is known.
+3. If `mechanical-artifact` applies, route directly to the deterministic child skill without Change Brief, Flow Record, planning, finish sync, or other lifecycle state.
+4. If full lifecycle or any wiki-backed route applies, resolve or ask for the project root when it is not obvious.
+5. Select the intended primary stage without invoking it.
+6. Run the Initialization Gate for business-project full-lifecycle or wiki-backed work.
+7. If the gate routes to `project-init`, wait for its return handoff and keep `pending_intent` plus `pending_primary_stage` intact.
+8. For full-lifecycle routes, create or resume a Lifecycle Session: Change Brief, Bug Brief, or working-context.
+9. Save or update a short routing record for full-lifecycle routes.
+10. Invoke one primary stage skill, then select optional external bridge skills only after project scope is known.
 
 ## Core Process
 
@@ -140,6 +142,7 @@ Before doing project work:
 | User asks to query project `.llm-wiki`, find related requirements/docs/bugs/artifacts, or assemble discussion context | read-only-query | `project-query` |
 | User asks which service owns an interface/topic/client/config/callback, or asks for cross-service contract evidence without requesting a change | cross-project-lookup | `project-query` |
 | User asks to register a known cross-project integration point manually, confirm a proposal, reject a proposal, or pin an accepted relationship | wiki-maintenance | `project-graph-human-edge` |
+| User asks to generate, refresh, rebuild, preview, or validate Base Graph / Project Graph `graph.html` or another interactive graph HTML | mechanical-artifact | `project-graph-visualize` |
 | User asks to scan for missing upstream/downstream relationship candidates | wiki-maintenance | `project-graph-candidates-scan` |
 | User asks to turn a candidate into an evidence-backed edge proposal through Base Graph or source verification | wiki-maintenance | `project-graph-auto-edge` |
 | User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
@@ -165,7 +168,7 @@ If confidence is low, ask one minimal routing question. Do not start a long inta
 When multiple routes seem plausible, choose the least state-changing route that still satisfies the user:
 
 ```text
-lightweight-answer < read-only-query < wiki-doctor < dashboard-refresh < wiki-maintenance < full-lifecycle
+lightweight-answer < read-only-query < mechanical-artifact < wiki-doctor < dashboard-refresh < wiki-maintenance < full-lifecycle
 ```
 
 Use this quick decision order:
@@ -313,6 +316,7 @@ If the returned result suggests new scope, new sources, changed acceptance crite
 ## Boundaries
 
 - Lightweight-answer and read-only query must not create Change Brief, Bug Brief, dashboard updates, or code changes by default.
+- `mechanical-artifact` routes such as `project-graph-visualize` may write only their declared artifact output and must not create lifecycle documents, plans, finish-sync records, or commits unless the user explicitly asks.
 - Full lifecycle work must not call external implementation/debugging/planning skills before project scope is established.
 - External skills are bridges, not lifecycle owners.
 - Completion claims must go through verification, knowledge sync, artifact sync, dashboard sync when enabled, and review as appropriate.

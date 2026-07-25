@@ -1,0 +1,23 @@
+{
+  "skill_name": "project-graph-visualize",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "在当前 Base Graph 仓库生成整个 Project Graph 和 Base Graph 的交互式 HTML，直接实现，不要规格和计划。",
+      "expected_output": "Generates and validates .llm-wiki/base-graph/graph.html directly, without lifecycle documents or commits.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "刷新一下 base graph 的 graph.html，关系数据以各项目当前 edges、candidates、proposals 为准。",
+      "expected_output": "Rebuilds the offline HTML from current source Markdown, preserves layer semantics, and reports dynamic counts.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "这个业务项目的 MQTT 上下游是谁？先别生成页面。",
+      "expected_output": "Does not trigger visualization generation; routes to project-query for a read-only graph lookup.",
+      "files": []
+    }
+  ]
+}

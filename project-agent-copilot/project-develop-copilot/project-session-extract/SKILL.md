@@ -67,6 +67,38 @@ Example triggers:
 - Session Import Gate
 - Finish Sync Gate when writing a confirmed Session Digest
 
+## Initialization Gate
+
+Run after identifying the requested mode and before reading project Wiki state or writing a Session Digest.
+
+- `wiki_required_for: save-context-digest-or-promote-to-lifecycle`
+- `allowed_without_wiki: brief-candidates-or-draft-context-digest`
+- `on_missing_wiki: route project-init`
+- `pending_primary_stage: project-session-extract`
+- Preserve the user's historical-session request and selected candidate items as `pending_intent`.
+- If `<project_root>/.llm-wiki/` is absent and the mode is `save-context-digest` or `promote-to-lifecycle`, stop and return a Context Handoff to `project-init`.
+- Do not create a partial `.llm-wiki/`, `session-digests/` directory, requirement, bug, Flow Record, or dashboard state as a substitute for initialization.
+
+On the missing-wiki write branch, emit this minimal handoff:
+
+```text
+bootstrap_handoff:
+  project_root: <resolved project root>
+  pending_intent: <preserved session request and selected candidates>
+  pending_primary_stage: project-session-extract
+  requested_stage_or_bridge: project-init
+  current_gate: Initialization Gate
+```
+
+## Without Wiki Preview Boundary
+
+When `.llm-wiki/` is absent, `brief-candidates` and `draft-context-digest` may continue as ephemeral previews. These modes:
+
+- must not write files
+- must not claim a Session Digest was imported
+- must not perform duplicate detection against unavailable Wiki state
+- must preserve the candidate selection so a later `save-context-digest` request can bootstrap through `project-init` without repeating the extraction
+
 ## Required Shared References
 
 Read these role-level references as needed:
@@ -89,11 +121,11 @@ Reference availability policy:
 
 ## Required First Check
 
-1. Resolve `project_root` and `.llm-wiki` when import is requested.
-2. If `.llm-wiki` does not exist and the user wants to import, route to `project-init` first.
-3. Identify the input source: pasted chat, transcript file, exported JSON, handoff, summary, or unknown.
-4. Classify sensitivity: `normal`, `cautious`, or `sensitive`.
-5. Decide whether the user asked for `brief-candidates`, `draft-context-digest`, `save-context-digest`, or `promote-to-lifecycle`.
+1. Identify the input source: pasted chat, transcript file, exported JSON, handoff, summary, or unknown.
+2. Classify sensitivity: `normal`, `cautious`, or `sensitive`.
+3. Decide whether the user asked for `brief-candidates`, `draft-context-digest`, `save-context-digest`, or `promote-to-lifecycle`.
+4. Resolve `project_root` and `.llm-wiki` when project Wiki access or import is requested.
+5. Run the Initialization Gate before Wiki access or writes; use the Without Wiki Preview Boundary only for the two preview modes.
 6. Read only the smallest relevant wiki context needed for recall and duplicate avoidance.
 7. Do not force matching to existing requirements, bugs, modules, or Flow Records unless promotion is requested.
 8. Never write project truth from historical session memory without user confirmation.

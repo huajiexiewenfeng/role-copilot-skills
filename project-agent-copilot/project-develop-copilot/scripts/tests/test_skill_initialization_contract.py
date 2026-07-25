@@ -19,6 +19,10 @@ def section(text: str, heading: str) -> str:
 
 
 class SkillInitializationContractTest(unittest.TestCase):
+    BOOTSTRAP_STAGES = {
+        "project-base-init",
+        "project-init",
+    }
     STATEFUL_STAGES = {
         "project-develop": "project-develop/SKILL.md",
         "project-fix": "project-fix/SKILL.md",
@@ -29,6 +33,27 @@ class SkillInitializationContractTest(unittest.TestCase):
         "project-graph-auto-edge": "project-graph-auto-edge/SKILL.md",
         "project-graph-human-edge": "project-graph-human-edge/SKILL.md",
     }
+    SPECIALIZED_STAGES = {
+        "llm-wiki-doctor",
+        "project-query",
+        "project-review",
+        "project-session-extract",
+    }
+    MECHANICAL_STAGES = {
+        "project-graph-visualize",
+    }
+
+    def test_every_child_skill_has_an_initialization_policy_classification(self):
+        discovered = {
+            skill_path.parent.name for skill_path in SKILL_ROOT.glob("*/SKILL.md")
+        }
+        required = (
+            self.BOOTSTRAP_STAGES
+            | set(self.STATEFUL_STAGES)
+            | self.SPECIALIZED_STAGES
+            | self.MECHANICAL_STAGES
+        )
+        self.assertSetEqual(discovered, required)
 
     def test_router_runs_initialization_gate_before_lifecycle_session(self):
         router = read("SKILL.md")
@@ -38,20 +63,24 @@ class SkillInitializationContractTest(unittest.TestCase):
             "`on_missing_wiki: route project-init`",
             "`pending_intent`",
             "`pending_primary_stage`",
-            "`excluded_mode: lightweight-answer`",
             "`read_only_missing_wiki: confirm-before-init`",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, gate)
+        self.assertTrue(
+            "`excluded_mode: lightweight-answer`" in gate
+            or "`excluded_mode: lightweight-answer-or-mechanical-artifact`" in gate
+        )
 
         first_check = section(router, "## Required First Check")
         self.assertIn(
             "If full lifecycle or any wiki-backed route applies, resolve",
             first_check,
         )
+        first_check_lower = first_check.lower()
         self.assertLess(
-            first_check.index("Run the Initialization Gate"),
-            first_check.index("Create or resume a Lifecycle Session"),
+            first_check_lower.index("run the initialization gate"),
+            first_check_lower.index("create or resume a lifecycle session"),
         )
         handoff = router[
             router.index("## Context Handoff") : router.index("## Return Handoff")
@@ -113,6 +142,83 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("skip wiki, artifact, dashboard, and Flow Record", review_exception)
         self.assertIn("lifecycle and wiki integrity were not assessed", review_exception)
 
+    def test_graph_visualizer_is_a_mechanical_artifact_route(self):
+        router = read("SKILL.md")
+        self.assertIn(
+            "`excluded_mode: lightweight-answer-or-mechanical-artifact`",
+            section(router, "## Initialization Gate"),
+        )
+        self.assertIn(
+            "| User asks to generate, refresh, rebuild, preview, or validate "
+            "Base Graph / Project Graph `graph.html` or another interactive graph "
+            "HTML | mechanical-artifact | `project-graph-visualize` |",
+            section(router, "## Mode / Entry Selection"),
+        )
+        self.assertIn(
+            "`mechanical-artifact` routes such as `project-graph-visualize`",
+            section(router, "## Boundaries"),
+        )
+
+        visualizer = read("project-graph-visualize/SKILL.md")
+        mechanical = section(visualizer, "## Mechanical generation mode")
+        self.assertIn("Do not create Change Brief", mechanical)
+        self.assertIn("Do not commit unless the user explicitly asks", mechanical)
+        self.assertIn(
+            "Allowed writes:\n\n- the requested HTML output only.",
+            section(visualizer, "## Write boundary"),
+        )
+        self.assertIn(
+            '"graph_role": "base"',
+            section(visualizer, "## Preconditions"),
+        )
+
+        required_files = {
+            "SKILL.md",
+            "assets/template.html",
+            "evals/evals.json",
+            "scripts/build-graph-visualization.ps1",
+            "scripts/GraphVisualization.psm1",
+            "scripts/validate-graph-visualization.ps1",
+            "tests/skill-smoke.Tests.ps1",
+        }
+        visualizer_root = SKILL_ROOT / "project-graph-visualize"
+        actual_files = {
+            path.relative_to(visualizer_root).as_posix()
+            for path in visualizer_root.rglob("*")
+            if path.is_file()
+        }
+        self.assertSetEqual(actual_files, required_files)
+
+    def test_doctor_refuses_missing_wiki_with_bootstrap_handoff(self):
+        gate = section(read("llm-wiki-doctor/SKILL.md"), "## Initialization Gate")
+        self.assertIn("`wiki_required: true`", gate)
+        self.assertIn("`on_missing_wiki: route project-init`", gate)
+        self.assertIn("`pending_primary_stage: llm-wiki-doctor`", gate)
+        self.assertIn("`pending_intent`", gate)
+        self.assertIn("Do not run the Doctor", gate)
+        self.assert_bootstrap_handoff(gate, "llm-wiki-doctor")
+
+    def test_session_extract_allows_preview_but_bootstraps_before_writes(self):
+        session = read("project-session-extract/SKILL.md")
+        gate = section(session, "## Initialization Gate")
+        self.assertIn(
+            "`wiki_required_for: save-context-digest-or-promote-to-lifecycle`",
+            gate,
+        )
+        self.assertIn(
+            "`allowed_without_wiki: brief-candidates-or-draft-context-digest`",
+            gate,
+        )
+        self.assertIn("`on_missing_wiki: route project-init`", gate)
+        self.assertIn("`pending_primary_stage: project-session-extract`", gate)
+        self.assertIn("`pending_intent`", gate)
+        self.assert_bootstrap_handoff(gate, "project-session-extract")
+
+        preview = section(session, "## Without Wiki Preview Boundary")
+        self.assertIn("must not write files", preview)
+        self.assertIn("must not claim a Session Digest was imported", preview)
+        self.assertIn("preserve the candidate selection", preview)
+
     def test_project_init_preserves_pending_route_without_overclaiming_readiness(self):
         init = read("project-init/SKILL.md")
         init_contract = section(init, "## Bootstrap Return Contract")
@@ -155,6 +261,41 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("业务代码改动", acceptance_prompt)
         self.assertNotIn(".llm-wiki", acceptance_prompt)
         self.assertNotIn("project init", acceptance_prompt.lower())
+
+    def test_manual_eval_and_acceptance_cover_doctor_and_session_extract_gates(self):
+        evals = read("evals/project-develop-copilot-evals.md")
+        acceptance = read("references/acceptance-cases.md")
+
+        doctor_eval = section(
+            evals,
+            "## Eval 34: Uninitialized Repository Bootstraps Before Doctor",
+        )
+        self.assertIn("pending_primary_stage: llm-wiki-doctor", doctor_eval)
+        self.assertIn("bootstrap_stage: project-init", doctor_eval)
+        self.assertIn("must not run", doctor_eval)
+
+        session_eval = section(
+            evals,
+            "## Eval 35: Session Preview Is Allowed But Save Requires Init",
+        )
+        self.assertIn("brief-candidates", session_eval)
+        self.assertIn("save-context-digest", session_eval)
+        self.assertIn("pending_primary_stage: project-session-extract", session_eval)
+
+        doctor_case = section(
+            acceptance,
+            "## Case 38: Uninitialized Repository Bootstraps Before Doctor",
+        )
+        self.assertIn("pending_primary_stage: llm-wiki-doctor", doctor_case)
+        self.assertIn("must not run", doctor_case)
+
+        session_case = section(
+            acceptance,
+            "## Case 39: Session Preview Is Allowed But Save Requires Init",
+        )
+        self.assertIn("brief-candidates", session_case)
+        self.assertIn("save-context-digest", session_case)
+        self.assertIn("pending_primary_stage: project-session-extract", session_case)
 
 
 if __name__ == "__main__":

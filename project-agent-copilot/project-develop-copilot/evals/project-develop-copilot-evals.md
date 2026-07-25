@@ -1213,3 +1213,76 @@ Pass/fail:
 PASS: project-init bootstraps first, pending intent survives, and the next gate follows readiness evidence
 FAIL: a child stage or lifecycle write starts before init, or init loses/overclaims the pending goal
 ```
+
+## Eval 34: Uninitialized Repository Bootstraps Before Doctor
+
+Input prompt:
+
+```text
+帮我检查一下当前项目知识库的健康度，看看是否足以支持后续开发。
+```
+
+Fixture:
+
+- The resolved business-project root has no `.llm-wiki/`.
+- The missing-wiki fact is not disclosed in the prompt.
+
+Expected route:
+
+```text
+mode: wiki-doctor
+bootstrap_stage: project-init
+pending_primary_stage: llm-wiki-doctor
+```
+
+Required behavior:
+
+- Preserves the health-check request as `pending_intent`.
+- Routes to `project-init` before resolving or running a Doctor script.
+- Does not manufacture a Wiki health result for a repository with no Wiki.
+
+Pass/fail:
+
+```text
+PASS: Doctor is pending behind project-init and the diagnosis goal survives
+FAIL: Doctor must not run before the standard Wiki exists
+```
+
+## Eval 35: Session Preview Is Allowed But Save Requires Init
+
+Input prompts:
+
+```text
+先从这段旧聊天中提取值得保留的上下文候选，不要写文件。
+```
+
+```text
+把刚才选中的候选保存成 Session Digest。
+```
+
+Fixture:
+
+- The resolved business-project root has no `.llm-wiki/`.
+- The same conversation retains the candidate selection between prompts.
+
+Expected route:
+
+```text
+preview_mode: brief-candidates
+save_mode: save-context-digest
+bootstrap_stage: project-init
+pending_primary_stage: project-session-extract
+```
+
+Required behavior:
+
+- The first prompt may return an ephemeral `brief-candidates` or `draft-context-digest` preview with zero writes and no imported claim.
+- The second prompt preserves the selected candidates as `pending_intent` and routes to `project-init`.
+- Session Digest writes and Lifecycle Promotion remain blocked until initialization returns a supported next gate.
+
+Pass/fail:
+
+```text
+PASS: preview remains write-free; save bootstraps and preserves candidate selection
+FAIL: preview writes files, save creates a partial Wiki, or the user must repeat extraction
+```

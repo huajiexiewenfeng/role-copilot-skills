@@ -37,6 +37,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 | `project-graph-candidates-scan` | 扫描当前项目的 Project Graph 关系候选；只写 candidates 和 scan report，不写 confirmed edge 或 cross-ref pin。 |
 | `project-graph-auto-edge` | 通过 Base Graph 和本地/远端源码证据，把 candidate 转成可人工确认的 edge proposal。 |
 | `project-graph-human-edge` | 接受、拒绝或手动登记 Project Graph edge，并在写入 confirmed edge 时维护 `cross-refs/index.md` pin。 |
+| `project-graph-visualize` | 从已初始化的 Base Graph 确定性生成并校验独立 HTML Viewer，不进入项目生命周期，也不修改图谱源文件。 |
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-session-extract` | 将历史 AI/team chat、transcript、旧会话或 handoff 先提取成可召回的 Session Digest；只有用户明确确认后，才把选中内容升级到需求、Bug、Flow Record 或 dashboard。 |
@@ -138,13 +139,14 @@ Project Develop Copilot 会先输出简要候选清单，让用户选择要保�
 
 ## Project Graph 与跨项目引用层
 
-Project Graph 是 `.llm-wiki` 内的横切证据生命周期，现在拆成三个显式维护子 skill。`project-init` 为业务项目创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/proposals.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-base-init` 只创建独立 Base Graph 的 catalog / overview 协调结构；`project-query` 按 pin -> edge -> candidate/proposal 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责图谱一致性巡检和结构修复。
+Project Graph 是 `.llm-wiki` 内的横切证据生命周期，现在拆成三个显式维护子 skill 和一个确定性可视化子 skill。`project-init` 为业务项目创建 `project-graph/edges.md`、`project-graph/candidates.md`、`project-graph/proposals.md`、`project-graph/scan-report.md` 和只做 pin 的 `cross-refs/index.md`；`project-base-init` 只创建独立 Base Graph 的 catalog / overview 协调结构；`project-query` 按 pin -> edge -> candidate/proposal 回答“这个接口 / topic / Feign 对面是谁”这类只读问题；`project-develop` 在 Change Brief 中记录经过源码验证的外部依赖；`project-fix` 在 Bug Brief 中记录 External Findings；`project-maintain` 负责图谱一致性巡检和结构修复。
 
 Project Graph 维护技能：
 
 - `project-graph-candidates-scan`：扫描当前项目并维护 candidates。
 - `project-graph-auto-edge`：通过 Base Graph / 源码证据把 candidate 转成 proposal。
 - `project-graph-human-edge`：接受、拒绝或手动登记 confirmed edge，并维护 cross-ref pin。
+- `project-graph-visualize`：从 Base Graph 机械生成并校验 `<base-root>/.llm-wiki/base-graph/graph.html`。
 
 事实只在人工确认后存于 `project-graph/edges.md`。`cross-refs/index.md` 只是 pin 层，只引用 `edge_id`；本机路径只放在 gitignore 的 registry 文件里。外部项目 wiki 和源码默认 read-only。
 
@@ -155,6 +157,7 @@ Project Graph 维护技能：
 - 说“做一次 project-graph candidates.md 的扫描”：走 `project-graph-candidates-scan`。
 - 说“通过 base-graph 找到对应项目，生成 edge proposal”：走 `project-graph-auto-edge`。
 - 说“确认这个 proposal / 手动登记这条边”：走 `project-graph-human-edge`。
+- 说“生成 / 刷新 Project Graph 可视化”：走 `project-graph-visualize`；它只写 Base Graph 的独立 HTML Viewer。
 - 说“初始化这个 Base Graph 仓库”：走 `project-base-init`；普通业务项目仓库才走 `project-init`。
 - Base Graph 是可选全局视角，通过 `LLM_WIKI_BASE_GRAPH_PATH` 或 `~/.llm-wiki/base-graph.local.json` 发现。
 - Base Graph 的 `registry.local.json` 是本机配置例外；业务项目会话经确认可写它，但不得写 Base 的 `overview.md`、`project-catalog.md`、`decisions/` 或 `handoff/`。

@@ -33,6 +33,7 @@ English | [Simplified Chinese](./README.zh.md)
 | `project-graph-candidates-scan` | Scan the current project for Project Graph relationship candidates; it writes candidates and scan reports only, not confirmed edges or cross-ref pins. |
 | `project-graph-auto-edge` | Resolve candidates through Base Graph and local/remote source evidence into human-reviewable edge proposals. |
 | `project-graph-human-edge` | Accept, reject, or manually register Project Graph edges, and maintain `cross-refs/index.md` pins when confirmed edges are written. |
+| `project-graph-visualize` | Build and validate a deterministic standalone HTML viewer from an initialized Base Graph without entering the project lifecycle or mutating graph source files. |
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-session-extract` | Distill historical AI/team chat sessions, transcripts, old conversations, or handoffs into recallable Session Digests first; promote selected digest items into lifecycle objects only after explicit confirmation. |
@@ -136,13 +137,14 @@ The expected response is a Project Context Pack:
 
 ## Project Graph And Cross-Project Refs
 
-Project Graph is a `.llm-wiki` evidence lifecycle with three explicit maintenance child skills. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/proposals.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md` for business projects; `project-base-init` creates only the independent Base Graph structure for catalog and overview coordination; `project-query` uses pin -> edge -> candidate/proposal lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` audits and repairs graph consistency.
+Project Graph is a `.llm-wiki` evidence lifecycle with three explicit maintenance child skills plus one deterministic visualization child skill. `project-init` creates `project-graph/edges.md`, `project-graph/candidates.md`, `project-graph/proposals.md`, `project-graph/scan-report.md`, and pin-only `cross-refs/index.md` for business projects; `project-base-init` creates only the independent Base Graph structure for catalog and overview coordination; `project-query` uses pin -> edge -> candidate/proposal lookup for read-only questions like "which service owns this topic"; `project-develop` records source-verified external dependencies in Change Briefs; `project-fix` records external findings in Bug Briefs; `project-maintain` audits and repairs graph consistency.
 
 Project Graph maintenance skills:
 
 - `project-graph-candidates-scan`: scan the current project and maintain candidates.
 - `project-graph-auto-edge`: resolve candidates into proposals through Base Graph and source evidence.
 - `project-graph-human-edge`: accept, reject, or manually register confirmed edges and cross-ref pins.
+- `project-graph-visualize`: mechanically generate and validate `<base-root>/.llm-wiki/base-graph/graph.html` from an initialized Base Graph.
 
 Facts live only in `project-graph/edges.md` after human confirmation. `cross-refs/index.md` is a pin layer that references `edge_id`; local paths live in ignored registry files. Remote project wiki and source are read-only by default.
 
@@ -202,6 +204,7 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 - Ask “帮我登记这个跨项目调用” or “确认这个 proposal” to run `project-graph-human-edge`; human edge writes update `edges.md` and upsert `cross-refs/index.md` by default.
 - Ask “扫一下未登记上下游” or “做一次 project-graph candidates.md 的扫描” to run `project-graph-candidates-scan`.
 - Ask “通过 base-graph 找到对应项目，生成 edge proposal” to run `project-graph-auto-edge`.
+- Ask “生成 / 刷新 Project Graph 可视化” to run `project-graph-visualize`; it only writes the standalone Base Graph HTML artifact.
 - Ask "initialize this Base Graph repository" to run `project-base-init`; use ordinary `project-init` only for business project repositories.
 - Base Graph is optional and discovered through `LLM_WIKI_BASE_GRAPH_PATH` or `~/.llm-wiki/base-graph.local.json`.
 - Base Graph `registry.local.json` is a local-config exception; business-project sessions may write it after confirmation, but must not write Base tracked files such as `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`.

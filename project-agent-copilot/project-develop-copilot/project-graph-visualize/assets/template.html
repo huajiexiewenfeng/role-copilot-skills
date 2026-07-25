@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>__GRAPH_NAME__ Project Graph</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --panel: #0d1929;
+      --panel-2: #111f31;
+      --line: #26384e;
+      --text: #e7eef8;
+      --muted: #91a3b8;
+      --cyan: #3ddbd9;
+      --blue: #6ea8fe;
+      --green: #58d68d;
+      --amber: #f4c95d;
+      --red: #ff7b72;
+      --violet: #bd93f9;
+      --shadow: 0 18px 40px rgba(0, 0, 0, .24);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(61, 219, 217, .08), transparent 32rem),
+        radial-gradient(circle at 90% 20%, rgba(110, 168, 254, .08), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font: 14px/1.45 Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button, select, input[type="search"] {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #0a1625;
+      color: var(--text);
+    }
+    button {
+      min-height: 34px;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    button:hover, button:focus-visible, select:focus-visible, input:focus-visible {
+      border-color: var(--cyan);
+      outline: 2px solid rgba(61, 219, 217, .18);
+      outline-offset: 1px;
+    }
+    button.active {
+      border-color: rgba(61, 219, 217, .6);
+      background: rgba(61, 219, 217, .13);
+      color: #c8fffe;
+    }
+    .app {
+      display: grid;
+      grid-template: auto minmax(0, 1fr) / 264px minmax(480px, 1fr) 320px;
+      height: 100vh;
+    }
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-height: 78px;
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 17, 31, .94);
+      backdrop-filter: blur(14px);
+      z-index: 4;
+    }
+    .brand {
+      min-width: 245px;
+    }
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 2px 0 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    .metrics {
+      display: flex;
+      gap: 8px;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .metric {
+      min-width: 104px;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: linear-gradient(145deg, rgba(17, 31, 49, .96), rgba(10, 22, 37, .96));
+    }
+    .metric strong {
+      display: block;
+      font-size: 19px;
+      line-height: 1.15;
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .projection {
+      margin-left: auto;
+      max-width: 255px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+    .projection b { color: var(--amber); }
+    .sidebar, .inspector {
+      min-height: 0;
+      overflow: auto;
+      padding: 16px;
+      background: rgba(13, 25, 41, .92);
+      scrollbar-width: thin;
+    }
+    .sidebar { border-right: 1px solid var(--line); }
+    .inspector { border-left: 1px solid var(--line); }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 10px;
+      color: #c9d7e7;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .filter-group {
+      padding: 13px 0;
+      border-top: 1px solid rgba(38, 56, 78, .7);
+    }
+    .filter-group:first-of-type { border-top: 0; }
+    .filter-group label.caption {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    input[type="search"], select {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 30px;
+      color: #c7d4e3;
+      cursor: pointer;
+    }
+    .check input { accent-color: var(--cyan); }
+    .swatch {
+      width: 23px;
+      border-top: 3px solid var(--blue);
+    }
+    .swatch.candidate { border-top-style: dashed; border-color: var(--amber); }
+    .swatch.proposal { border-top: 3px dotted var(--violet); }
+    .swatch.overview { border-top: 4px dashed rgba(145, 163, 184, .7); }
+    .workspace {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 13px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 22, 37, .78);
+    }
+    .toolbar .spacer { flex: 1; }
+    .result-count {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .graph-panel, .queue-panel {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #graph {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 360px;
+      touch-action: none;
+      user-select: none;
+    }
+    .graph-grid {
+      stroke: rgba(110, 168, 254, .065);
+      stroke-width: 1;
+    }
+    .relation {
+      fill: none;
+      stroke-width: 2.2;
+      opacity: .78;
+      cursor: pointer;
+      transition: opacity .14s, stroke-width .14s;
+    }
+    .relation:hover, .relation.selected {
+      opacity: 1;
+      stroke-width: 4;
+    }
+    .relation-edge { stroke: var(--blue); }
+    .relation-candidate { stroke: var(--amber); stroke-dasharray: 8 6; }
+    .relation-proposal { stroke: var(--violet); stroke-dasharray: 2 6; }
+    .relation-overview { stroke: #7f93aa; stroke-width: 5; stroke-dasharray: 13 9; opacity: .44; }
+    .relation.unverified { stroke: var(--red); }
+    .relation-label {
+      fill: #aebed0;
+      font-size: 10px;
+      paint-order: stroke;
+      stroke: var(--bg);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+    .node {
+      cursor: grab;
+      outline: none;
+    }
+    .node:active { cursor: grabbing; }
+    .node-shape {
+      fill: #12243a;
+      stroke: #4e6c8f;
+      stroke-width: 2;
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .22));
+    }
+    .node.catalog .node-shape {
+      fill: #0f3042;
+      stroke: var(--cyan);
+      stroke-width: 2.5;
+    }
+    .node.external .node-shape {
+      fill: #281f34;
+      stroke: #9f79c8;
+      stroke-dasharray: 5 4;
+    }
+    .node.missing .node-shape { stroke: var(--amber); stroke-dasharray: 8 5; }
+    .node.selected .node-shape { stroke: #fff; stroke-width: 4; }
+    .node-label {
+      fill: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+    .node-sublabel {
+      fill: #8fa5bc;
+      font-size: 9px;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+    .empty-state {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      color: var(--muted);
+      text-align: center;
+      pointer-events: none;
+    }
+    .legend {
+      position: absolute;
+      left: 14px;
+      bottom: 13px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 14px;
+      max-width: calc(100% - 28px);
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(8, 17, 31, .88);
+      color: var(--muted);
+      font-size: 10px;
+      pointer-events: none;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .queue-panel {
+      overflow: auto;
+      padding: 18px;
+      scrollbar-width: thin;
+    }
+    .queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 12px;
+    }
+    .queue-column {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(13, 25, 41, .72);
+      overflow: hidden;
+    }
+    .queue-column h3 {
+      display: flex;
+      justify-content: space-between;
+      margin: 0;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .queue-list { display: grid; gap: 1px; background: var(--line); }
+    .queue-item {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      border: 0;
+      border-radius: 0;
+      background: var(--panel);
+      text-align: left;
+    }
+    .queue-item:hover { background: var(--panel-2); }
+    .queue-item strong, .queue-item span { display: block; }
+    .queue-item span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .detail-head {
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--line);
+    }
+    .detail-head h2 {
+      margin: 4px 0;
+      font-size: 18px;
+      overflow-wrap: anywhere;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 2px 4px 2px 0;
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #b9c9d9;
+      font-size: 10px;
+    }
+    .pill.good { border-color: rgba(88, 214, 141, .45); color: var(--green); }
+    .pill.warn { border-color: rgba(244, 201, 93, .45); color: var(--amber); }
+    .pill.bad { border-color: rgba(255, 123, 114, .45); color: var(--red); }
+    .details { margin: 13px 0 0; }
+    .details dt {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .details dd {
+      margin: 3px 0 0;
+      color: #d9e4ef;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+    .hint {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(17, 31, 49, .72);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .quality {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid rgba(244, 201, 93, .35);
+      border-radius: 11px;
+      background: rgba(244, 201, 93, .055);
+      color: #dac98e;
+      font-size: 11px;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    @media (max-width: 1120px) {
+      .app { grid-template-columns: 230px minmax(420px, 1fr); }
+      .inspector {
+        position: fixed;
+        right: 0;
+        top: 78px;
+        bottom: 0;
+        width: min(360px, 88vw);
+        z-index: 5;
+        box-shadow: var(--shadow);
+        transform: translateX(100%);
+        transition: transform .18s ease;
+      }
+      .inspector.open { transform: translateX(0); }
+      .projection { display: none; }
+    }
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .app {
+        grid-template: auto auto minmax(620px, 1fr) / 1fr;
+        height: auto;
+        min-height: 100vh;
+      }
+      .topbar { position: sticky; top: 0; flex-wrap: wrap; }
+      .brand { min-width: 100%; }
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 14px;
+      }
+      .sidebar .section-title { grid-column: 1 / -1; }
+      .workspace { min-height: 620px; }
+      .inspector { top: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="eyebrow">Base Graph Projection</div>
+        <h1>__GRAPH_NAME__ Project Graph</h1>
+      </div>
+      <div class="metrics" id="metrics" aria-label="图谱统计"></div>
+      <div class="projection">
+        <b>partial_view</b><br>
+        generated_by: scripts/build-graph-visualization.ps1<br>
+        generated_at: __GENERATED_AT__
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="图谱筛选">
+      <h2 class="section-title">探索条件 <button id="clear-filters" type="button">清除</button></h2>
+      <div class="filter-group">
+        <label class="caption" for="query">搜索 ID、项目、锚点或摘要</label>
+        <input id="query" type="search" placeholder="例如 mqtt、stream、edge-…">
+      </div>
+      <div class="filter-group">
+        <span class="caption">数据层</span>
+        <label class="check"><input type="checkbox" data-layer="overview"><span class="swatch overview"></span>Base Overview</label>
+        <label class="check"><input type="checkbox" data-layer="edge" checked><span class="swatch"></span>Confirmed Edge</label>
+        <label class="check"><input type="checkbox" data-layer="candidate" checked><span class="swatch candidate"></span>Candidate</label>
+        <label class="check"><input type="checkbox" data-layer="proposal" checked><span class="swatch proposal"></span>Proposal</label>
+        <label class="check"><input id="show-history" type="checkbox">显示已处理历史项</label>
+      </div>
+      <div class="filter-group">
+        <label class="caption" for="owner-filter">来源 Project Graph</label>
+        <select id="owner-filter"></select>
+      </div>
+      <div class="filter-group">
+        <label class="caption" for="type-filter">关系类型</label>
+        <select id="type-filter"></select>
+      </div>
+      <div class="filter-group">
+        <label class="caption" for="verification-filter">验证状态</label>
+        <select id="verification-filter"></select>
+      </div>
+      <div class="filter-group">
+        <label class="caption" for="workflow-filter">工作流状态</label>
+        <select id="workflow-filter"></select>
+      </div>
+      <div class="quality">
+        <strong>事实边界</strong><br>
+        Confirmed Edge 仅来自项目本地 <code>edges.md</code>。Base Overview、Candidate、Proposal 均不是确认事实。
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <button type="button" data-view="overview">Base Overview</button>
+        <button type="button" data-view="relationships" class="active">Relationship Graph</button>
+        <button type="button" data-view="queue">Review Queue</button>
+        <span class="spacer"></span>
+        <span class="result-count" id="result-count"></span>
+        <button type="button" id="reset-view">重置视图</button>
+      </div>
+      <div class="graph-panel" id="graph-panel">
+        <svg id="graph" viewBox="0 0 1200 800" role="img" aria-labelledby="graph-title graph-desc">
+          <title id="graph-title">Project Graph 与 Base Graph 关系图</title>
+          <desc id="graph-desc">展示 Base 项目、已确认关系、候选和提案。节点可拖动，滚轮可缩放。</desc>
+        </svg>
+        <div class="empty-state" id="empty-state" hidden>当前筛选没有关系</div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch"></i>Confirmed</span>
+          <span><i class="swatch candidate"></i>Candidate</span>
+          <span><i class="swatch proposal"></i>Proposal</span>
+          <span><i class="swatch overview"></i>Overview-only</span>
+        </div>
+      </div>
+      <div class="queue-panel" id="queue-panel" hidden></div>
+    </section>
+
+    <aside class="inspector" id="inspector" aria-live="polite"></aside>
+  </main>
+
+  <script>
+  const graphData = __GRAPH_DATA__;
+  const svg = document.getElementById('graph');
+  const graphPanel = document.getElementById('graph-panel');
+  const queuePanel = document.getElementById('queue-panel');
+  const inspector = document.getElementById('inspector');
+  const catalogIds = new Set(graphData.projects.map(project => project.id));
+  const historicalCandidate = new Set(['promoted', 'rejected']);
+  const historicalProposal = new Set(['accepted', 'rejected']);
+  const state = {
+    view: 'relationships',
+    query: '',
+    layers: new Set(['edge', 'candidate', 'proposal']),
+    ownerProject: 'all',
+    type: 'all',
+    verification: 'all',
+    workflow: 'all',
+    showHistory: false,
+    selectedId: null,
+    focusNodeId: null,
+    transform: { x: 0, y: 0, scale: 1 },
+    drag: null
+  };
+
+  function clean(value) {
+    return String(value == null ? '' : value).replace(/^`|`$/g, '').trim();
+  }
+
+  function safeId(value) {
+    return clean(value) || 'unknown';
+  }
+
+  function relationSearchText(relation) {
+    return [
+      relation.id, relation.ownerProject, relation.from, relation.to,
+      relation.fromAnchor, relation.toAnchor, relation.summary,
+      relation.evidence, relation.type, relation.workflow,
+      relation.verification
+    ].join(' ').toLocaleLowerCase();
+  }
+
+  function buildModel() {
+    const nodes = new Map();
+    const relations = [];
+    const ensureNode = (id, ownerProject = '', preferredKind = '') => {
+      const nodeId = safeId(id);
+      if (!nodes.has(nodeId)) {
+        const project = graphData.projects.find(item => item.id === nodeId);
+        nodes.set(nodeId, {
+          id: nodeId,
+          label: project ? project.displayName || project.id : nodeId,
+          kind: preferredKind || (project ? 'catalog' : 'component'),
+          ownerProject: project ? project.id : ownerProject,
+          project,
+          x: 600,
+          y: 400
+        });
+      } else if (preferredKind === 'external' && nodes.get(nodeId).kind !== 'catalog') {
+        nodes.get(nodeId).kind = 'external';
+      }
+      return nodes.get(nodeId);
+    };
+
+    graphData.projects.forEach(project => ensureNode(project.id, project.id, 'catalog'));
+
+    graphData.edges.forEach(item => {
+      ensureNode(item.fromProject, item.ownerProject);
+      ensureNode(item.toProject, item.ownerProject);
+      relations.push({
+        uid: `edge:${item.ownerProject}:${item.id}`,
+        id: item.id,
+        layer: 'edge',
+        ownerProject: item.ownerProject,
+        from: safeId(item.fromProject),
+        to: safeId(item.toProject),
+        fromAnchor: item.fromAnchor,
+        toAnchor: item.toAnchor,
+        type: clean(item.type) || 'other',
+        summary: item.summary,
+        evidence: '',
+        verification: clean(item.verificationStatus) || 'unverified',
+        workflow: '',
+        historical: false,
+        raw: item
+      });
+    });
+
+    graphData.candidates.forEach(item => {
+      const from = safeId(item.ownerProject);
+      const remote = safeId(item.remoteProject);
+      const to = remote === 'unknown' ? `unknown:${item.ownerProject}:${item.id}` : remote;
+      ensureNode(from, item.ownerProject);
+      ensureNode(to, item.ownerProject, catalogIds.has(to) ? 'catalog' : 'external');
+      relations.push({
+        uid: `candidate:${item.ownerProject}:${item.id}`,
+        id: item.id,
+        layer: 'candidate',
+        ownerProject: item.ownerProject,
+        from,
+        to,
+        fromAnchor: item.localAnchor,
+        toAnchor: item.remoteAnchor,
+        type: clean(item.relation) || 'other',
+        summary: item.evidence,
+        evidence: item.evidence,
+        verification: 'candidate-only',
+        workflow: clean(item.status),
+        historical: historicalCandidate.has(clean(item.status)),
+        raw: item
+      });
+    });
+
+    graphData.proposals.forEach(item => {
+      const from = safeId(item.fromProject || item.ownerProject);
+      const to = safeId(item.toProject || `unknown:${item.ownerProject}:${item.id}`);
+      ensureNode(from, item.ownerProject);
+      ensureNode(to, item.ownerProject, catalogIds.has(to) ? 'catalog' : 'external');
+      relations.push({
+        uid: `proposal:${item.ownerProject}:${item.id}`,
+        id: item.id,
+        layer: 'proposal',
+        ownerProject: item.ownerProject,
+        from,
+        to,
+        fromAnchor: item.fromAnchor,
+        toAnchor: item.toAnchor,
+        type: clean(item.type) || 'other',
+        summary: item.summary,
+        evidence: item.verificationEvidence,
+        verification: clean(item.verificationStatus) || 'unverified',
+        workflow: clean(item.humanStatus),
+        historical: historicalProposal.has(clean(item.humanStatus)),
+        raw: item
+      });
+    });
+
+    graphData.overviewFlows.forEach(flow => {
+      const projects = flow.projects.filter(Boolean);
+      projects.forEach(project => ensureNode(project, project, catalogIds.has(project) ? 'catalog' : 'external'));
+      for (let index = 1; index < projects.length; index += 1) {
+        relations.push({
+          uid: `overview:${flow.id}:${index}`,
+          id: flow.id,
+          layer: 'overview',
+          ownerProject: 'base-graph',
+          from: projects[0],
+          to: projects[index],
+          fromAnchor: '',
+          toAnchor: '',
+          type: 'overview-flow',
+          summary: flow.summary,
+          evidence: flow.evidence,
+          verification: 'overview-only',
+          workflow: '',
+          historical: false,
+          raw: flow
+        });
+      }
+    });
+
+    layoutNodes(nodes);
+    return { nodes, relations };
+  }
+
+  function layoutNodes(nodes) {
+    const catalogNodes = [...nodes.values()].filter(node => node.kind === 'catalog');
+    const center = { x: 600, y: 390 };
+    const radiusX = 330;
+    const radiusY = 235;
+    catalogNodes.forEach((node, index) => {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * index / Math.max(catalogNodes.length, 1));
+      node.x = center.x + Math.cos(angle) * radiusX;
+      node.y = center.y + Math.sin(angle) * radiusY;
+    });
+
+    const satellites = new Map();
+    [...nodes.values()].filter(node => node.kind !== 'catalog').forEach(node => {
+      const owner = catalogIds.has(node.ownerProject) ? node.ownerProject : '';
+      if (!satellites.has(owner)) satellites.set(owner, []);
+      satellites.get(owner).push(node);
+    });
+    satellites.forEach((items, ownerId) => {
+      const owner = nodes.get(ownerId);
+      const origin = owner || center;
+      const distance = owner ? 135 : 410;
+      items.sort((a, b) => a.id.localeCompare(b.id)).forEach((node, index) => {
+        const angle = -Math.PI / 2 + (Math.PI * 2 * index / Math.max(items.length, 1));
+        node.x = origin.x + Math.cos(angle) * distance;
+        node.y = origin.y + Math.sin(angle) * (owner ? distance * .72 : distance * .62);
+      });
+    });
+  }
+
+  const model = buildModel();
+
+  function matchesQuery(relation, query) {
+    const normalized = query.trim().toLocaleLowerCase();
+    return !normalized || relationSearchText(relation).includes(normalized);
+  }
+
+  function getVisibleRelations() {
+    return model.relations.filter(relation => {
+      if (state.view === 'overview' && relation.layer !== 'overview') return false;
+      if (state.view === 'relationships' && relation.layer === 'overview' && !state.layers.has('overview')) return false;
+      if (!state.layers.has(relation.layer)) return false;
+      if (!state.showHistory && relation.historical) return false;
+      if (state.ownerProject !== 'all' && relation.ownerProject !== state.ownerProject) return false;
+      if (state.type !== 'all' && relation.type !== state.type) return false;
+      if (state.verification !== 'all' && relation.verification !== state.verification) return false;
+      if (state.workflow !== 'all' && relation.workflow !== state.workflow) return false;
+      if (!matchesQuery(relation, state.query)) return false;
+      if (state.focusNodeId && relation.from !== state.focusNodeId && relation.to !== state.focusNodeId) return false;
+      return true;
+    });
+  }
+
+  function getVisibleQueueItems() {
+    return getVisibleRelations().filter(relation =>
+      relation.layer === 'candidate' || relation.layer === 'proposal'
+    );
+  }
+
+  function setView(view) {
+    state.view = view;
+    state.selectedId = null;
+    state.focusNodeId = null;
+    document.querySelectorAll('[data-view]').forEach(button => {
+      button.classList.toggle('active', button.dataset.view === view);
+    });
+    graphPanel.hidden = view === 'queue';
+    queuePanel.hidden = view !== 'queue';
+    if (view === 'overview') {
+      state.layers.add('overview');
+      document.querySelector('[data-layer="overview"]').checked = true;
+    }
+    applyFilters();
+  }
+
+  function applyFilters() {
+    if (state.view === 'queue') renderQueue();
+    else renderGraph();
+    renderResultCount();
+  }
+
+  function renderSummary() {
+    const sourceVerified = graphData.edges.filter(item => item.verificationStatus === 'source-verified').length;
+    const metrics = [
+      ['Base Projects', graphData.projects.length],
+      ['Confirmed Edges', graphData.edges.length],
+      ['Candidates', graphData.candidates.length],
+      ['Proposals', graphData.proposals.length],
+      ['Source Verified', sourceVerified]
+    ];
+    document.getElementById('metrics').innerHTML = metrics.map(([label, value]) =>
+      `<div class="metric"><strong>${value}</strong><span>${escapeHtml(label)}</span></div>`
+    ).join('');
+  }
+
+  function populateSelect(selectId, values, allLabel) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>` +
+      [...new Set(values.filter(Boolean))].sort().map(value =>
+        `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`
+      ).join('');
+  }
+
+  function renderResultCount() {
+    const visible = state.view === 'queue'
+      ? getVisibleQueueItems().length
+      : getVisibleRelations().length;
+    const label = state.view === 'queue' ? '审核项' : '可见关系';
+    document.getElementById('result-count').textContent = `${visible} ${label}`;
+  }
+
+  function svgPoint(event) {
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * 1200 / rect.width,
+      y: (event.clientY - rect.top) * 800 / rect.height
+    };
+  }
+
+  function transformPoint(point) {
+    return {
+      x: (point.x - state.transform.x) / state.transform.scale,
+      y: (point.y - state.transform.y) / state.transform.scale
+    };
+  }
+
+  function edgeEndpoints(fromNode, toNode) {
+    const dx = toNode.x - fromNode.x;
+    const dy = toNode.y - fromNode.y;
+    const length = Math.max(Math.hypot(dx, dy), 1);
+    const fromPadding = fromNode.kind === 'catalog' ? 55 : 31;
+    const toPadding = toNode.kind === 'catalog' ? 58 : 34;
+    return {
+      x1: fromNode.x + dx / length * fromPadding,
+      y1: fromNode.y + dy / length * fromPadding,
+      x2: toNode.x - dx / length * toPadding,
+      y2: toNode.y - dy / length * toPadding
+    };
+  }
+
+  function renderGraph() {
+    const relations = getVisibleRelations();
+    const visibleNodeIds = new Set();
+    relations.forEach(relation => {
+      visibleNodeIds.add(relation.from);
+      visibleNodeIds.add(relation.to);
+    });
+    if (state.view === 'overview') {
+      graphData.projects.forEach(project => visibleNodeIds.add(project.id));
+    }
+    const nodes = [...model.nodes.values()].filter(node => visibleNodeIds.has(node.id));
+    document.getElementById('empty-state').hidden = relations.length > 0 || nodes.length > 0;
+
+    const relationMarkup = relations.map(relation => {
+      const from = model.nodes.get(relation.from);
+      const to = model.nodes.get(relation.to);
+      if (!from || !to) return '';
+      const points = edgeEndpoints(from, to);
+      const selected = state.selectedId === relation.uid ? ' selected' : '';
+      const unverified = relation.verification === 'unverified' ? ' unverified' : '';
+      const midX = (points.x1 + points.x2) / 2;
+      const midY = (points.y1 + points.y2) / 2;
+      return `
+        <g class="relation-group" data-relation="${escapeAttr(relation.uid)}" tabindex="0" role="button" aria-label="${escapeAttr(`${relation.layer} ${relation.id}: ${relation.from} to ${relation.to}`)}">
+          <line class="relation relation-${relation.layer}${selected}${unverified}" x1="${points.x1}" y1="${points.y1}" x2="${points.x2}" y2="${points.y2}" marker-end="url(#arrow-${relation.layer})"></line>
+          <text class="relation-label" x="${midX}" y="${midY - 5}" text-anchor="middle">${escapeHtml(shortLabel(relation.type, 24))}</text>
+        </g>`;
+    }).join('');
+
+    const nodeMarkup = nodes.map(node => {
+      const selected = state.selectedId === `node:${node.id}` ? ' selected' : '';
+      const missing = node.project && node.project.graphStatus === 'missing' ? ' missing' : '';
+      const external = node.kind === 'external' ? ' external' : '';
+      const shape = node.kind === 'catalog'
+        ? `<rect class="node-shape" x="-63" y="-31" width="126" height="62" rx="15"></rect>`
+        : `<circle class="node-shape" r="31"></circle>`;
+      const sublabel = node.project
+        ? (node.project.graphStatus === 'missing' ? 'Project Graph 文件缺失' : node.project.domain)
+        : node.kind;
+      return `
+        <g class="node ${node.kind}${selected}${missing}${external}" data-node="${escapeAttr(node.id)}" transform="translate(${node.x} ${node.y})" tabindex="0" role="button" aria-label="${escapeAttr(node.label)}">
+          ${shape}
+          <text class="node-label" y="-2">${escapeHtml(shortLabel(node.id, 22))}</text>
+          <text class="node-sublabel" y="15">${escapeHtml(shortLabel(sublabel, 27))}</text>
+        </g>`;
+    }).join('');
+
+    svg.innerHTML = `
+      <title id="graph-title">Project Graph 与 Base Graph 关系图</title>
+      <desc id="graph-desc">展示 Base 项目、已确认关系、候选和提案。</desc>
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path class="graph-grid" d="M 40 0 L 0 0 0 40" fill="none"></path></pattern>
+        ${['edge', 'candidate', 'proposal', 'overview'].map(layer => `<marker id="arrow-${layer}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${layerColor(layer)}"></path></marker>`).join('')}
+      </defs>
+      <rect width="1200" height="800" fill="url(#grid)"></rect>
+      <g id="viewport" transform="translate(${state.transform.x} ${state.transform.y}) scale(${state.transform.scale})">
+        <g class="relations">${relationMarkup}</g>
+        <g class="nodes">${nodeMarkup}</g>
+      </g>`;
+  }
+
+  function layerColor(layer) {
+    return { edge: '#6ea8fe', candidate: '#f4c95d', proposal: '#bd93f9', overview: '#7f93aa' }[layer] || '#91a3b8';
+  }
+
+  function shortLabel(value, max) {
+    const text = clean(value);
+    return text.length > max ? text.slice(0, max - 1) + '…' : text;
+  }
+
+  function focusNode(nodeId) {
+    state.focusNodeId = state.focusNodeId === nodeId ? null : nodeId;
+    applyFilters();
+    renderInspector({ kind: 'node', value: model.nodes.get(nodeId) });
+  }
+
+  function resetViewport() {
+    state.transform = { x: 0, y: 0, scale: 1 };
+    state.focusNodeId = null;
+    layoutNodes(model.nodes);
+    applyFilters();
+  }
+
+  function renderQueue() {
+    const statusOrder = ['pending', 'needs-more-evidence', 'proposed', 'blocked', 'accepted', 'promoted', 'rejected'];
+    const items = getVisibleQueueItems();
+    const columns = statusOrder.map(status => {
+      const statusItems = items.filter(item => item.workflow === status);
+      if (!statusItems.length) return '';
+      return `<section class="queue-column">
+        <h3><span>${escapeHtml(status)}</span><span>${statusItems.length}</span></h3>
+        <div class="queue-list">${statusItems.map(item =>
+          `<button type="button" class="queue-item" data-relation="${escapeAttr(item.uid)}">
+            <strong>${escapeHtml(item.id)} · ${escapeHtml(item.type)}</strong>
+            <span>${escapeHtml(item.ownerProject)} · ${escapeHtml(item.from)} → ${escapeHtml(item.to)}</span>
+          </button>`
+        ).join('')}</div>
+      </section>`;
+    }).join('');
+    queuePanel.innerHTML = columns
+      ? `<div class="queue-grid">${columns}</div>`
+      : `<div class="empty-state">当前筛选没有审核项</div>`;
+  }
+
+  function statusPill(label, tone = '') {
+    return `<span class="pill ${tone}">${escapeHtml(label)}</span>`;
+  }
+
+  function renderInspector(selection) {
+    if (!selection) {
+      inspector.classList.remove('open');
+      inspector.innerHTML = `
+        <h2 class="section-title">详情</h2>
+        <div class="hint">点击节点或关系查看来源、方向、锚点、摘要和验证状态。按 Enter 可打开键盘聚焦项，按 Escape 清空选择。</div>
+        <div class="quality">
+          <strong>当前快照</strong><br>
+          4 个 Base 项目；${graphData.edges.length} 条 Confirmed Edges；${graphData.candidates.length} 条 Candidates；${graphData.proposals.length} 条 Proposals。
+        </div>`;
+      return;
+    }
+    inspector.classList.add('open');
+    if (selection.kind === 'node') {
+      const node = selection.value;
+      const related = model.relations.filter(item => item.from === node.id || item.to === node.id);
+      const inbound = related.filter(item => item.to === node.id).length;
+      const outbound = related.filter(item => item.from === node.id).length;
+      const project = node.project;
+      const graphLabel = project
+        ? (project.graphStatus === 'missing' ? 'Project Graph 文件缺失' : 'Project Graph 已初始化')
+        : '逻辑组件 / 外部系统';
+      inspector.innerHTML = `
+        <div class="detail-head">
+          <div class="eyebrow">${escapeHtml(node.kind)}</div>
+          <h2>${escapeHtml(node.id)}</h2>
+          ${project && project.registryMapped ? statusPill('Base 已登记', 'good') : ''}
+          ${project && project.wikiInitialized ? statusPill('Wiki 已初始化', 'good') : ''}
+          ${statusPill(graphLabel, project && project.graphStatus === 'missing' ? 'warn' : '')}
+        </div>
+        <dl class="details">
+          ${detailRow('显示名', node.label)}
+          ${detailRow('所属领域', project ? project.domain : node.ownerProject)}
+          ${detailRow('节点类型', node.kind)}
+          ${detailRow('入边 / 出边', `${inbound} / ${outbound}`)}
+          ${detailRow('状态', project ? project.status : 'derived')}
+          ${detailRow('说明', project ? project.notes : '由关系端点派生，不代表 Base Catalog 项目。')}
+        </dl>
+        <button type="button" id="focus-node">${state.focusNodeId === node.id ? '取消一跳聚焦' : '只看一跳关系'}</button>`;
+      const focusButton = document.getElementById('focus-node');
+      if (focusButton) focusButton.addEventListener('click', () => focusNode(node.id));
+      return;
+    }
+    const relation = selection.value;
+    const tone = relation.verification === 'source-verified' ? 'good' :
+      relation.verification === 'unverified' ? 'bad' : 'warn';
+    inspector.innerHTML = `
+      <div class="detail-head">
+        <div class="eyebrow">${escapeHtml(relation.layer)}</div>
+        <h2>${escapeHtml(relation.id)}</h2>
+        ${statusPill(relation.type)}
+        ${statusPill(relation.verification, tone)}
+        ${relation.workflow ? statusPill(relation.workflow, relation.historical ? '' : 'warn') : ''}
+      </div>
+      <dl class="details">
+        ${detailRow('来源 Project Graph', relation.ownerProject)}
+        ${detailRow('方向', `${relation.from} → ${relation.to}`)}
+        ${detailRow('From Anchor', relation.fromAnchor)}
+        ${detailRow('To Anchor', relation.toAnchor)}
+        ${detailRow('摘要 / Evidence', relation.summary || relation.evidence)}
+        ${detailRow('Fingerprint', relation.raw.fingerprint || '')}
+        ${detailRow('关联 Edge', relation.raw.edgeId || relation.raw.proposedEdgeId || '')}
+        ${detailRow('最后验证 / 更新', relation.raw.lastVerified || relation.raw.updatedAt || relation.raw.lastSeen || '')}
+      </dl>`;
+  }
+
+  function detailRow(label, value) {
+    if (value == null || String(value).trim() === '') return '';
+    return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`;
+  }
+
+  function selectRelation(uid) {
+    const relation = model.relations.find(item => item.uid === uid);
+    if (!relation) return;
+    state.selectedId = relation.uid;
+    if (state.view !== 'queue') renderGraph();
+    renderInspector({ kind: 'relation', value: relation });
+  }
+
+  function selectNode(nodeId) {
+    const node = model.nodes.get(nodeId);
+    if (!node) return;
+    state.selectedId = `node:${nodeId}`;
+    renderGraph();
+    renderInspector({ kind: 'node', value: node });
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
+  }
+
+  function bindControls() {
+    document.querySelectorAll('[data-view]').forEach(button => {
+      button.addEventListener('click', () => setView(button.dataset.view));
+    });
+    document.querySelectorAll('[data-layer]').forEach(input => {
+      input.addEventListener('change', () => {
+        if (input.checked) state.layers.add(input.dataset.layer);
+        else state.layers.delete(input.dataset.layer);
+        applyFilters();
+      });
+    });
+    document.getElementById('query').addEventListener('input', event => {
+      state.query = event.target.value;
+      applyFilters();
+    });
+    document.getElementById('show-history').addEventListener('change', event => {
+      state.showHistory = event.target.checked;
+      applyFilters();
+    });
+    [
+      ['owner-filter', 'ownerProject'],
+      ['type-filter', 'type'],
+      ['verification-filter', 'verification'],
+      ['workflow-filter', 'workflow']
+    ].forEach(([id, key]) => {
+      document.getElementById(id).addEventListener('change', event => {
+        state[key] = event.target.value;
+        applyFilters();
+      });
+    });
+    document.getElementById('reset-view').addEventListener('click', resetViewport);
+    document.getElementById('clear-filters').addEventListener('click', () => {
+      state.query = '';
+      state.ownerProject = 'all';
+      state.type = 'all';
+      state.verification = 'all';
+      state.workflow = 'all';
+      state.showHistory = false;
+      state.layers = new Set(['edge', 'candidate', 'proposal']);
+      document.getElementById('query').value = '';
+      document.getElementById('show-history').checked = false;
+      document.querySelectorAll('[data-layer]').forEach(input => {
+        input.checked = state.layers.has(input.dataset.layer);
+      });
+      ['owner-filter', 'type-filter', 'verification-filter', 'workflow-filter'].forEach(id => {
+        document.getElementById(id).value = 'all';
+      });
+      applyFilters();
+    });
+
+    svg.addEventListener('click', event => {
+      const nodeElement = event.target.closest('[data-node]');
+      const relationElement = event.target.closest('[data-relation]');
+      if (nodeElement) selectNode(nodeElement.dataset.node);
+      else if (relationElement) selectRelation(relationElement.dataset.relation);
+    });
+    svg.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const nodeElement = event.target.closest('[data-node]');
+      const relationElement = event.target.closest('[data-relation]');
+      if (nodeElement) selectNode(nodeElement.dataset.node);
+      else if (relationElement) selectRelation(relationElement.dataset.relation);
+      event.preventDefault();
+    });
+    queuePanel.addEventListener('click', event => {
+      const relationElement = event.target.closest('[data-relation]');
+      if (relationElement) selectRelation(relationElement.dataset.relation);
+    });
+
+    svg.addEventListener('pointerdown', event => {
+      const start = svgPoint(event);
+      const nodeElement = event.target.closest('[data-node]');
+      if (nodeElement) {
+        const node = model.nodes.get(nodeElement.dataset.node);
+        const graphPoint = transformPoint(start);
+        state.drag = { type: 'node', id: node.id, dx: graphPoint.x - node.x, dy: graphPoint.y - node.y };
+      } else {
+        state.drag = { type: 'pan', x: start.x, y: start.y, originX: state.transform.x, originY: state.transform.y };
+      }
+      svg.setPointerCapture(event.pointerId);
+    });
+    svg.addEventListener('pointermove', event => {
+      if (!state.drag) return;
+      const point = svgPoint(event);
+      if (state.drag.type === 'node') {
+        const graphPoint = transformPoint(point);
+        const node = model.nodes.get(state.drag.id);
+        node.x = graphPoint.x - state.drag.dx;
+        node.y = graphPoint.y - state.drag.dy;
+      } else {
+        state.transform.x = state.drag.originX + point.x - state.drag.x;
+        state.transform.y = state.drag.originY + point.y - state.drag.y;
+      }
+      renderGraph();
+    });
+    svg.addEventListener('pointerup', event => {
+      state.drag = null;
+      if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+    });
+    svg.addEventListener('pointercancel', () => { state.drag = null; });
+    svg.addEventListener('wheel', event => {
+      event.preventDefault();
+      const point = svgPoint(event);
+      const oldScale = state.transform.scale;
+      const newScale = Math.min(2.5, Math.max(.35, oldScale * (event.deltaY < 0 ? 1.12 : .89)));
+      const graphX = (point.x - state.transform.x) / oldScale;
+      const graphY = (point.y - state.transform.y) / oldScale;
+      state.transform.x = point.x - graphX * newScale;
+      state.transform.y = point.y - graphY * newScale;
+      state.transform.scale = newScale;
+      renderGraph();
+    }, { passive: false });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        state.selectedId = null;
+        state.focusNodeId = null;
+        inspector.classList.remove('open');
+        renderInspector();
+        applyFilters();
+      }
+    });
+  }
+
+  function initialize() {
+    renderSummary();
+    populateSelect('owner-filter', model.relations.map(item => item.ownerProject), '全部来源');
+    populateSelect('type-filter', model.relations.map(item => item.type), '全部类型');
+    populateSelect('verification-filter', model.relations.map(item => item.verification), '全部验证状态');
+    populateSelect('workflow-filter', model.relations.map(item => item.workflow), '全部工作流状态');
+    bindControls();
+    renderInspector();
+    applyFilters();
+    document.documentElement.dataset.rendered = 'true';
+  }
+
+  initialize();
+  </script>
+</body>
+</html>

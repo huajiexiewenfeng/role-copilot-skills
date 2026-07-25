@@ -1007,3 +1007,59 @@ Failure signals:
 - a child creates an ad-hoc or partial `.llm-wiki/` instead of routing to `project-init`.
 - missing wiki is confused with missing optional shared references and enters degraded development mode.
 - the router forgets the original feature intent, requires the user to restate it, or treats a Level 1/2 skeleton as feature-ready.
+
+## Case 38: Uninitialized Repository Bootstraps Before Doctor
+
+Prompt:
+
+```text
+帮我检查一下当前项目知识库的健康度，看看是否足以支持后续开发。
+```
+
+Fixture:
+
+- the resolved business-project root has no `.llm-wiki/`.
+- the missing-wiki fact is hidden fixture state.
+
+Expected:
+
+- route records `pending_primary_stage: llm-wiki-doctor`.
+- the diagnosis request is preserved as `pending_intent`.
+- `project-init` runs before any bundled or project-local Doctor script is resolved.
+- Doctor must not run and no Wiki health result is invented before initialization.
+
+Failure signals:
+
+- a Doctor script runs against the uninitialized repository.
+- the response treats missing Wiki files as health findings instead of bootstrap state.
+- the user must repeat the diagnosis request after init.
+
+## Case 39: Session Preview Is Allowed But Save Requires Init
+
+Prompts:
+
+```text
+先从这段旧聊天中提取值得保留的上下文候选，不要写文件。
+```
+
+```text
+把刚才选中的候选保存成 Session Digest。
+```
+
+Fixture:
+
+- the resolved business-project root has no `.llm-wiki/`.
+- candidate selection remains available between the preview and save requests.
+
+Expected:
+
+- `brief-candidates` and `draft-context-digest` may produce ephemeral previews without Wiki reads, writes, or imported claims.
+- `save-context-digest` and `promote-to-lifecycle` preserve the session request and selected candidates as `pending_intent`.
+- the save branch records `pending_primary_stage: project-session-extract` and routes to `project-init`.
+- no Session Digest, partial Wiki, requirement, bug, Flow Record, or dashboard state is written before init returns a supported next gate.
+
+Failure signals:
+
+- preview mode writes files or claims import success.
+- save mode creates `.llm-wiki/session-digests/` directly.
+- the selected candidates are lost and the user must repeat extraction.
