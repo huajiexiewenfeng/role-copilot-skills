@@ -213,6 +213,10 @@ Project Graph 维护技能：
 | cross-project boundary check | 在 Context Recovery / External Bridge 规则下执行的只读远程证据检查。 | `references/cross-project-refs.md` | remote evidence access guard |
 | Base Graph | 可选的机器级 registry 主册与架构 overview/catalog。 | `references/base-graph.md` | platform graph overview |
 
+## 升级说明
+
+重要架构升级和技术复盘统一收录在 [`references/upgrades/`](./references/upgrades/README.md)。每份文档记录升级动机、设计决策、实施阶段、验证证据、已知边界和后续建议。
+
 ## 安全边界
 
 - 源码、测试、配置、构建文件和用户决策是事实来源。

@@ -210,6 +210,10 @@ Legacy `docs/ai-coding/` directories are migration sources. New project context 
 - Base Graph `registry.local.json` is a local-config exception; business-project sessions may write it after confirmation, but must not write Base tracked files such as `overview.md`, `project-catalog.md`, `decisions/`, or `handoff/`.
 - `~/.llm-wiki/registry.json` is legacy read-only compatibility. New implementations should not create or prefer it.
 
+## Upgrade Notes
+
+Major architecture upgrades and technical retrospectives are indexed in [`references/upgrades/`](./references/upgrades/README.md). Each note records the motivation, design decisions, implementation stages, verification evidence, known limits, and recommended follow-up.
+
 ## Safety
 
 - Source code, tests, configuration, build files, and user decisions are the source of truth.
