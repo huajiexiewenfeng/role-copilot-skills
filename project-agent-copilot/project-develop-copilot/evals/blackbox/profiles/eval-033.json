@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.2",
+  "eval_id": "33",
+  "profile_version": "eval-033-profile-0.2",
+  "fixture_version": "eval-033-fixture-0.1",
+  "canonical_heading": "Eval 33: Uninitialized Business Repository Bootstraps Before Development",
+  "prompt_appendix": "针对这个合成项目完成请求，并在最终回答中列出实际修改文件、测试命令与结果。",
+  "scenario_kind": "state-changing",
+  "turn_count": 1,
+  "checkpoint_turns": [],
+  "semantic_assertion_ids": [
+    "bootstrap-before-development",
+    "pending-intent-fidelity",
+    "readiness-evidence-gates-resume",
+    "no-level-readiness-overclaim",
+    "feature-contract-result"
+  ],
+  "manual_only_assertions": [
+    {
+      "id": "root-init-anchor-implementation-order",
+      "coverage": "manual-only",
+      "reason": "final answer and final Git state cannot independently prove runtime checkpoint order"
+    }
+  ],
+  "contract_refs": [
+    {"path": "SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "project-develop/SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "evals/project-develop-copilot-evals.md", "heading": "## Eval 33: Uninitialized Business Repository Bootstraps Before Development"}
+  ],
+  "params": {
+    "write_policy": {
+      "mode": "allowlist",
+      "allowed_path_globs": [
+        ".llm-wiki/**",
+        "src/config.py",
+        "tests/test_config.py"
+      ],
+      "required_path_any_of": [
+        ".llm-wiki/README.md"
+      ],
+      "required_path_all_of": [
+        "src/config.py",
+        "tests/test_config.py"
+      ]
+    }
+  }
+}

@@ -2,16 +2,18 @@
 
 ## Scope
 
-This is a **Developer-only** sidecar for Eval 2 and Eval 32. It is not part of
+This is a **Developer-only** sidecar for Eval 2, Eval 32, Eval 33, Eval 34, and
+Eval 35. It is not part of
 Skill routing or the ordinary team workflow, so ordinary users pay zero setup,
 prompt, token, or latency cost. The sidecar never calls an Agent or LLM. A human
 operator runs those tools separately and moves the resulting files across the
 boundary described below.
 
-The sidecar has three commands:
+The sidecar has four commands:
 
 ```text
-python scripts/blackbox_eval.py prepare --case {2,32} [--skill-path PATH] [--workspace PATH]
+python scripts/blackbox_eval.py prepare --case {2,32,33,34,35} [--skill-path PATH] [--workspace PATH]
+python scripts/blackbox_eval.py checkpoint --run PATH --turn 1
 python scripts/blackbox_eval.py grade --run PATH [--execution-kind {agent,canned} --agent-product LABEL --agent-model LABEL]
 python scripts/blackbox_eval.py report --run PATH [--baseline PATH] [--regression-pair BEFORE AFTER]...
 ```
@@ -31,6 +33,10 @@ an unverified identity.
    Record the manual `execution_kind`, Agent product, and Agent model on the
    first `grade` call. The three values are one immutable group; later grade
    calls may omit all three.
+   Eval 35 is the multi-turn exception: give the Agent `prompt.md`, copy its
+   first answer to `answer-turn-1.md`, then run `checkpoint --run PATH --turn
+   1`. Only after that checkpoint succeeds should the same conversation receive
+   `prompt-2.md`; copy the second answer to `answer.md`.
 3. Run `grade`. When semantic review is unresolved, a human runs the Judge
    outside this program using `judge-request.json`, copies the response into
    `judge.json`, and runs `grade` again. `grading.json` records the validated
@@ -63,6 +69,8 @@ claim.
 
 - `answer.md` is a human copy boundary. `prepare` creates it empty; this program
   does not generate an answer.
+- `answer-turn-1.md` is the Eval 35 first-turn human copy boundary. Its bytes
+  and intermediate Git state are locked before the save prompt is sent.
 - `judge-request.json` is local Judge input, and `judge.json` is the manual Judge
   response boundary. This program does not call a Judge.
 - `grading.json` is deterministic output whose provenance must continue to match
@@ -95,6 +103,11 @@ literal matching proves the complete reasoning path. Eval 32 therefore retains
 a `manual-only` read-order assertion: final files and answers cannot prove read
 order without a runtime trace, so a human must assess that assertion.
 
+Eval 33-35 do not use Wiki/source canaries. They use scenario-specific Git
+write policies instead. Eval 35 additionally requires an intermediate
+checkpoint so a clean final tree cannot hide a write that occurred during the
+preview turn.
+
 For untracked content, the maximum captured file size is **65,536** bytes and
 the maximum total is **1,048,576** bytes. Eligible content payloads are
 **local-only** Judge inputs. `report.md` exposes paths, sizes, and hashes rather
@@ -115,6 +128,9 @@ credentials, or sensitive project material as fixtures.
   verified but changed Skill identity, matching Agent and Judge identities, an
   approved frozen baseline, and declared regression coverage from the other
   Eval. Only Human `approve` authorizes the comparison.
+- The first initialization certification is intentionally a current Codex Run.
+  Its evidence is bound to the recorded Agent product, full model label, Skill
+  fingerprint, and source commit. It does not certify other Agent products or models.
 
 No live Agent or LLM runs in CI. CI runs the offline unit tests and repository
 integrity checks only; it neither generates `answer.md` nor `judge.json`.

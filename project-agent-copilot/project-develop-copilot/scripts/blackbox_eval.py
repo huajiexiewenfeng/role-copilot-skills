@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import fnmatch
 import hashlib
 import json
 import os
@@ -24,9 +25,10 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parents[1]
 BLACKBOX_ROOT = SKILL_ROOT / "evals" / "blackbox"
 CANONICAL_EVALS = SKILL_ROOT / "evals" / "project-develop-copilot-evals.md"
-GRADER_VERSION = "blackbox-eval-0.1"
-PROFILE_SCHEMA_VERSION = "0.1"
-RUN_SCHEMA_VERSION = "0.1"
+GRADER_VERSION = "blackbox-eval-0.2"
+PROFILE_SCHEMA_VERSION = "0.2"
+SUPPORTED_PROFILE_SCHEMA_VERSIONS = {"0.1", "0.2"}
+RUN_SCHEMA_VERSION = "0.2"
 JUDGE_SCHEMA_VERSION = "0.1"
 DIAGNOSIS_SCHEMA_VERSION = "0.1"
 PATCH_DECISION_SCHEMA_VERSION = "0.1"
@@ -40,7 +42,11 @@ MAX_UNTRACKED_TOTAL_BYTES = 1_048_576
 DEFAULT_WORKSPACE = REPO_ROOT.parent / "project-develop-copilot-eval-workspace"
 FROZEN_ARTIFACTS = (
     "prompt.md",
+    "prompt-2.md",
+    "answer-turn-1.md",
     "answer.md",
+    "checkpoint-turn-1.json",
+    "checkpoint-turn-1.diff.patch",
     "diff.patch",
     "evidence.json",
     "judge-request.json",
@@ -118,6 +124,14 @@ class CanaryPair:
 
 
 @dataclass(frozen=True)
+class WritePolicy:
+    mode: str
+    allowed_path_globs: tuple[str, ...] = ()
+    required_path_any_of: tuple[str, ...] = ()
+    required_path_all_of: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ManualOnlyAssertion:
     id: str
     coverage: str
@@ -137,11 +151,16 @@ class AssertionResult:
 @dataclass(frozen=True)
 class EvalProfile:
     eval_id: str
+    schema_version: str
     profile_version: str
     fixture_version: str
     canonical_heading: str
     prompt_appendix: str
     fixture_root: Path
+    scenario_kind: str
+    turn_count: int
+    checkpoint_turns: tuple[int, ...]
+    write_policy: WritePolicy
     required_path_any_of: tuple[str, ...]
     canary_pairs: tuple[CanaryPair, ...]
     min_observed_pairs: int
@@ -505,19 +524,99 @@ def load_profile(eval_id: str) -> EvalProfile:
     normalized_id = str(numeric_id)
     path = BLACKBOX_ROOT / "profiles" / f"eval-{numeric_id:03d}.json"
     raw = read_json_object(path)
-    if raw.get("schema_version") != PROFILE_SCHEMA_VERSION:
-        raise EvalError(f"unsupported profile schema: {raw.get('schema_version')}")
+    schema_version = raw.get("schema_version")
+    if schema_version not in SUPPORTED_PROFILE_SCHEMA_VERSIONS:
+        raise EvalError(f"unsupported profile schema: {schema_version}")
     if raw.get("eval_id") != normalized_id:
         raise EvalError(f"profile eval_id mismatch: {path}")
     params = raw.get("params")
     if not isinstance(params, dict):
         raise EvalError("profile params must be an object")
+
+    if schema_version == "0.1":
+        scenario_kind = "read-only"
+        turn_count = 1
+        checkpoint_turns: tuple[int, ...] = ()
+        if params.get("zero_write") is not True:
+            raise EvalError("v0.1 profiles require zero_write=true")
+        write_policy = WritePolicy(mode="zero")
+    else:
+        scenario_kind = _require_string(raw, "scenario_kind")
+        if scenario_kind not in {"read-only", "state-changing", "multi-turn"}:
+            raise EvalError("unsupported scenario_kind")
+        turn_count = raw.get("turn_count")
+        if not isinstance(turn_count, int) or isinstance(turn_count, bool) or turn_count < 1:
+            raise EvalError("turn_count must be a positive integer")
+        if scenario_kind == "multi-turn" and turn_count < 2:
+            raise EvalError("multi-turn profiles require at least two turns")
+        if scenario_kind != "multi-turn" and turn_count != 1:
+            raise EvalError("single-turn scenario kinds require turn_count=1")
+        checkpoint_raw = raw.get("checkpoint_turns", [])
+        if (
+            not isinstance(checkpoint_raw, list)
+            or any(
+                not isinstance(item, int)
+                or isinstance(item, bool)
+                or item < 1
+                or item >= turn_count
+                for item in checkpoint_raw
+            )
+            or len(checkpoint_raw) != len(set(checkpoint_raw))
+        ):
+            raise EvalError("checkpoint_turns must be unique intermediate turn numbers")
+        checkpoint_turns = tuple(checkpoint_raw)
+        policy_raw = params.get("write_policy")
+        if not isinstance(policy_raw, dict):
+            raise EvalError("v0.2 profiles require write_policy")
+        mode = _require_string(policy_raw, "mode")
+        if mode not in {"zero", "allowlist"}:
+            raise EvalError("unsupported write policy mode")
+        allowed_raw = policy_raw.get("allowed_path_globs", [])
+        required_write_raw = policy_raw.get("required_path_any_of", [])
+        required_all_raw = policy_raw.get("required_path_all_of", [])
+        if (
+            not isinstance(allowed_raw, list)
+            or not isinstance(required_write_raw, list)
+            or not isinstance(required_all_raw, list)
+        ):
+            raise EvalError("write policy paths must be lists")
+        for label, values in (
+            ("allowed_path_globs", allowed_raw),
+            ("required_path_any_of", required_write_raw),
+            ("required_path_all_of", required_all_raw),
+        ):
+            if not all(
+                isinstance(item, str)
+                and item
+                and not Path(item).is_absolute()
+                and ".." not in Path(item).parts
+                for item in values
+            ):
+                raise EvalError(f"{label} must contain safe relative paths")
+        if mode == "zero" and (allowed_raw or required_write_raw or required_all_raw):
+            raise EvalError("zero write policy cannot configure write paths")
+        if mode == "allowlist" and not allowed_raw:
+            raise EvalError("allowlist write policy requires allowed_path_globs")
+        write_policy = WritePolicy(
+            mode=mode,
+            allowed_path_globs=tuple(allowed_raw),
+            required_path_any_of=tuple(required_write_raw),
+            required_path_all_of=tuple(required_all_raw),
+        )
+
     policy = params.get("canary_policy")
-    pairs = params.get("canary_pairs")
-    if not isinstance(policy, dict) or not isinstance(pairs, list):
+    pairs = params.get("canary_pairs", [])
+    if not isinstance(pairs, list):
+        raise EvalError("canary_pairs must be a list")
+    if pairs:
+        if not isinstance(policy, dict):
+            raise EvalError("canary policy is required when pairs are configured")
+        if policy.get("matcher_version") != CANARY_MATCHER_VERSION:
+            raise EvalError("unsupported canary matcher version")
+    elif schema_version == "0.1":
         raise EvalError("profile canary policy and pairs are required")
-    if policy.get("matcher_version") != CANARY_MATCHER_VERSION:
-        raise EvalError("unsupported canary matcher version")
+    elif policy is not None:
+        raise EvalError("canary_policy is forbidden without canary_pairs")
     canary_pairs = tuple(
         CanaryPair(
             id=_require_string(item, "id"),
@@ -527,7 +626,7 @@ def load_profile(eval_id: str) -> EvalProfile:
         for item in pairs
         if isinstance(item, dict)
     )
-    if len(canary_pairs) != len(pairs) or len(canary_pairs) != 3:
+    if len(canary_pairs) != len(pairs) or len(canary_pairs) not in {0, 3}:
         raise EvalError("exactly three canary pairs are required")
     literals = [
         literal
@@ -538,15 +637,19 @@ def load_profile(eval_id: str) -> EvalProfile:
         raise EvalError("canary literals must be unique")
     if any(left in right for left in literals for right in literals if left != right):
         raise EvalError("canary literals must not be substrings")
-    min_observed_pairs = policy.get("min_observed_pairs")
-    if min_observed_pairs != 2:
-        raise EvalError("min_observed_pairs must be exactly 2 for v0.1")
-    required_paths = params.get("required_path_any_of")
-    if not isinstance(required_paths, list) or not required_paths or not all(
-        isinstance(item, str)
-        and item.startswith(".llm-wiki/")
-        and ".." not in Path(item).parts
-        for item in required_paths
+    min_observed_pairs = policy.get("min_observed_pairs") if canary_pairs else 0
+    if canary_pairs and min_observed_pairs != 2:
+        raise EvalError("min_observed_pairs must be exactly 2 for canary profiles")
+    required_paths = params.get("required_path_any_of", [])
+    if (
+        not isinstance(required_paths, list)
+        or (schema_version == "0.1" and not required_paths)
+        or not all(
+            isinstance(item, str)
+            and item.startswith(".llm-wiki/")
+            and ".." not in Path(item).parts
+            for item in required_paths
+        )
     ):
         raise EvalError("required_path_any_of must contain .llm-wiki relative paths")
     contract_refs = raw.get("contract_refs")
@@ -599,11 +702,16 @@ def load_profile(eval_id: str) -> EvalProfile:
         raise EvalError("configured Wiki evidence path is missing from fixture")
     return EvalProfile(
         eval_id=normalized_id,
+        schema_version=schema_version,
         profile_version=_require_string(raw, "profile_version"),
         fixture_version=_require_string(raw, "fixture_version"),
         canonical_heading=_require_string(raw, "canonical_heading"),
         prompt_appendix=_require_string(raw, "prompt_appendix"),
         fixture_root=fixture_root,
+        scenario_kind=scenario_kind,
+        turn_count=turn_count,
+        checkpoint_turns=checkpoint_turns,
+        write_policy=write_policy,
         required_path_any_of=tuple(required_paths),
         canary_pairs=canary_pairs,
         min_observed_pairs=min_observed_pairs,
@@ -623,18 +731,55 @@ def extract_canonical_eval(profile: EvalProfile) -> str:
     return text[start:] if next_heading < 0 else text[start:next_heading]
 
 
-def extract_canonical_prompt(profile: EvalProfile) -> str:
+def extract_canonical_prompts(profile: EvalProfile) -> tuple[str, ...]:
     section = extract_canonical_eval(profile)
-    marker = "Input prompt:"
+    if profile.turn_count == 1:
+        marker = "Input prompt:"
+        marker_index = section.find(marker)
+        if marker_index < 0:
+            raise EvalError(f"Input prompt marker missing for Eval {profile.eval_id}")
+        fence_start = section.find("```", marker_index + len(marker))
+        content_start = section.find("\n", fence_start) + 1
+        fence_end = section.find("\n```", content_start)
+        if fence_start < 0 or content_start <= 0 or fence_end < 0:
+            raise EvalError(f"Input prompt fence missing for Eval {profile.eval_id}")
+        return (section[content_start:fence_end].strip(),)
+
+    marker = "Input prompts:" if profile.turn_count > 1 else "Input prompt:"
     marker_index = section.find(marker)
     if marker_index < 0:
         raise EvalError(f"Input prompt marker missing for Eval {profile.eval_id}")
-    fence_start = section.find("```", marker_index + len(marker))
-    content_start = section.find("\n", fence_start) + 1
-    fence_end = section.find("\n```", content_start)
-    if fence_start < 0 or content_start <= 0 or fence_end < 0:
-        raise EvalError(f"Input prompt fence missing for Eval {profile.eval_id}")
-    return section[content_start:fence_end].strip()
+    fixture_index = section.find("\nFixture:", marker_index + len(marker))
+    prompt_block = section[marker_index:] if fixture_index < 0 else section[marker_index:fixture_index]
+    prompts: list[str] = []
+    search_from = 0
+    while True:
+        fence_start = prompt_block.find("```", search_from)
+        if fence_start < 0:
+            break
+        content_start = prompt_block.find("\n", fence_start)
+        if content_start < 0:
+            break
+        content_start += 1
+        fence_end = prompt_block.find("\n```", content_start)
+        if fence_end < 0:
+            break
+        prompts.append(prompt_block[content_start:fence_end].strip())
+        search_from = fence_end + 4
+    if len(prompts) != profile.turn_count:
+        raise EvalError(
+            f"Eval {profile.eval_id} requires {profile.turn_count} canonical prompts; "
+            f"found {len(prompts)}"
+        )
+    return tuple(prompts)
+
+
+def extract_canonical_prompt(profile: EvalProfile) -> str:
+    return extract_canonical_prompts(profile)[0]
+
+
+def _prompt_bundle_bytes(prompts: Sequence[bytes]) -> bytes:
+    return b"\n--- BLACKBOX TURN BOUNDARY ---\n".join(prompts)
 
 
 def _extract_contract_section(path: Path, heading: str) -> str:
@@ -672,6 +817,19 @@ def build_judge_request(
             "content": answer,
         }
     }
+    for turn in profile.checkpoint_turns:
+        prior_answer_path = run_path / f"answer-turn-{turn}.md"
+        prior_answer = prior_answer_path.read_text(encoding="utf-8")
+        prior_answer_bytes = prior_answer.encode("utf-8")
+        evidence_registry[prior_answer_path.name] = {
+            "kind": "text",
+            "path": prior_answer_path.name,
+            "encoding": "utf-8",
+            "sha256": _sha256_bytes(prior_answer_bytes),
+            "size": len(prior_answer_bytes),
+            "quotable": True,
+            "content": prior_answer,
+        }
     diff_is_binary = any(
         marker in diff
         for marker in (b"\x00", b"GIT binary patch", b"Binary files ")
@@ -726,8 +884,13 @@ def build_judge_request(
         },
         "evidence_registry": evidence_registry,
         "instruction": (
-            "Return every required semantic and canary-adoption assertion. "
-            "Every verdict must include an evidence_quote from its declared "
+            "Return every required semantic assertion"
+            + (
+                " and every required canary-adoption assertion. "
+                if profile.canary_pairs
+                else ". "
+            )
+            + "Every verdict must include an evidence_quote from its declared "
             "evidence_ref. Quotes are checked only by case-sensitive "
             "normalized substring matching within that one evidence source."
         ),
@@ -806,10 +969,17 @@ def prepare_run(
     fixture_path = run_path / "fixture"
     shutil.copytree(profile.fixture_root, fixture_path, symlinks=True)
 
-    canonical_prompt = extract_canonical_prompt(profile)
-    effective_prompt = f"{canonical_prompt}\n\n{profile.prompt_appendix}\n"
-    prompt_bytes = effective_prompt.encode("utf-8")
-    (run_path / "prompt.md").write_bytes(prompt_bytes)
+    canonical_prompts = extract_canonical_prompts(profile)
+    effective_prompts = (
+        f"{canonical_prompts[0]}\n\n{profile.prompt_appendix}\n",
+        *canonical_prompts[1:],
+    )
+    canonical_prompt_bytes = tuple(item.encode("utf-8") for item in canonical_prompts)
+    effective_prompt_bytes = tuple(item.encode("utf-8") for item in effective_prompts)
+    (run_path / "prompt.md").write_bytes(effective_prompt_bytes[0])
+    for turn, prompt_bytes in enumerate(effective_prompt_bytes[1:], start=2):
+        (run_path / f"prompt-{turn}.md").write_bytes(prompt_bytes)
+        (run_path / f"answer-turn-{turn - 1}.md").write_bytes(b"")
     (run_path / "answer.md").write_bytes(b"")
 
     run_git(fixture_path, ["init"])
@@ -840,9 +1010,14 @@ def prepare_run(
         {
             "agent_identity": None,
             "answer_sha256": None,
-            "canonical_prompt_sha256": _sha256_bytes(canonical_prompt.encode("utf-8")),
+            "canonical_prompt_sha256": _sha256_bytes(
+                _prompt_bundle_bytes(canonical_prompt_bytes)
+            ),
+            "completed_checkpoints": {},
             "created_at": timestamp,
-            "effective_prompt_sha256": _sha256_bytes(prompt_bytes),
+            "effective_prompt_sha256": _sha256_bytes(
+                _prompt_bundle_bytes(effective_prompt_bytes)
+            ),
             "eval_id": profile.eval_id,
             "fixture_baseline_commit": fixture_baseline_commit,
             "fixture_version": profile.fixture_version,
@@ -854,11 +1029,13 @@ def prepare_run(
             "patch_decision_history": [],
             "profile_version": profile.profile_version,
             "prompt_appendix": profile.prompt_appendix,
+            "required_checkpoint_turns": list(profile.checkpoint_turns),
             "run_id": run_id,
             "run_status": "READY_FOR_AGENT",
             "schema_version": RUN_SCHEMA_VERSION,
             "skill_identity": identity,
             "skill_source_commit": skill_source_commit,
+            "turn_count": profile.turn_count,
             "unresolved_assertion_ids": [],
         },
     )
@@ -896,16 +1073,41 @@ def collect_git_evidence(run_path: Path) -> dict[str, Any]:
             ],
             env_overrides=env_overrides,
         ).stdout
+        changed_raw = run_git(
+            fixture_path,
+            ["diff", "--name-only", "-z", baseline, "--"],
+            env_overrides=env_overrides,
+        ).stdout
 
     statuses = parse_porcelain_v1_z(status_raw)
     untracked_paths = [
         entry["path"] for entry in statuses if entry["status"] == "??"
     ]
     untracked_manifest = collect_untracked_content(fixture_path, untracked_paths)
+    try:
+        diff_paths = [
+            item.decode("utf-8", errors="strict").replace("\\", "/")
+            for item in changed_raw.split(b"\0")
+            if item
+        ]
+    except UnicodeDecodeError as error:
+        raise EvalError("git changed path is not UTF-8") from error
+    changed_paths = sorted(
+        {
+            *diff_paths,
+            *(str(entry["path"]) for entry in statuses),
+            *(
+                str(entry["original_path"]).replace("\\", "/")
+                for entry in statuses
+                if entry.get("original_path")
+            ),
+        }
+    )
     (run_path / "diff.patch").write_bytes(diff)
     evidence = {
         "baseline_head": baseline,
         "current_head": current_head,
+        "changed_paths": changed_paths,
         "diff_patch_sha256": _sha256_bytes(diff),
         "diff_patch_size": len(diff),
         "has_any_write": current_head != baseline or bool(statuses) or bool(diff),
@@ -915,6 +1117,105 @@ def collect_git_evidence(run_path: Path) -> dict[str, Any]:
     }
     write_json(run_path / "evidence.json", evidence)
     return evidence
+
+
+def _checkpoint_digest(checkpoint: Mapping[str, Any]) -> str:
+    payload = dict(checkpoint)
+    payload.pop("checkpoint_sha256", None)
+    return _sha256_json(payload)
+
+
+def checkpoint_turn(
+    run_path: Path,
+    turn: int,
+    now: Callable[[], datetime] | None = None,
+) -> dict[str, Any]:
+    resolved = run_path.expanduser().resolve(strict=True)
+    run = read_json_object(resolved / "run.json")
+    profile = load_profile(_require_string(run, "eval_id"))
+    _validate_prepared_run(resolved, run, profile)
+    if turn not in profile.checkpoint_turns:
+        raise EvalError(f"turn {turn} is not a configured checkpoint")
+    if run.get("agent_identity") is not None or run.get("answer_sha256") is not None:
+        raise EvalError("cannot checkpoint after final answer identity is locked")
+    completed = run.get("completed_checkpoints")
+    if not isinstance(completed, dict):
+        raise EvalError("Run completed_checkpoints must be an object")
+    if str(turn) in completed:
+        raise EvalError(f"turn {turn} checkpoint already exists")
+
+    answer_path = resolved / f"answer-turn-{turn}.md"
+    if not answer_path.is_file():
+        raise EvalError(f"answer-turn-{turn}.md is missing")
+    answer_bytes = answer_path.read_bytes()
+    if not answer_bytes.strip():
+        raise EvalError(f"answer-turn-{turn}.md is empty")
+    try:
+        answer_bytes.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise EvalError(f"answer-turn-{turn}.md must be UTF-8") from error
+
+    evidence = collect_git_evidence(resolved)
+    checkpoint_diff = resolved / f"checkpoint-turn-{turn}.diff.patch"
+    os.replace(resolved / "diff.patch", checkpoint_diff)
+    (resolved / "evidence.json").unlink()
+    instant = (now or (lambda: datetime.now(timezone.utc)))()
+    checkpoint: dict[str, Any] = {
+        "answer_path": answer_path.name,
+        "answer_sha256": _sha256_bytes(answer_bytes),
+        "captured_at": _utc_timestamp(instant),
+        "evidence": evidence,
+        "schema_version": "0.1",
+        "turn": turn,
+    }
+    checkpoint["checkpoint_sha256"] = _checkpoint_digest(checkpoint)
+    write_json(resolved / f"checkpoint-turn-{turn}.json", checkpoint)
+    completed[str(turn)] = checkpoint["checkpoint_sha256"]
+    run["completed_checkpoints"] = completed
+    write_json(resolved / "run.json", run)
+    return checkpoint
+
+
+def validate_required_checkpoints(
+    run_path: Path,
+    profile: EvalProfile,
+    run: Mapping[str, Any],
+) -> dict[int, dict[str, Any]]:
+    completed = run.get("completed_checkpoints")
+    if not isinstance(completed, dict):
+        raise EvalError("Run completed_checkpoints must be an object")
+    validated: dict[int, dict[str, Any]] = {}
+    for turn in profile.checkpoint_turns:
+        pointer = completed.get(str(turn))
+        if not isinstance(pointer, str) or not re.fullmatch(r"[0-9a-f]{64}", pointer):
+            raise EvalError(f"required turn {turn} checkpoint is missing")
+        checkpoint_path = run_path / f"checkpoint-turn-{turn}.json"
+        if not checkpoint_path.is_file():
+            raise EvalError(f"checkpoint-turn-{turn}.json is missing")
+        checkpoint = read_json_object(checkpoint_path)
+        if checkpoint.get("checkpoint_sha256") != pointer:
+            raise EvalError(f"turn {turn} checkpoint pointer mismatch")
+        if _checkpoint_digest(checkpoint) != pointer:
+            raise EvalError(f"turn {turn} checkpoint content differs from its lock")
+        if checkpoint.get("turn") != turn or checkpoint.get("schema_version") != "0.1":
+            raise EvalError(f"turn {turn} checkpoint metadata is invalid")
+        answer_path = run_path / f"answer-turn-{turn}.md"
+        if (
+            not answer_path.is_file()
+            or _sha256_file(answer_path) != checkpoint.get("answer_sha256")
+        ):
+            raise EvalError(f"checkpoint answer bytes differ for turn {turn}")
+        evidence = checkpoint.get("evidence")
+        if not isinstance(evidence, dict):
+            raise EvalError(f"turn {turn} checkpoint evidence is invalid")
+        diff_path = run_path / f"checkpoint-turn-{turn}.diff.patch"
+        if (
+            not diff_path.is_file()
+            or _sha256_file(diff_path) != evidence.get("diff_patch_sha256")
+        ):
+            raise EvalError(f"turn {turn} checkpoint diff differs from its lock")
+        validated[turn] = checkpoint
+    return validated
 
 
 def observe_canary_pairs(
@@ -983,12 +1284,15 @@ def _validate_judge_input(
 
     profile_pair_ids = [pair.id for pair in profile.canary_pairs]
     observed_pair_ids = [item.get("pair_id") for item in observations]
-    if (
-        len(observations) != 3
-        or len(profile_pair_ids) != 3
-        or observed_pair_ids != profile_pair_ids
-    ):
-        raise EvalError("Judge requires exactly three ordered canary observations")
+    if profile.canary_pairs:
+        if (
+            len(observations) != 3
+            or len(profile_pair_ids) != 3
+            or observed_pair_ids != profile_pair_ids
+        ):
+            raise EvalError("Judge requires exactly three ordered canary observations")
+    elif observations or profile_pair_ids:
+        raise EvalError("Judge received canary observations for a non-canary profile")
     allowed_states = {"wiki_only", "source_only", "both", "neither"}
     if any(item.get("state") not in allowed_states for item in observations):
         raise EvalError("unknown canary observation state")
@@ -1020,7 +1324,7 @@ def _validate_judge_input(
         if raw_assertion["verdict"] not in {"pass", "fail", "uncertain"}:
             raise EvalError("unknown Judge verdict")
         evidence_ref = raw_assertion["evidence_ref"]
-        if evidence_ref not in {"answer.md", "diff.patch"}:
+        if evidence_ref not in evidence_registry:
             raise EvalError("unknown Judge evidence ref")
         evidence = evidence_registry.get(evidence_ref)
         if not isinstance(evidence, Mapping):
@@ -1132,22 +1436,23 @@ def grade_judge(
             )
         )
 
-    coverage_outcome = (
-        "PASS" if preferred_count >= profile.min_observed_pairs else "PARTIAL"
-    )
-    results.append(
-        AssertionResult(
-            id="canary-adoption-coverage",
-            layer="judge",
-            outcome=coverage_outcome,
-            severity="info" if coverage_outcome == "PASS" else "soft",
-            message=(
-                f"{preferred_count} of exactly {len(profile.canary_pairs)} "
-                "canary pairs adopted preferred evidence; "
-                f"minimum is {profile.min_observed_pairs}."
-            ),
+    if profile.canary_pairs:
+        coverage_outcome = (
+            "PASS" if preferred_count >= profile.min_observed_pairs else "PARTIAL"
         )
-    )
+        results.append(
+            AssertionResult(
+                id="canary-adoption-coverage",
+                layer="judge",
+                outcome=coverage_outcome,
+                severity="info" if coverage_outcome == "PASS" else "soft",
+                message=(
+                    f"{preferred_count} of exactly {len(profile.canary_pairs)} "
+                    "canary pairs adopted preferred evidence; "
+                    f"minimum is {profile.min_observed_pairs}."
+                ),
+            )
+        )
     return results
 
 
@@ -1176,16 +1481,18 @@ def _baseline_contains_path(run_path: Path, relative_path: str) -> bool:
     return bool(listing)
 
 
-def run_deterministic_assertions(
-    run_path: Path,
+def _path_matches_any(path: str, patterns: Sequence[str]) -> bool:
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+
+
+def _write_boundary_result(
     profile: EvalProfile,
-    answer: str,
     git_evidence: Mapping[str, Any],
-) -> tuple[list[AssertionResult], list[dict[str, Any]]]:
-    assertions: list[AssertionResult] = []
+) -> AssertionResult:
     has_any_write = git_evidence.get("has_any_write") is True
-    assertions.append(
-        AssertionResult(
+    policy = profile.write_policy
+    if policy.mode == "zero":
+        return AssertionResult(
             id="write-boundary",
             layer="deterministic",
             outcome="FAIL" if has_any_write else "PASS",
@@ -1197,25 +1504,111 @@ def run_deterministic_assertions(
             ),
             evidence_ids=("git-evidence:write-state",),
         )
-    )
 
-    cited_wiki_path = _answer_has_standalone_path(
-        answer, profile.required_path_any_of
-    )
-    assertions.append(
-        AssertionResult(
-            id="wiki-path-citation",
+    raw_paths = git_evidence.get("changed_paths", [])
+    if not isinstance(raw_paths, list) or not all(
+        isinstance(item, str) and item for item in raw_paths
+    ):
+        return AssertionResult(
+            id="write-boundary",
             layer="deterministic",
-            outcome="PASS" if cited_wiki_path else "PARTIAL",
-            severity="info" if cited_wiki_path else "soft",
-            message=(
-                "Answer cites at least one configured Wiki evidence path."
-                if cited_wiki_path
-                else "Answer cites none of the configured Wiki evidence paths."
-            ),
-            evidence_ids=("answer:wiki-path-citation",),
+            outcome="FAIL",
+            severity="hard",
+            message="Git evidence cannot attribute state-changing writes to paths.",
+            evidence_ids=("git-evidence:changed-paths",),
+        )
+    changed_paths = tuple(sorted(set(raw_paths)))
+    forbidden = tuple(
+        path
+        for path in changed_paths
+        if not _path_matches_any(path, policy.allowed_path_globs)
+    )
+    missing_any = (
+        bool(policy.required_path_any_of)
+        and not any(
+            _path_matches_any(path, policy.required_path_any_of)
+            for path in changed_paths
         )
     )
+    missing_all = tuple(
+        pattern
+        for pattern in policy.required_path_all_of
+        if not any(fnmatch.fnmatchcase(path, pattern) for path in changed_paths)
+    )
+    unattributed = has_any_write and not changed_paths
+    failed = bool(forbidden or missing_any or missing_all or unattributed)
+    details: list[str] = []
+    if forbidden:
+        details.append(f"forbidden paths: {', '.join(forbidden)}")
+    if missing_any:
+        details.append(
+            "none of required paths changed: "
+            + ", ".join(policy.required_path_any_of)
+        )
+    if missing_all:
+        details.append(f"required paths missing: {', '.join(missing_all)}")
+    if unattributed:
+        details.append("write state has no attributable changed path")
+    return AssertionResult(
+        id="write-boundary",
+        layer="deterministic",
+        outcome="FAIL" if failed else "PASS",
+        severity="hard" if failed else "info",
+        message=(
+            "; ".join(details)
+            if details
+            else "All fixture writes stay inside the configured allowlist."
+        ),
+        evidence_ids=("git-evidence:changed-paths",),
+    )
+
+
+def run_deterministic_assertions(
+    run_path: Path,
+    profile: EvalProfile,
+    answer: str,
+    git_evidence: Mapping[str, Any],
+) -> tuple[list[AssertionResult], list[dict[str, Any]]]:
+    assertions: list[AssertionResult] = [_write_boundary_result(profile, git_evidence)]
+
+    if profile.required_path_any_of:
+        cited_wiki_path = _answer_has_standalone_path(
+            answer, profile.required_path_any_of
+        )
+        assertions.append(
+            AssertionResult(
+                id="wiki-path-citation",
+                layer="deterministic",
+                outcome="PASS" if cited_wiki_path else "PARTIAL",
+                severity="info" if cited_wiki_path else "soft",
+                message=(
+                    "Answer cites at least one configured Wiki evidence path."
+                    if cited_wiki_path
+                    else "Answer cites none of the configured Wiki evidence paths."
+                ),
+                evidence_ids=("answer:wiki-path-citation",),
+            )
+        )
+
+    if profile.checkpoint_turns:
+        run = read_json_object(run_path / "run.json")
+        checkpoints = validate_required_checkpoints(run_path, profile, run)
+        for turn in profile.checkpoint_turns:
+            has_turn_write = checkpoints[turn]["evidence"].get("has_any_write") is True
+            assertions.append(
+                AssertionResult(
+                    id=f"turn-{turn}-write-boundary",
+                    layer="deterministic",
+                    outcome="FAIL" if has_turn_write else "PASS",
+                    severity="hard" if has_turn_write else "info",
+                    message=(
+                        f"Turn {turn} checkpoint contains fixture writes."
+                        if has_turn_write
+                        else f"Turn {turn} checkpoint is write-free."
+                    ),
+                    evidence_ids=(f"checkpoint-turn-{turn}:write-state",),
+                )
+            )
 
     if profile.eval_id == "32":
         root_index = ".llm-wiki/index.md"
@@ -1253,25 +1646,26 @@ def run_deterministic_assertions(
         )
 
     observations = observe_canary_pairs(answer, profile)
-    has_observed_canary = any(
-        item["state"] != "neither" for item in observations
-    )
-    assertions.append(
-        AssertionResult(
-            id="canary-coverage",
-            layer="deterministic",
-            outcome="PASS" if has_observed_canary else "PARTIAL",
-            severity="info" if has_observed_canary else "soft",
-            message=(
-                "At least one canary pair has an observable literal."
-                if has_observed_canary
-                else "No canary pair has an observable literal."
-            ),
-            evidence_ids=tuple(
-                f"answer:canary:{item['pair_id']}" for item in observations
-            ),
+    if profile.canary_pairs:
+        has_observed_canary = any(
+            item["state"] != "neither" for item in observations
         )
-    )
+        assertions.append(
+            AssertionResult(
+                id="canary-coverage",
+                layer="deterministic",
+                outcome="PASS" if has_observed_canary else "PARTIAL",
+                severity="info" if has_observed_canary else "soft",
+                message=(
+                    "At least one canary pair has an observable literal."
+                    if has_observed_canary
+                    else "No canary pair has an observable literal."
+                ),
+                evidence_ids=tuple(
+                    f"answer:canary:{item['pair_id']}" for item in observations
+                ),
+            )
+        )
 
     assertions.extend(
         AssertionResult(
@@ -1317,6 +1711,7 @@ def _provenance_from_run(run: Mapping[str, Any]) -> dict[str, Any]:
         "skill_source_commit",
         "skill_identity",
         "fixture_baseline_commit",
+        "completed_checkpoints",
         "agent_identity",
         "answer_sha256",
         "judge_identity",
@@ -1406,10 +1801,31 @@ def _validate_prepared_run(
         raise EvalError("Run prompt.md must exist")
     if not fixture_path.is_dir() or not (fixture_path / ".git").is_dir():
         raise EvalError("Run fixture Git repository is missing")
-    if _sha256_file(prompt_path) != run.get("effective_prompt_sha256"):
+    if run.get("turn_count") != profile.turn_count:
+        raise EvalError("Run turn_count mismatch")
+    if run.get("required_checkpoint_turns") != list(profile.checkpoint_turns):
+        raise EvalError("Run required_checkpoint_turns mismatch")
+    completed_checkpoints = run.get("completed_checkpoints")
+    if not isinstance(completed_checkpoints, dict):
+        raise EvalError("Run completed_checkpoints must be an object")
+    effective_prompt_bytes = [prompt_path.read_bytes()]
+    for turn in range(2, profile.turn_count + 1):
+        path = run_path / f"prompt-{turn}.md"
+        if not path.is_file():
+            raise EvalError(f"Run prompt-{turn}.md must exist")
+        effective_prompt_bytes.append(path.read_bytes())
+        if not (run_path / f"answer-turn-{turn - 1}.md").is_file():
+            raise EvalError(f"Run answer-turn-{turn - 1}.md must exist")
+    if _sha256_bytes(_prompt_bundle_bytes(effective_prompt_bytes)) != run.get(
+        "effective_prompt_sha256"
+    ):
         raise EvalError("effective_prompt_sha256 mismatch")
-    canonical = extract_canonical_prompt(profile).encode("utf-8")
-    if _sha256_bytes(canonical) != run.get("canonical_prompt_sha256"):
+    canonical = tuple(
+        item.encode("utf-8") for item in extract_canonical_prompts(profile)
+    )
+    if _sha256_bytes(_prompt_bundle_bytes(canonical)) != run.get(
+        "canonical_prompt_sha256"
+    ):
         raise EvalError("canonical_prompt_sha256 mismatch")
     baseline = _validate_full_commit(
         fixture_path, run.get("fixture_baseline_commit"), "Fixture baseline commit"
@@ -1858,6 +2274,7 @@ def grade_run(
 
         profile = load_profile(eval_id)
         _validate_prepared_run(run_path, run, profile)
+        validate_required_checkpoints(run_path, profile, run)
 
         answer_path = run_path / "answer.md"
         answer_locked = run.get("agent_identity") is not None or run.get("answer_sha256") is not None
@@ -2732,10 +3149,20 @@ def build_cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Project Develop Copilot black-box evaluator")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    prepare = commands.add_parser("prepare", help="prepare an Eval 2 or 32 Run")
-    prepare.add_argument("--case", dest="eval_id", required=True, choices=("2", "32"))
+    prepare = commands.add_parser(
+        "prepare", help="prepare an Eval 2, 32, 33, 34, or 35 Run"
+    )
+    prepare.add_argument(
+        "--case", dest="eval_id", required=True, choices=("2", "32", "33", "34", "35")
+    )
     prepare.add_argument("--skill-path", type=Path)
     prepare.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE)
+
+    checkpoint = commands.add_parser(
+        "checkpoint", help="lock an intermediate multi-turn answer and Git state"
+    )
+    checkpoint.add_argument("--run", dest="run_path", required=True, type=Path)
+    checkpoint.add_argument("--turn", required=True, type=int)
 
     grade = commands.add_parser("grade", help="grade a prepared Run")
     grade.add_argument("--run", dest="run_path", required=True, type=Path)
@@ -2770,6 +3197,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Prompt: {run_path / 'prompt.md'}")
         print(f"Fixture: {run_path / 'fixture'}")
         print(f"Answer: {run_path / 'answer.md'}")
+        return 0
+    if args.command == "checkpoint":
+        try:
+            checkpoint = checkpoint_turn(args.run_path, args.turn)
+        except (EvalError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        print(
+            f"Checkpoint: "
+            f"{args.run_path.expanduser().resolve() / f'checkpoint-turn-{args.turn}.json'}"
+        )
+        print(f"Checkpoint SHA-256: {checkpoint['checkpoint_sha256']}")
         return 0
     if args.command == "grade":
         identity = (args.execution_kind, args.agent_product, args.agent_model)

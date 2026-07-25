@@ -10,17 +10,19 @@ Normal delivery comes first.
 
 ## Offline black-box bridge
 
-The developer-only black-box sidecar adds an offline bridge for Eval 2 and Eval
-32:
+The developer-only black-box sidecar adds an offline improvement bridge for
+Eval 2 and Eval 32, plus run-level Initialization Gate certification for Eval
+33, Eval 34, and Eval 35:
 
 ```text
 offline evidence -> diagnosis -> Human Patch Gate -> before/after comparison
 ```
 
-The sidecar prepares files, validates deterministic/Judge evidence, and freezes
-diagnosis provenance. It does not call an Agent or LLM, apply a Skill patch, or
-infer human approval. A human copies `answer.md` and `judge.json` into the Run,
-then the process must stop at the Human Patch Gate. Only an explicit Human
+The sidecar prepares files, records the Eval 35 intermediate checkpoint,
+validates deterministic/Judge evidence, and freezes diagnosis provenance. It
+does not call an Agent or LLM, apply a Skill patch, or infer human approval. A
+human copies the answer files and `judge.json` into the Run, then the process
+must stop at the Human Patch Gate. Only an explicit Human
 `patch-decision.json` value of `approve` authorizes the Level B before/after
 bridge.
 

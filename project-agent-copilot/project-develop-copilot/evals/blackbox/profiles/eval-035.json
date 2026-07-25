@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.2",
+  "eval_id": "35",
+  "profile_version": "eval-035-profile-0.2",
+  "fixture_version": "eval-035-fixture-0.1",
+  "canonical_heading": "Eval 35: Session Preview Is Allowed But Save Requires Init",
+  "prompt_appendix": "旧聊天摘要：团队决定超时配置只接受正整数；默认读取超时是 30 秒；对应业务改动只允许位于 src/config.py 和 tests/test_config.py。请从这些内容中选择值得保留的候选。",
+  "scenario_kind": "multi-turn",
+  "turn_count": 2,
+  "checkpoint_turns": [1],
+  "semantic_assertion_ids": [
+    "preview-candidate-quality",
+    "preview-no-imported-claim",
+    "selected-candidates-preserved",
+    "save-bootstrap-before-digest",
+    "supported-next-gate-required"
+  ],
+  "manual_only_assertions": [],
+  "contract_refs": [
+    {"path": "SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "project-session-extract/SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "evals/project-develop-copilot-evals.md", "heading": "## Eval 35: Session Preview Is Allowed But Save Requires Init"}
+  ],
+  "params": {
+    "write_policy": {
+      "mode": "allowlist",
+      "allowed_path_globs": [
+        ".llm-wiki/**"
+      ],
+      "required_path_any_of": [
+        ".llm-wiki/README.md"
+      ]
+    }
+  }
+}

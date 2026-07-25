@@ -52,6 +52,34 @@ class BlackboxEvalAssetTest(unittest.TestCase):
             profile.manual_only_assertions[0].reason,
         )
 
+    def test_initialization_profiles_are_v02_without_wiki_canaries(self):
+        expected = {
+            "33": ("state-changing", 1, "allowlist"),
+            "34": ("state-changing", 1, "allowlist"),
+            "35": ("multi-turn", 2, "allowlist"),
+        }
+
+        for eval_id, (scenario_kind, turn_count, write_mode) in expected.items():
+            with self.subTest(eval_id=eval_id):
+                profile = self.runner.load_profile(eval_id)
+                self.assertEqual("0.2", profile.schema_version)
+                self.assertEqual(scenario_kind, profile.scenario_kind)
+                self.assertEqual(turn_count, profile.turn_count)
+                self.assertEqual(write_mode, profile.write_policy.mode)
+                self.assertEqual((), profile.canary_pairs)
+                self.assertEqual(0, profile.min_observed_pairs)
+                self.assertEqual((), profile.required_path_any_of)
+                self.assertFalse((profile.fixture_root / ".llm-wiki").exists())
+
+    def test_eval_035_requires_a_first_turn_checkpoint(self):
+        profile = self.runner.load_profile("35")
+
+        self.assertEqual((1,), profile.checkpoint_turns)
+        prompts = self.runner.extract_canonical_prompts(profile)
+        self.assertEqual(2, len(prompts))
+        self.assertIn("不要写文件", prompts[0])
+        self.assertIn("Session Digest", prompts[1])
+
     def test_canary_literals_are_unique_and_not_substrings(self):
         for eval_id in ("2", "32"):
             profile = self.runner.load_profile(eval_id)
@@ -332,6 +360,77 @@ class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
 
         result = self.assertion_by_id(assertions, "wiki-root-index-absent")
         self.assertEqual("FAIL", result.outcome)
+
+    def test_eval_033_allows_only_wiki_and_bounded_business_paths(self):
+        profile = self.runner.load_profile("33")
+        assertions, observations = self.run_assertions(
+            "Initialization completed before bounded implementation.",
+            profile=profile,
+            has_any_write=True,
+            run_path=self.root / "unused-run",
+        )
+        write_boundary = self.assertion_by_id(assertions, "write-boundary")
+        self.assertEqual("FAIL", write_boundary.outcome)
+        self.assertEqual([], observations)
+
+        assertions, observations = self.runner.run_deterministic_assertions(
+            self.root / "unused-run",
+            profile,
+            "Initialization completed before bounded implementation.",
+            {
+                "has_any_write": True,
+                "changed_paths": [
+                    ".llm-wiki/README.md",
+                    "src/config.py",
+                    "tests/test_config.py",
+                ],
+            },
+        )
+        self.assertEqual(
+            "PASS",
+            self.assertion_by_id(assertions, "write-boundary").outcome,
+        )
+        self.assertEqual([], observations)
+        self.assertNotIn(
+            "wiki-path-citation",
+            {item.id for item in assertions},
+        )
+        self.assertNotIn("canary-coverage", {item.id for item in assertions})
+
+        assertions, _ = self.runner.run_deterministic_assertions(
+            self.root / "unused-run",
+            profile,
+            "Initialization completed before bounded implementation.",
+            {
+                "has_any_write": True,
+                "changed_paths": [
+                    ".llm-wiki/README.md",
+                    "src/config.py",
+                    "tests/test_config.py",
+                    "src/unrelated.py",
+                ],
+            },
+        )
+        self.assertEqual(
+            "FAIL",
+            self.assertion_by_id(assertions, "write-boundary").outcome,
+        )
+
+    def test_eval_034_rejects_business_source_writes(self):
+        profile = self.runner.load_profile("34")
+        assertions, _ = self.runner.run_deterministic_assertions(
+            self.root / "unused-run",
+            profile,
+            "Doctor remained pending until initialization completed.",
+            {
+                "has_any_write": True,
+                "changed_paths": [".llm-wiki/README.md", "src/config.py"],
+            },
+        )
+
+        result = self.assertion_by_id(assertions, "write-boundary")
+        self.assertEqual("FAIL", result.outcome)
+        self.assertIn("src/config.py", result.message)
         self.assertEqual("hard", result.severity)
 
     def test_all_neither_canaries_create_partial_coverage_without_adoption(self):
@@ -557,6 +656,57 @@ class BlackboxEvalJudgeTest(unittest.TestCase):
             self.by_id(results, "canary-adoption-coverage").outcome,
         )
 
+    def test_initialization_judge_has_no_canary_coverage_requirement(self):
+        profile = self.runner.load_profile("34")
+        answer = "The health request remains pending behind project-init."
+        evidence_registry = {
+            "answer.md": {
+                "kind": "text",
+                "content": answer,
+                "quotable": True,
+            },
+            "diff.patch": {
+                "kind": "text",
+                "content": "",
+                "quotable": True,
+            },
+        }
+        judge = {
+            "schema_version": self.runner.JUDGE_SCHEMA_VERSION,
+            "model": "fixture-judge",
+            "temperature": 0,
+            "prompt_version": self.runner.JUDGE_PROMPT_VERSION,
+            "profile_version": profile.profile_version,
+            "evidence_match_mode": self.runner.QUOTE_MATCH_MODE,
+            "evidence_normalizer_version": self.runner.QUOTE_NORMALIZER_VERSION,
+            "assertions": [
+                {
+                    "id": assertion_id,
+                    "verdict": "pass",
+                    "evidence_ref": "answer.md",
+                    "evidence_quote": answer,
+                    "reason": "The bootstrap handoff preserves the request.",
+                }
+                for assertion_id in profile.semantic_assertion_ids
+            ],
+        }
+
+        results = self.runner.grade_judge(
+            judge,
+            profile,
+            evidence_registry,
+            observations=[],
+        )
+
+        self.assertEqual(
+            "PASS",
+            self.by_id(results, "judge-validation").outcome,
+        )
+        self.assertNotIn(
+            "canary-adoption-coverage",
+            {item.id for item in results},
+        )
+
     def test_judge_results_do_not_override_deterministic_hard_failures(self):
         hard_fail = self.runner.AssertionResult(
             id="write-boundary",
@@ -671,6 +821,26 @@ class BlackboxEvalPrepareTest(unittest.TestCase):
             (run_path / "prompt.md").read_text(encoding="utf-8"),
         )
 
+    def test_prepare_eval_035_creates_two_prompt_and_answer_boundaries(self):
+        run_path = self.runner.prepare_run(
+            "35", self.workspace, skill_path=None, run_id="eval-035-test"
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+
+        self.assertEqual(2, run["turn_count"])
+        self.assertEqual([1], run["required_checkpoint_turns"])
+        self.assertTrue((run_path / "prompt.md").is_file())
+        self.assertTrue((run_path / "prompt-2.md").is_file())
+        self.assertEqual(
+            "",
+            (run_path / "answer-turn-1.md").read_text(encoding="utf-8"),
+        )
+        self.assertEqual("", (run_path / "answer.md").read_text(encoding="utf-8"))
+        self.assertNotEqual(
+            (run_path / "prompt.md").read_bytes(),
+            (run_path / "prompt-2.md").read_bytes(),
+        )
+
     def test_prepare_fingerprints_explicit_skill_path(self):
         skill = Path(self.temp.name) / "installed-skill"
         skill.mkdir()
@@ -692,6 +862,159 @@ class BlackboxEvalPrepareTest(unittest.TestCase):
             self.runner.prepare_run(
                 "2", self.runner.REPO_ROOT / "tmp-evals", skill_path=None
             )
+
+
+class BlackboxEvalCheckpointTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = load_runner()
+        self.temp = TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.workspace = Path(self.temp.name) / "workspace"
+
+    def prepare(self, suffix):
+        return self.runner.prepare_run(
+            "35",
+            self.workspace,
+            skill_path=None,
+            run_id=f"eval-035-{suffix}",
+        )
+
+    def test_first_turn_checkpoint_locks_answer_and_clean_git_state(self):
+        run_path = self.prepare("checkpoint")
+        first_answer = run_path / "answer-turn-1.md"
+        first_answer.write_text(
+            "候选：保留超时配置约束；本轮没有写文件。",
+            encoding="utf-8",
+        )
+
+        checkpoint = self.runner.checkpoint_turn(
+            run_path,
+            turn=1,
+            now=lambda: datetime(2026, 7, 25, 8, 0, tzinfo=timezone.utc),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+
+        self.assertFalse(checkpoint["evidence"]["has_any_write"])
+        self.assertEqual(
+            hashlib.sha256(first_answer.read_bytes()).hexdigest(),
+            checkpoint["answer_sha256"],
+        )
+        self.assertEqual(
+            checkpoint["checkpoint_sha256"],
+            run["completed_checkpoints"]["1"],
+        )
+        self.assertTrue((run_path / "checkpoint-turn-1.diff.patch").is_file())
+
+        first_answer.write_text("tampered", encoding="utf-8")
+        with self.assertRaisesRegex(
+            self.runner.EvalError,
+            "checkpoint answer bytes differ",
+        ):
+            self.runner.validate_required_checkpoints(
+                run_path,
+                self.runner.load_profile("35"),
+                self.runner.read_json_object(run_path / "run.json"),
+            )
+
+    def test_eval_035_first_turn_write_is_a_deterministic_failure(self):
+        run_path = self.prepare("write")
+        (run_path / "answer-turn-1.md").write_text(
+            "候选已经预览。",
+            encoding="utf-8",
+        )
+        (run_path / "fixture" / "preview-output.md").write_text(
+            "forbidden",
+            encoding="utf-8",
+        )
+        self.runner.checkpoint_turn(run_path, turn=1)
+        profile = self.runner.load_profile("35")
+
+        assertions, _ = self.runner.run_deterministic_assertions(
+            run_path,
+            profile,
+            "第二轮已转交初始化。",
+            {"has_any_write": True, "changed_paths": [".llm-wiki/README.md"]},
+        )
+
+        result = next(item for item in assertions if item.id == "turn-1-write-boundary")
+        self.assertEqual("FAIL", result.outcome)
+        self.assertEqual("hard", result.severity)
+
+    def test_eval_035_judge_request_registers_both_turn_answers(self):
+        run_path = self.prepare("judge")
+        first = "候选：保留超时配置约束；本轮没有写文件。"
+        second = "所选候选已作为 pending_intent 转交 project-init。"
+        (run_path / "answer-turn-1.md").write_text(first, encoding="utf-8")
+        self.runner.checkpoint_turn(run_path, turn=1)
+
+        request = self.runner.build_judge_request(
+            run_path,
+            self.runner.load_profile("35"),
+            second,
+            b"",
+            observations=[],
+        )
+
+        self.assertEqual(
+            first,
+            request["evidence_registry"]["answer-turn-1.md"]["content"],
+        )
+        self.assertEqual(
+            second,
+            request["evidence_registry"]["answer.md"]["content"],
+        )
+
+    def test_eval_035_grade_requires_and_uses_the_locked_checkpoint(self):
+        missing = self.prepare("missing-checkpoint")
+        (missing / "answer.md").write_text("第二轮回答", encoding="utf-8")
+        self.assertEqual(
+            1,
+            self.runner.grade_run(
+                missing,
+                execution_kind="canned",
+                agent_product="canned",
+                agent_model="eval-035-mechanics",
+            ),
+        )
+        missing_run = self.runner.read_json_object(missing / "run.json")
+        self.assertEqual("RUN_ERROR", missing_run["run_status"])
+        self.assertIn("required turn 1 checkpoint is missing", missing_run["run_error_reason"])
+
+        run_path = self.prepare("graded")
+        (run_path / "answer-turn-1.md").write_text(
+            "候选已经预览，本轮未写文件。",
+            encoding="utf-8",
+        )
+        self.runner.checkpoint_turn(run_path, turn=1)
+        wiki_readme = run_path / "fixture" / ".llm-wiki" / "README.md"
+        wiki_readme.parent.mkdir()
+        wiki_readme.write_text("# Initialized Wiki\n", encoding="utf-8")
+        (run_path / "answer.md").write_text(
+            "已保留候选并转交初始化。",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            0,
+            self.runner.grade_run(
+                run_path,
+                execution_kind="canned",
+                agent_product="canned",
+                agent_model="eval-035-mechanics",
+                now=lambda: datetime(2026, 7, 25, 9, 0, tzinfo=timezone.utc),
+            ),
+        )
+        run = self.runner.read_json_object(run_path / "run.json")
+        grading = self.runner.read_json_object(run_path / "grading.json")
+        self.assertEqual("NEEDS_REVIEW", run["run_status"])
+        self.assertEqual(
+            "PASS",
+            next(
+                item
+                for item in grading["assertions"]
+                if item["id"] == "turn-1-write-boundary"
+            )["outcome"],
+        )
 
 
 class BlackboxEvalEvidenceTest(unittest.TestCase):
@@ -2649,9 +2972,10 @@ class BlackboxEvalCliTest(unittest.TestCase):
 
     def test_cli_help_is_complete_and_invalid_arguments_exit_two(self):
         parser = self.runner.build_cli_parser()
-        self.assertIn("{prepare,grade,report}", parser.format_help())
+        self.assertIn("{prepare,checkpoint,grade,report}", parser.format_help())
         for command, options in {
             "prepare": ("--case", "--skill-path", "--workspace"),
+            "checkpoint": ("--run", "--turn"),
             "grade": ("--run", "--execution-kind", "--agent-product", "--agent-model"),
             "report": ("--run", "--baseline", "--regression-pair"),
         }.items():
@@ -2708,6 +3032,24 @@ class BlackboxEvalDocumentationTest(unittest.TestCase):
             "`fixture/` is the Agent project root and current working directory (cwd).",
             "Do not run the Agent from the caller's real repository.",
             "`answer.md` must contain the final answer produced from that Run's `fixture/`.",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, readme)
+
+    def test_developer_readme_documents_initialization_runs_and_current_codex_boundary(self):
+        readme = (SKILL_ROOT / "evals" / "blackbox" / "README.md").read_text(
+            encoding="utf-8"
+        )
+
+        for text in (
+            "Eval 33",
+            "Eval 34",
+            "Eval 35",
+            "checkpoint --run",
+            "answer-turn-1.md",
+            "current Codex Run",
+            "does not certify other Agent products or models",
+            "ordinary users pay zero",
         ):
             with self.subTest(text=text):
                 self.assertIn(text, readme)

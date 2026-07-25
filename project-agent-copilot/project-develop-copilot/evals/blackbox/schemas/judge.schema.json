@@ -26,7 +26,7 @@
           "id": {"type": "string", "minLength": 1},
           "verdict": {"enum": ["pass", "fail", "uncertain"]},
           "adopted": {"enum": ["preferred", "source", "neither", "uncertain"]},
-          "evidence_ref": {"enum": ["answer.md", "diff.patch"]},
+          "evidence_ref": {"enum": ["answer.md", "answer-turn-1.md", "diff.patch"]},
           "evidence_quote": {"type": "string", "minLength": 1},
           "reason": {"type": "string", "minLength": 1}
         }

@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.2",
+  "eval_id": "34",
+  "profile_version": "eval-034-profile-0.2",
+  "fixture_version": "eval-034-fixture-0.1",
+  "canonical_heading": "Eval 34: Uninitialized Repository Bootstraps Before Doctor",
+  "prompt_appendix": "针对这个合成项目执行检查，并在最终回答中区分初始化事实、实际诊断结果与仍待完成的事项。",
+  "scenario_kind": "state-changing",
+  "turn_count": 1,
+  "checkpoint_turns": [],
+  "semantic_assertion_ids": [
+    "doctor-pending-behind-init",
+    "diagnosis-intent-preserved",
+    "no-manufactured-health-result",
+    "post-init-health-result-grounded"
+  ],
+  "manual_only_assertions": [],
+  "contract_refs": [
+    {"path": "SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "llm-wiki-doctor/SKILL.md", "heading": "## Initialization Gate"},
+    {"path": "evals/project-develop-copilot-evals.md", "heading": "## Eval 34: Uninitialized Repository Bootstraps Before Doctor"}
+  ],
+  "params": {
+    "write_policy": {
+      "mode": "allowlist",
+      "allowed_path_globs": [
+        ".llm-wiki/**"
+      ],
+      "required_path_any_of": [
+        ".llm-wiki/README.md"
+      ]
+    }
+  }
+}

@@ -6,11 +6,11 @@ Do not store raw private conversations, customer data, credentials, or sensitive
 
 ## Current Eval Set
 
-- `project-develop-copilot-evals.md`: 32 manual P0 lifecycle and routing regression definitions.
+- `project-develop-copilot-evals.md`: 35 manual P0 lifecycle and routing regression definitions.
 - `runbook.md`: how to run and score the evals manually.
-- `blackbox/README.md`: developer-only black-box sidecar for Eval 2 and Eval 32.
+- `blackbox/README.md`: developer-only black-box sidecar for Eval 2, 32, 33, 34, and 35.
 
-There is no automated Agent runner. The developer-only black-box sidecar prepares, grades, and reports file-based Eval 2/32 Runs without invoking an Agent or LLM. Deterministic repository-integrity CI may validate the sidecar, static text, links, and canonical definition facts; automated Agent lifecycle and Runtime Eval CI remain deferred.
+There is no automated Agent runner. The developer-only black-box sidecar prepares, checkpoints, grades, and reports file-based Eval 2/32/33/34/35 Runs without invoking an Agent or LLM. Deterministic repository-integrity CI may validate the sidecar, static text, links, and canonical definition facts; automated Agent lifecycle and Runtime Eval CI remain deferred.
 
 ## Required Rule
 
