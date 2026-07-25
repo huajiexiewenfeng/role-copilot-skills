@@ -32,8 +32,24 @@ class ResumeExtract:
     candidate_hint: str
     page_count: int
     char_count: int
+    removed_control_characters: int
     extracted_at: str
     warnings: list[str]
+
+
+_ALLOWED_C0 = {"\t", "\n", "\r"}
+
+
+def remove_forbidden_controls(text: str) -> tuple[str, int]:
+    output: list[str] = []
+    removed = 0
+    for character in text:
+        codepoint = ord(character)
+        if (codepoint < 0x20 and character not in _ALLOWED_C0) or codepoint == 0x7F:
+            removed += 1
+            continue
+        output.append(character)
+    return "".join(output), removed
 
 
 def sanitize_filename(value: str) -> str:
@@ -61,7 +77,7 @@ def iter_pdf_files(inputs: Iterable[Path], recursive: bool) -> list[Path]:
     return sorted(set(files), key=lambda p: str(p).lower())
 
 
-def extract_pdf_text(path: Path) -> tuple[str, int, list[str]]:
+def extract_pdf_text(path: Path) -> tuple[str, int, list[str], int]:
     warnings: list[str] = []
     reader = PdfReader(str(path))
     parts: list[str] = []
@@ -73,9 +89,14 @@ def extract_pdf_text(path: Path) -> tuple[str, int, list[str]]:
             text = ""
         parts.append(f"\n\n--- Page {index} ---\n\n{text.strip()}")
     text = "\n".join(parts).strip()
+    text, removed_controls = remove_forbidden_controls(text)
+    if removed_controls:
+        warnings.append(
+            f"Removed {removed_controls} forbidden control character(s) from extracted text."
+        )
     if not text:
         warnings.append("No extractable text. The PDF may be scanned or image-based.")
-    return text, len(reader.pages), warnings
+    return text, len(reader.pages), warnings, removed_controls
 
 
 def write_summary(output_dir: Path, extracts: list[ResumeExtract]) -> None:
@@ -134,7 +155,7 @@ def main(argv: list[str]) -> int:
 
     extracts: list[ResumeExtract] = []
     for pdf_path in pdf_files:
-        text, page_count, warnings = extract_pdf_text(pdf_path)
+        text, page_count, warnings, removed_controls = extract_pdf_text(pdf_path)
         candidate_hint = candidate_hint_from_filename(pdf_path)
         output_name = sanitize_filename(pdf_path.stem) + ".txt"
         text_path = output_dir / output_name
@@ -156,6 +177,7 @@ def main(argv: list[str]) -> int:
                 candidate_hint=candidate_hint,
                 page_count=page_count,
                 char_count=len(text),
+                removed_control_characters=removed_controls,
                 extracted_at=datetime.now().isoformat(timespec="seconds"),
                 warnings=warnings,
             )
