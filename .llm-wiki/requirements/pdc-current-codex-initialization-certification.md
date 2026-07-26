@@ -22,6 +22,7 @@
   - 生成仅适用于当前 Codex Run 的证据和报告。
   - 根据首轮真实 Eval 33–35 的失败证据，新增只写 `.llm-wiki/**` 的 `automatic-minimal` 初始化桥接模式。
   - 将“子 Skill 默认只读”与“用户明确禁止写入”分离，避免普通 Doctor 健康检查停在确认前。
+  - 直达子 Skill 时将 `bootstrap_handoff` 定义为内部路由消息，同一轮继续执行 `project-init`，不得把 handoff 当最终答复。
 - reference-only:
   - 已完成的 Initialization Gate Skill 改造。
   - 既有 Eval 2、32 真实 Agent Run。
@@ -41,6 +42,7 @@
 - 缺 Wiki 的自动桥接必须携带 `bootstrap_mode: automatic-minimal`，且只能写 `.llm-wiki/**`。
 - `.gitignore`、`.pre-commit-config.yaml` 与 `.github/workflows/llm-wiki-doctor.yml` 只属于用户显式 `explicit-full` init/refresh；自动桥接不得写入。
 - Doctor 的默认只读诊断不等于用户禁止 bootstrap 写入；仅用户明确 no-write 时暂停确认。
+- 直达任一 wiki-backed 子 Skill 且缺 Wiki 时，除明确 no-write 或根目录置信度需确认外，必须在同一轮 dispatch `project-init`；不得终止于 `bootstrap_handoff`。
 - 无 canary 的初始化用例不会伪造 Wiki canary 或 Wiki 路径引用评分。
 - Judge 能分别引用 Eval 35 第一轮与第二轮回答。
 - 文档明确这是 Skill Developer 使用的人工 Sidecar，普通用户零感知。
@@ -84,7 +86,7 @@
 | development | done | Blackbox v0.2 profile、allowlist 写入策略、Eval 35 多轮检查点与 Eval 33–35 Fixture | 2026-07-25 |
 | testing | done | TDD RED；Blackbox 92/92；仓库级 77/77；文本、文档、sync、Skill validation 与 diff check | 2026-07-25 |
 | current-codex-run-1 | done | Eval 33–35 均完成真实 Codex/gpt-5.6-sol Run；确定性失败分别暴露根目录集成越界写入与 Doctor 误停确认 | 2026-07-26 |
-| remediation | in-progress | 新增 `automatic-minimal` / `explicit-full` 边界，契约测试先 RED 后 GREEN；等待全量验证与真实重跑 | 2026-07-26 |
+| remediation | in-progress | 新增 `automatic-minimal` / `explicit-full` 边界；首轮重跑又发现直达 `project-session-extract` 停在 handoff，已进入第二轮 TDD 修复 | 2026-07-26 |
 | archive | pending |  | 2026-07-25 |
 
 ## Open Questions
@@ -97,3 +99,4 @@
 - Eval 35 的第一轮零写入是可确定性验证的中间状态，因此必须在第二轮之前冻结检查点。
 - Sidecar 实现已完成但本 Flow 尚未归档；下一门禁是使用当前 Codex、当前安装 Skill 和明确模型标签运行 Eval 33–35。
 - 首轮真实 Run 使用 Codex Desktop / `gpt-5.6-sol`：Eval 33、35 因 `.gitignore`、`.pre-commit-config.yaml`、`.github/workflows/llm-wiki-doctor.yml` 越过 profile allowlist 失败；Eval 34 因普通健康检查被误判为禁止写入而未初始化失败。
+- 修复后的第二轮真实 Run 中，Eval 35 第一轮零写入检查点通过，但第二轮直达 `project-session-extract` 后把 `bootstrap_handoff` 当成最终答复；该 Run 不作为通过证据，触发 direct-invocation dispatch 契约补强。

@@ -1286,11 +1286,12 @@ Required behavior:
 - The first prompt may return an ephemeral `brief-candidates` or `draft-context-digest` preview with zero writes and no imported claim.
 - The second prompt preserves the selected candidates as `pending_intent` and routes to `project-init`.
 - The save branch uses `bootstrap_mode: automatic-minimal`, writes only under `.llm-wiki/**`, and defers project-root integrations.
+- A direct `project-session-extract` invocation must not end at the bootstrap handoff; the handoff is internal routing evidence and the same turn continues through `project-init`.
 - Session Digest writes and Lifecycle Promotion remain blocked until initialization returns a supported next gate.
 
 Pass/fail:
 
 ```text
 PASS: preview remains write-free; save bootstraps and preserves candidate selection
-FAIL: preview writes files, save creates a partial Wiki, or the user must repeat extraction
+FAIL: preview writes files, save creates a partial Wiki, save stops at a bootstrap handoff, or the user must repeat extraction
 ```

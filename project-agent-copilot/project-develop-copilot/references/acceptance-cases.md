@@ -1061,10 +1061,12 @@ Expected:
 - `save-context-digest` and `promote-to-lifecycle` preserve the session request and selected candidates as `pending_intent`.
 - the save branch records `pending_primary_stage: project-session-extract` and routes to `project-init` with `bootstrap_mode: automatic-minimal`.
 - automatic bootstrap writes only under `.llm-wiki/**` and defers project-root integrations.
+- a direct `project-session-extract` invocation must not end at the bootstrap handoff; it continues through `project-init` in the same turn.
 - no Session Digest, partial Wiki, requirement, bug, Flow Record, or dashboard state is written before init returns a supported next gate.
 
 Failure signals:
 
 - preview mode writes files or claims import success.
 - save mode creates `.llm-wiki/session-digests/` directly.
+- save mode returns the bootstrap handoff as its terminal user-facing result instead of dispatching `project-init`.
 - the selected candidates are lost and the user must repeat extraction.

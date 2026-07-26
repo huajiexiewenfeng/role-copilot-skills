@@ -65,6 +65,9 @@ Run after resolving the project root and before a wiki query, cross-project look
 
 - `wiki_required: true`
 - `on_missing_wiki: route project-init`
+- `direct_invocation_missing_wiki: dispatch-project-init`
+- When directly invoked and no parent router is active, treat the bootstrap handoff as an internal routing message, not a terminal user-facing response.
+- Unless an explicit no-write constraint or root-confidence check requires confirmation, continue through `project-init` in the same turn, consume its return handoff, and resume only at a supported next gate.
 - `pending_primary_stage: project-query`
 - Preserve the requested evidence question or dashboard action as `pending_intent`.
 - `source-only_without_wiki: lightweight-answer`

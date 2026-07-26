@@ -17,6 +17,9 @@ Run after resolving the project root and before resolving or running a Doctor sc
 
 - `wiki_required: true`
 - `on_missing_wiki: route project-init`
+- `direct_invocation_missing_wiki: dispatch-project-init`
+- When directly invoked and no parent router is active, treat the bootstrap handoff as an internal routing message, not a terminal user-facing response.
+- Unless an explicit no-write constraint or root-confidence check requires confirmation, continue through `project-init` in the same turn, consume its return handoff, and resume only at a supported next gate.
 - `pending_primary_stage: llm-wiki-doctor`
 - Preserve the user's original diagnosis request as `pending_intent`.
 - If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init` with `bootstrap_mode: automatic-minimal`.

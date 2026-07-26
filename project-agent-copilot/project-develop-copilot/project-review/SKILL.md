@@ -54,6 +54,9 @@ Run after resolving the project root and before lifecycle-quality, wiki-integrit
 
 - `wiki_required_for: lifecycle-or-wiki-review`
 - `on_missing_wiki: route project-init`
+- `direct_invocation_missing_wiki: dispatch-project-init`
+- Outside the quick-diff exception, when directly invoked and no parent router is active, treat the bootstrap handoff as an internal routing message, not a terminal user-facing response.
+- Unless an explicit no-write constraint or root-confidence check requires confirmation, continue through `project-init` in the same turn, consume its return handoff, and resume only at a supported next gate.
 - `pending_primary_stage: project-review`
 - Preserve the requested review scope as `pending_intent`.
 - `allowed_without_wiki: quick-diff-review`

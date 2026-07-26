@@ -126,6 +126,18 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("requested_stage_or_bridge: project-init", gate)
         self.assertIn("bootstrap_mode: automatic-minimal", gate)
         self.assertIn("current_gate: Initialization Gate", gate)
+        self.assertIn(
+            "`direct_invocation_missing_wiki: dispatch-project-init`",
+            gate,
+        )
+        self.assertIn(
+            "internal routing message, not a terminal user-facing response",
+            gate,
+        )
+        self.assertIn(
+            "continue through `project-init` in the same turn",
+            gate,
+        )
 
     def test_wiki_query_and_lifecycle_review_have_narrow_read_only_boundary(self):
         query_gate = section(read("project-query/SKILL.md"), "## Initialization Gate")
@@ -328,6 +340,10 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("save-context-digest", session_eval)
         self.assertIn("pending_primary_stage: project-session-extract", session_eval)
         self.assertIn("bootstrap_mode: automatic-minimal", session_eval)
+        self.assertIn(
+            "must not end at the bootstrap handoff",
+            session_eval,
+        )
 
         doctor_case = section(
             acceptance,
@@ -346,6 +362,10 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("save-context-digest", session_case)
         self.assertIn("pending_primary_stage: project-session-extract", session_case)
         self.assertIn("bootstrap_mode: automatic-minimal", session_case)
+        self.assertIn(
+            "must not end at the bootstrap handoff",
+            session_case,
+        )
 
 
 if __name__ == "__main__":

@@ -74,6 +74,9 @@ Run after identifying the requested mode and before reading project Wiki state o
 - `wiki_required_for: save-context-digest-or-promote-to-lifecycle`
 - `allowed_without_wiki: brief-candidates-or-draft-context-digest`
 - `on_missing_wiki: route project-init`
+- `direct_invocation_missing_wiki: dispatch-project-init`
+- On a write branch, when directly invoked and no parent router is active, treat the bootstrap handoff as an internal routing message, not a terminal user-facing response.
+- Unless an explicit no-write constraint or root-confidence check requires confirmation, continue through `project-init` in the same turn, consume its return handoff, and resume only at a supported next gate.
 - `pending_primary_stage: project-session-extract`
 - Preserve the user's historical-session request and selected candidate items as `pending_intent`.
 - If `<project_root>/.llm-wiki/` is absent and the mode is `save-context-digest` or `promote-to-lifecycle`, stop and return a Context Handoff to `project-init`.

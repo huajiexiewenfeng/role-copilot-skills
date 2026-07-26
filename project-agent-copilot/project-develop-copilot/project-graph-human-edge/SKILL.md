@@ -17,6 +17,9 @@ Run after resolving the current project root and before reading proposals or wri
 
 - `wiki_required: true`
 - `on_missing_wiki: route project-init`
+- `direct_invocation_missing_wiki: dispatch-project-init`
+- When directly invoked and no parent router is active, treat the bootstrap handoff as an internal routing message, not a terminal user-facing response.
+- Unless an explicit no-write constraint or root-confidence check requires confirmation, continue through `project-init` in the same turn, consume its return handoff, and resume only at a supported next gate.
 - `pending_primary_stage: project-graph-human-edge`
 - Preserve the user's requested proposal or manual edge action as `pending_intent`.
 - If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`; resume only after the router receives initialization readiness and a supported next gate.
