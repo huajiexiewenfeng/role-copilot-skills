@@ -19,8 +19,10 @@ Run after resolving the project root and before resolving or running a Doctor sc
 - `on_missing_wiki: route project-init`
 - `pending_primary_stage: llm-wiki-doctor`
 - Preserve the user's original diagnosis request as `pending_intent`.
-- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`.
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init` with `bootstrap_mode: automatic-minimal`.
 - Do not run the Doctor, create a partial `.llm-wiki/`, or report a Wiki health result when the Wiki does not exist.
+- Default read-only diagnosis does not mean the user forbids bootstrap writes. Ordinary health-check requests use automatic minimal bootstrap, then resume Doctor.
+- Only an explicit no-write constraint pauses for confirmation before initialization.
 
 On the missing-wiki branch, emit this minimal handoff:
 
@@ -30,6 +32,7 @@ bootstrap_handoff:
   pending_intent: <preserved diagnosis request>
   pending_primary_stage: llm-wiki-doctor
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

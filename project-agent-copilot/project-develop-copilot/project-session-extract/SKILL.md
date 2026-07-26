@@ -87,6 +87,7 @@ bootstrap_handoff:
   pending_intent: <preserved session request and selected candidates>
   pending_primary_stage: project-session-extract
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

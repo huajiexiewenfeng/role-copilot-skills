@@ -30,6 +30,7 @@ bootstrap_handoff:
   pending_intent: <preserved proposal or manual edge request>
   pending_primary_stage: project-graph-human-edge
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

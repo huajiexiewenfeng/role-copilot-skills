@@ -38,13 +38,15 @@ After the routing decision selects a business-project stage, resolve the project
 - `wiki_required_for: full-lifecycle-or-wiki-backed`
 - `on_missing_wiki: route project-init`
 - `excluded_mode: lightweight-answer`
-- `read_only_missing_wiki: confirm-before-init`
+- `missing_wiki_bootstrap_mode: automatic-minimal`
+- `explicit_no_write_missing_wiki: confirm-before-init`
 - Preserve the user's real goal as `pending_intent` and the selected stage as `pending_primary_stage`.
-- If `<project_root>/.llm-wiki/` is absent, hand off to `project-init` first. Do not let the pending child create a partial wiki or its own lifecycle record as a substitute for initialization.
+- If `<project_root>/.llm-wiki/` is absent, hand off to `project-init` first with `bootstrap_mode: automatic-minimal`. Do not let the pending child create a partial wiki or its own lifecycle record as a substitute for initialization.
+- Automatic minimal bootstrap writes only under `<project_root>/.llm-wiki/**` and defers `.gitignore`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml`.
 - Because the wiki does not exist yet, keep the routing handoff in memory and pass it through the `project-init` Context Handoff. Persist it only after the standard wiki exists.
 - After init returns, use `initialization_level`, readiness evidence, and `next_gate` to decide whether to resume, complete scoped context, or stop with a limitation. Do not automatically enter implementation from a Level 1 or Level 2 skeleton.
 - Explicit `project-init` and `project-base-init` requests bypass this check because they are bootstrap routes. `lightweight-answer` never triggers it.
-- For an explicitly read-only or zero-write request, report the missing wiki and ask before init writes; preserve the pending route while offering a source-only `lightweight-answer` alternative.
+- A child stage's default read-only behavior is not a zero-write request. Only for a user-explicit read-only, no-write, or do-not-modify constraint, report the missing wiki and ask before init writes; preserve the pending route while offering a source-only `lightweight-answer` alternative.
 - Source-only questions stay `lightweight-answer`. A clearly source/diff-only `quick-diff-review` may run without a wiki, but it must not claim lifecycle or wiki integrity.
 
 ## Routing Table

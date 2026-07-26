@@ -63,7 +63,8 @@ class SkillInitializationContractTest(unittest.TestCase):
             "`on_missing_wiki: route project-init`",
             "`pending_intent`",
             "`pending_primary_stage`",
-            "`read_only_missing_wiki: confirm-before-init`",
+            "`missing_wiki_bootstrap_mode: automatic-minimal`",
+            "`explicit_no_write_missing_wiki: confirm-before-init`",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, gate)
@@ -97,7 +98,8 @@ class SkillInitializationContractTest(unittest.TestCase):
             "`on_missing_wiki: route project-init`",
             "`pending_intent`",
             "`pending_primary_stage`",
-            "`read_only_missing_wiki: confirm-before-init`",
+            "`missing_wiki_bootstrap_mode: automatic-minimal`",
+            "`explicit_no_write_missing_wiki: confirm-before-init`",
             "before invoking the pending stage",
             "before creating or resuming lifecycle state",
         ):
@@ -122,13 +124,17 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("pending_intent:", gate)
         self.assertIn(f"pending_primary_stage: {stage}", gate)
         self.assertIn("requested_stage_or_bridge: project-init", gate)
+        self.assertIn("bootstrap_mode: automatic-minimal", gate)
         self.assertIn("current_gate: Initialization Gate", gate)
 
     def test_wiki_query_and_lifecycle_review_have_narrow_read_only_boundary(self):
         query_gate = section(read("project-query/SKILL.md"), "## Initialization Gate")
         self.assertIn("`on_missing_wiki: route project-init`", query_gate)
         self.assertIn("`source-only_without_wiki: lightweight-answer`", query_gate)
-        self.assertIn("`read_only_missing_wiki: confirm-before-init`", query_gate)
+        self.assertIn(
+            "`explicit_no_write_missing_wiki: confirm-before-init`",
+            query_gate,
+        )
         self.assert_bootstrap_handoff(query_gate, "project-query")
 
         review = read("project-review/SKILL.md")
@@ -196,6 +202,14 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("`pending_primary_stage: llm-wiki-doctor`", gate)
         self.assertIn("`pending_intent`", gate)
         self.assertIn("Do not run the Doctor", gate)
+        self.assertIn(
+            "Default read-only diagnosis does not mean the user forbids bootstrap writes",
+            gate,
+        )
+        self.assertIn(
+            "Only an explicit no-write constraint pauses for confirmation",
+            gate,
+        )
         self.assert_bootstrap_handoff(gate, "llm-wiki-doctor")
 
     def test_session_extract_allows_preview_but_bootstraps_before_writes(self):
@@ -233,6 +247,31 @@ class SkillInitializationContractTest(unittest.TestCase):
                 self.assertIn(token, init_contract)
         self.assertGreaterEqual(init.count("- project_root:"), 2)
 
+    def test_automatic_bootstrap_writes_only_inside_llm_wiki(self):
+        init = read("project-init/SKILL.md")
+        automatic = section(init, "## Automatic Minimal Bootstrap Mode")
+        for token in (
+            "`bootstrap_mode: automatic-minimal`",
+            "writes only under `<project_root>/.llm-wiki/**`",
+            "`.gitignore`",
+            "`.pre-commit-config.yaml`",
+            "`.github/workflows/llm-wiki-doctor.yml`",
+            "`root_integrations_pending`",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, automatic)
+        self.assertIn(
+            "must not create or modify",
+            automatic,
+        )
+
+        explicit = section(init, "## Explicit Full Init / Refresh Mode")
+        self.assertIn("`bootstrap_mode: explicit-full`", explicit)
+        self.assertIn(
+            "may install or merge the project-root integrations",
+            explicit,
+        )
+
     def test_manual_eval_and_acceptance_case_cover_uninitialized_repository(self):
         evals = read("evals/project-develop-copilot-evals.md")
         acceptance = read("references/acceptance-cases.md")
@@ -251,6 +290,9 @@ class SkillInitializationContractTest(unittest.TestCase):
             "checkpoint_order: root-check -> project-init -> lifecycle-anchor -> implementation",
             eval_case,
         )
+        self.assertIn("bootstrap_mode: automatic-minimal", eval_case)
+        self.assertIn("only under `.llm-wiki/**`", eval_case)
+        self.assertIn("`.pre-commit-config.yaml`", eval_case)
 
         acceptance_case = section(
             acceptance,
@@ -261,6 +303,8 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("业务代码改动", acceptance_prompt)
         self.assertNotIn(".llm-wiki", acceptance_prompt)
         self.assertNotIn("project init", acceptance_prompt.lower())
+        self.assertIn("bootstrap_mode: automatic-minimal", acceptance_case)
+        self.assertIn("only under `.llm-wiki/**`", acceptance_case)
 
     def test_manual_eval_and_acceptance_cover_doctor_and_session_extract_gates(self):
         evals = read("evals/project-develop-copilot-evals.md")
@@ -273,6 +317,8 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("pending_primary_stage: llm-wiki-doctor", doctor_eval)
         self.assertIn("bootstrap_stage: project-init", doctor_eval)
         self.assertIn("must not run", doctor_eval)
+        self.assertIn("default read-only diagnosis", doctor_eval)
+        self.assertIn("explicit no-write constraint", doctor_eval)
 
         session_eval = section(
             evals,
@@ -281,6 +327,7 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("brief-candidates", session_eval)
         self.assertIn("save-context-digest", session_eval)
         self.assertIn("pending_primary_stage: project-session-extract", session_eval)
+        self.assertIn("bootstrap_mode: automatic-minimal", session_eval)
 
         doctor_case = section(
             acceptance,
@@ -288,6 +335,8 @@ class SkillInitializationContractTest(unittest.TestCase):
         )
         self.assertIn("pending_primary_stage: llm-wiki-doctor", doctor_case)
         self.assertIn("must not run", doctor_case)
+        self.assertIn("default read-only diagnosis", doctor_case)
+        self.assertIn("explicit no-write constraint", doctor_case)
 
         session_case = section(
             acceptance,
@@ -296,6 +345,7 @@ class SkillInitializationContractTest(unittest.TestCase):
         self.assertIn("brief-candidates", session_case)
         self.assertIn("save-context-digest", session_case)
         self.assertIn("pending_primary_stage: project-session-extract", session_case)
+        self.assertIn("bootstrap_mode: automatic-minimal", session_case)
 
 
 if __name__ == "__main__":

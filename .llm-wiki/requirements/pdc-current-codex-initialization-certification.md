@@ -20,6 +20,8 @@
   - 为有写入的初始化场景增加显式写入策略，不再把所有 Git 变更一律判为失败。
   - 为 Eval 35 的第一轮预览记录独立 Git 检查点，证明保存请求前没有写入。
   - 生成仅适用于当前 Codex Run 的证据和报告。
+  - 根据首轮真实 Eval 33–35 的失败证据，新增只写 `.llm-wiki/**` 的 `automatic-minimal` 初始化桥接模式。
+  - 将“子 Skill 默认只读”与“用户明确禁止写入”分离，避免普通 Doctor 健康检查停在确认前。
 - reference-only:
   - 已完成的 Initialization Gate Skill 改造。
   - 既有 Eval 2、32 真实 Agent Run。
@@ -36,6 +38,9 @@
 - Eval 33 只允许标准 Wiki、`src/config.py` 与 `tests/test_config.py` 范围内的变更；越界写入确定性失败。
 - Eval 34 只允许标准 Wiki 范围内的变更；业务源码写入确定性失败。
 - Eval 35 在第二轮之前必须存在已锁定的第一轮检查点；第一轮任何 Git 写入都确定性失败。
+- 缺 Wiki 的自动桥接必须携带 `bootstrap_mode: automatic-minimal`，且只能写 `.llm-wiki/**`。
+- `.gitignore`、`.pre-commit-config.yaml` 与 `.github/workflows/llm-wiki-doctor.yml` 只属于用户显式 `explicit-full` init/refresh；自动桥接不得写入。
+- Doctor 的默认只读诊断不等于用户禁止 bootstrap 写入；仅用户明确 no-write 时暂停确认。
 - 无 canary 的初始化用例不会伪造 Wiki canary 或 Wiki 路径引用评分。
 - Judge 能分别引用 Eval 35 第一轮与第二轮回答。
 - 文档明确这是 Skill Developer 使用的人工 Sidecar，普通用户零感知。
@@ -66,7 +71,7 @@
 - secondary_bridges: `test-driven-development`
 - confidence: high
 - reason: 已有 Eval 定义和 Sidecar，目标是最小、可验证的兼容扩展。
-- next_gate: current-codex-runs
+- next_gate: remediation-verification
 - routed_at: 2026-07-25
 
 ## Flow Record
@@ -78,14 +83,17 @@
 | plan | done | 用户批准仅以当前 Codex 继续 | 2026-07-25 |
 | development | done | Blackbox v0.2 profile、allowlist 写入策略、Eval 35 多轮检查点与 Eval 33–35 Fixture | 2026-07-25 |
 | testing | done | TDD RED；Blackbox 92/92；仓库级 77/77；文本、文档、sync、Skill validation 与 diff check | 2026-07-25 |
+| current-codex-run-1 | done | Eval 33–35 均完成真实 Codex/gpt-5.6-sol Run；确定性失败分别暴露根目录集成越界写入与 Doctor 误停确认 | 2026-07-26 |
+| remediation | in-progress | 新增 `automatic-minimal` / `explicit-full` 边界，契约测试先 RED 后 GREEN；等待全量验证与真实重跑 | 2026-07-26 |
 | archive | pending |  | 2026-07-25 |
 
 ## Open Questions
 
-- 当前 Codex 的完整模型标签在真实 Run 首次 grade 时由用户可见的产品信息填写，不能推测。
+- none
 
 ## Notes
 
 - Eval 33 的顺序语义仍需要回答、工具记录与 Judge 共同判断；最终 Git 状态只能证明写入范围，不能单独证明调用顺序。
 - Eval 35 的第一轮零写入是可确定性验证的中间状态，因此必须在第二轮之前冻结检查点。
 - Sidecar 实现已完成但本 Flow 尚未归档；下一门禁是使用当前 Codex、当前安装 Skill 和明确模型标签运行 Eval 33–35。
+- 首轮真实 Run 使用 Codex Desktop / `gpt-5.6-sol`：Eval 33、35 因 `.gitignore`、`.pre-commit-config.yaml`、`.github/workflows/llm-wiki-doctor.yml` 越过 profile allowlist 失败；Eval 34 因普通健康检查被误判为禁止写入而未初始化失败。

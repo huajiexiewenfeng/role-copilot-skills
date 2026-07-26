@@ -88,13 +88,15 @@ Run this gate after resolving the business-project root and intended route, but 
 - `wiki_required_for: full-lifecycle-or-wiki-backed`
 - `on_missing_wiki: route project-init`
 - `excluded_mode: lightweight-answer-or-mechanical-artifact`
-- `read_only_missing_wiki: confirm-before-init`
+- `missing_wiki_bootstrap_mode: automatic-minimal`
+- `explicit_no_write_missing_wiki: confirm-before-init`
 - Preserve the original request as `pending_intent` and the selected route as `pending_primary_stage`.
-- If `<project_root>/.llm-wiki/` is absent, stop the pending stage and hand off to `project-init`. Do not create a partial wiki, Change Brief, Bug Brief, routing record, plan, or code change first.
+- If `<project_root>/.llm-wiki/` is absent, stop the pending stage and hand off to `project-init` with `bootstrap_mode: automatic-minimal`. Do not create a partial wiki, Change Brief, Bug Brief, routing record, plan, or code change first.
+- Automatic minimal bootstrap may write only under `<project_root>/.llm-wiki/**`; it must defer project-root integrations such as `.gitignore`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml`.
 - Keep the bootstrap routing handoff in memory until `project-init` creates the standard wiki; then persist the routing record in the appropriate lifecycle session.
 - Resume the pending stage only when the `project-init` return handoff identifies a supported `next_gate`. Initialization Level 1 or 2 alone must not be treated as feature-ready.
 - Explicit `project-init` and `project-base-init` requests are gate destinations, not inputs to this gate.
-- If the pending request is explicitly read-only or forbids writes, report the missing wiki and ask before `project-init` writes; offer a source-only `lightweight-answer` alternative without losing the pending intent.
+- Default read-only behavior of a child stage, including Doctor diagnosis, is not an explicit no-write constraint. Only when the user explicitly says read-only, no writes, do not modify, or equivalent, report the missing wiki and ask before `project-init` writes; offer a source-only `lightweight-answer` alternative without losing the pending intent.
 - A source-only answer stays `lightweight-answer`. A clearly source/diff-only review may use the narrow `quick-diff-review` exception, but it must not claim lifecycle or wiki integrity.
 
 ## Required First Check
@@ -289,6 +291,7 @@ When handing off to a child stage skill or external bridge, use a short structur
 - excluded_scope:
 - current_gate:
 - requested_stage_or_bridge:
+- bootstrap_mode:
 - constraints:
 ```
 

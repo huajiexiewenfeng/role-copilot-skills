@@ -68,6 +68,7 @@ bootstrap_handoff:
   pending_intent: <preserved review scope>
   pending_primary_stage: project-review
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

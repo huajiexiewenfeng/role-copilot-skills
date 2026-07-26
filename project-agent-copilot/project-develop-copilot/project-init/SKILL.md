@@ -50,7 +50,7 @@ Use when the router or user needs to:
    - confidence: `high`, `medium`, or `low`
 4. If root confidence is `medium` or `low`, ask the user to confirm before writing `.llm-wiki`.
 5. Check whether `.llm-wiki` exists.
-6. Decide `init` vs `refresh`.
+6. Decide `init` vs `refresh`, then resolve `bootstrap_mode`: use `automatic-minimal` only for a missing-wiki handoff from the router or child; use `explicit-full` for a user-requested init, adopt, or refresh.
 7. Check for legacy `docs/ai-coding/`.
 8. Treat graph outputs as optional supporting context only when explicitly active or requested.
 9. Preserve useful existing `.llm-wiki` content before writing updates.
@@ -65,10 +65,29 @@ Use when the router or user needs to:
 When the router enters `project-init` because a business repository has no `.llm-wiki/`:
 
 - Accept and preserve `pending_intent` and `pending_primary_stage` from the Context Handoff.
+- Accept `bootstrap_mode: automatic-minimal`; do not silently promote it to an explicit full init.
 - Return the achieved `initialization_level`, remaining context gaps, and evidence-backed `next_gate`.
 - Keep the original user goal pending; do not replace it with a generic initialization task.
 - A Level 1 or Level 2 result must not automatically invoke `project-develop`, `project-fix`, or another pending stage. Return control to the router, which decides whether the next gate is scoped context completion, work definition, or the preserved stage.
 - Do not claim that creating the standard wiki skeleton proves feature readiness or full project understanding.
+
+## Automatic Minimal Bootstrap Mode
+
+Use `bootstrap_mode: automatic-minimal` only when the router or a wiki-backed child discovers that `<project_root>/.llm-wiki/` is absent while preserving another `pending_primary_stage`.
+
+- This mode writes only under `<project_root>/.llm-wiki/**`.
+- Create the standard Wiki structure, starter content, dashboard, and vendored Doctor files under `.llm-wiki/tools/**` when their scaffold is available.
+- It must not create or modify `.gitignore`, `.pre-commit-config.yaml`, `.github/workflows/llm-wiki-doctor.yml`, or any other project-root file.
+- Return those deferred project-root files as `root_integrations_pending`; do not treat them as initialization failures and do not block the preserved pending stage solely because they are absent.
+- Do not ask for confirmation merely because the pending child is read-only by default. Ask only when the user explicitly forbids writes or root confidence is medium or low.
+
+## Explicit Full Init / Refresh Mode
+
+Use `bootstrap_mode: explicit-full` when the user explicitly asks to initialize, adopt, install, or refresh project context.
+
+- This mode may install or merge the project-root integrations `.gitignore`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml`.
+- Preserve project-owned integration files: merge safely when obvious, write an `.example`, or report a manual merge action instead of overwriting.
+- Explicit full init retains the standard `.llm-wiki/**` creation and refresh behavior.
 
 ## Core Process
 
@@ -95,7 +114,7 @@ Workflow:
 2. Inspect project markers under the resolved project root only: `.git`, build files, `docs/`, `.llm-wiki/`, legacy `docs/ai-coding/`, and explicitly active graph outputs.
 3. Create missing `.llm-wiki` standard directories and starter files. Do not use an ad-hoc minimal layout when the project development lifecycle expects the standard structure.
 4. Ensure the standard `.llm-wiki` directory structure exists; create missing directories without deleting extra existing directories.
-5. Install or refresh the LLM Wiki Doctor scaffold from `../assets/llm-wiki-doctor-scaffold/` into the consuming project when available.
+5. Install or refresh the LLM Wiki Doctor scaffold from `../assets/llm-wiki-doctor-scaffold/` into the consuming project when available. In `automatic-minimal`, copy only `.llm-wiki/tools/**`; in `explicit-full`, also install or merge the project-root integrations.
 6. Create or update `.llm-wiki/modules/index.md`.
 7. Create `.llm-wiki/modules/<scope>/` only for user-selected or clearly active scopes that need source-backed context.
 8. Detect modules conservatively from build files and top-level service directories.
@@ -177,10 +196,10 @@ Refresh rules:
 - Add missing standard directories/files without flattening, renaming, or deleting user-created structure.
 - Create or preserve `.llm-wiki/cross-refs/index.md` with the pin-layer Cross-Project Integration Points template when missing.
 - Create or preserve `.llm-wiki/project-graph/edges.md`, `.llm-wiki/project-graph/candidates.md`, and `.llm-wiki/project-graph/scan-report.md` with empty templates when missing.
-- Install or refresh `.llm-wiki/tools/llm_wiki_doctor.py`, `.llm-wiki/tools/VERSION`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml` from the scaffold so each consuming project has its own machine-check entry points.
-- Do not silently overwrite project-owned `.pre-commit-config.yaml` or `.github/workflows/llm-wiki-doctor.yml`; merge safely when obvious, write a `.example` file, or report a manual merge action.
+- Always install or refresh `.llm-wiki/tools/llm_wiki_doctor.py` and `.llm-wiki/tools/VERSION` from the scaffold so each consuming project has local machine-check entry points.
+- In `explicit-full` only, install or refresh `.pre-commit-config.yaml` and `.github/workflows/llm-wiki-doctor.yml`. Do not silently overwrite project-owned files; merge safely when obvious, write a `.example` file, or report a manual merge action.
 - Refresh `.llm-wiki/tools/llm_wiki_doctor.py` only when it was scaffold-generated or when the user confirms replacement.
-- Ensure `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` exactly once so local project-path mappings and scan state do not enter git.
+- In `explicit-full` only, ensure `.gitignore` contains `.llm-wiki/registry.local.json`, `.llm-wiki/cross-refs/registry.local.json`, and `.llm-wiki/project-graph/scan-state.local.json` exactly once so local project-path mappings and scan state do not enter git.
 - Do not create `.llm-wiki/registry.local.json` or `.llm-wiki/cross-refs/registry.local.json` during init unless the user provides a remote project path and confirms storing it as local-only configuration.
 - Do not scan external projects during `project-init`; scanner is an optional later `project-maintain graph-scan` flow.
 - If the user initializes a Base Graph repo, stop ordinary business-project init and route to `project-base-init`. Do not create Base files from `project-init`.
@@ -193,7 +212,7 @@ Refresh rules:
 
 | Mode | Use when |
 |---|---|
-| `init` | no `.llm-wiki` exists or user asks to adopt a repository |
+| `init` | no `.llm-wiki` exists; use `automatic-minimal` for a router/child bridge and `explicit-full` for a user-requested adoption |
 | `refresh` | `.llm-wiki` exists and user asks to rescan, context changed, or docs/modules were added |
 | `migration-check` | legacy `docs/ai-coding` exists and should be indexed as source context |
 

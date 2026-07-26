@@ -41,6 +41,7 @@ bootstrap_handoff:
   pending_intent: <preserved user request and source constraints>
   pending_primary_stage: project-ingest
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

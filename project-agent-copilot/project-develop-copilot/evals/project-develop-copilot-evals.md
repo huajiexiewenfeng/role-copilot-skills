@@ -1184,6 +1184,7 @@ Expected route:
 ```text
 mode: full-lifecycle
 bootstrap_stage: project-init
+bootstrap_mode: automatic-minimal
 pending_primary_stage: project-develop
 checkpoint_order: root-check -> project-init -> lifecycle-anchor -> implementation
 ```
@@ -1193,6 +1194,7 @@ Required behavior:
 - Detects the missing `.llm-wiki/` after resolving the project root and before creating lifecycle state.
 - Preserves the exact `read_timeout_seconds()` behavior, environment variable, default, file boundary, and test boundary as `pending_intent`, with `project-develop` as the pending primary stage.
 - Routes first to `project-init` and creates the standard wiki structure rather than a child-specific partial directory.
+- Automatic bootstrap writes only under `.llm-wiki/**`; `.gitignore`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml` remain deferred root integrations.
 - Does not create a Change Brief, working-context, implementation plan, test, or code change before init returns.
 - Uses the init return handoff's `initialization_level`, readiness gaps, and `next_gate` to decide whether to resume development or complete scoped context first.
 - Persists the routing record only after the standard wiki exists; the user does not need to repeat the original feature request.
@@ -1206,6 +1208,7 @@ Forbidden behavior:
 - Treating missing `.llm-wiki/` as the shared-reference degraded mode from Eval 4.
 - Dropping the original intent, forcing the user to restate it, or implementing immediately from a Level 1/2 skeleton.
 - Passing only because the response repeats an initialization hint from the prompt; no such hint is present.
+- Creating or modifying project-root integration files during `automatic-minimal` bootstrap.
 
 Pass/fail:
 
@@ -1232,6 +1235,7 @@ Expected route:
 ```text
 mode: wiki-doctor
 bootstrap_stage: project-init
+bootstrap_mode: automatic-minimal
 pending_primary_stage: llm-wiki-doctor
 ```
 
@@ -1239,6 +1243,8 @@ Required behavior:
 
 - Preserves the health-check request as `pending_intent`.
 - Routes to `project-init` before resolving or running a Doctor script.
+- Treats default read-only diagnosis as a Doctor repair boundary, not as an explicit no-write constraint; only an explicit no-write constraint pauses for confirmation.
+- Automatic bootstrap writes only under `.llm-wiki/**` and defers project-root integration files.
 - Does not manufacture a Wiki health result for a repository with no Wiki.
 
 Pass/fail:
@@ -1271,6 +1277,7 @@ Expected route:
 preview_mode: brief-candidates
 save_mode: save-context-digest
 bootstrap_stage: project-init
+bootstrap_mode: automatic-minimal
 pending_primary_stage: project-session-extract
 ```
 
@@ -1278,6 +1285,7 @@ Required behavior:
 
 - The first prompt may return an ephemeral `brief-candidates` or `draft-context-digest` preview with zero writes and no imported claim.
 - The second prompt preserves the selected candidates as `pending_intent` and routes to `project-init`.
+- The save branch uses `bootstrap_mode: automatic-minimal`, writes only under `.llm-wiki/**`, and defers project-root integrations.
 - Session Digest writes and Lifecycle Promotion remain blocked until initialization returns a supported next gate.
 
 Pass/fail:

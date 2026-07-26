@@ -30,6 +30,7 @@ bootstrap_handoff:
   pending_intent: <preserved scan request and scope>
   pending_primary_stage: project-graph-candidates-scan
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

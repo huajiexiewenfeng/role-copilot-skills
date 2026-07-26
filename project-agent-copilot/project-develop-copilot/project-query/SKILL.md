@@ -68,9 +68,9 @@ Run after resolving the project root and before a wiki query, cross-project look
 - `pending_primary_stage: project-query`
 - Preserve the requested evidence question or dashboard action as `pending_intent`.
 - `source-only_without_wiki: lightweight-answer`
-- `read_only_missing_wiki: confirm-before-init`
-- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init`. Do not present source fallback as a successful wiki query or dashboard refresh.
-- If the request is read-only or forbids file changes, do not let `project-init` write until the user confirms initialization.
+- `explicit_no_write_missing_wiki: confirm-before-init`
+- If `<project_root>/.llm-wiki/` is absent, stop and return a Context Handoff to `project-init` with `bootstrap_mode: automatic-minimal`. Do not present source fallback as a successful wiki query or dashboard refresh.
+- Default query read-only behavior does not forbid automatic minimal bootstrap. If the user explicitly says no writes or forbids file changes, do not let `project-init` write until the user confirms initialization.
 - If the user explicitly wants only a small source-based answer with no lifecycle state, return to the router as `lightweight-answer` instead of continuing in `project-query`.
 
 On the missing-wiki branch, emit this minimal handoff:
@@ -81,6 +81,7 @@ bootstrap_handoff:
   pending_intent: <preserved evidence question or dashboard request>
   pending_primary_stage: project-query
   requested_stage_or_bridge: project-init
+  bootstrap_mode: automatic-minimal
   current_gate: Initialization Gate
 ```
 

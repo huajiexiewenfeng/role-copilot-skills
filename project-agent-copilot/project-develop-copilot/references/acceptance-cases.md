@@ -994,7 +994,8 @@ Fixture:
 Expected:
 
 - router classifies the request as `full-lifecycle`, preserves the exact function, environment variable, default, source file, and test boundary as `pending_intent`, and records `pending_primary_stage: project-develop`.
-- router uses `project-init` as the bootstrap stage before creating or resuming any lifecycle session.
+- router uses `project-init` with `bootstrap_mode: automatic-minimal` as the bootstrap stage before creating or resuming any lifecycle session.
+- automatic bootstrap writes only under `.llm-wiki/**`; it defers `.gitignore`, `.pre-commit-config.yaml`, and `.github/workflows/llm-wiki-doctor.yml`.
 - init creates the standard `.llm-wiki/` structure and returns `initialization_level`, readiness gaps, and an evidence-backed `next_gate`.
 - only after init returns may the router persist the routing record and resume the original goal.
 - Level 1 or Level 2 init routes to scoped context completion or another supported gate when feature readiness is not proven.
@@ -1007,6 +1008,7 @@ Failure signals:
 - a child creates an ad-hoc or partial `.llm-wiki/` instead of routing to `project-init`.
 - missing wiki is confused with missing optional shared references and enters degraded development mode.
 - the router forgets the original feature intent, requires the user to restate it, or treats a Level 1/2 skeleton as feature-ready.
+- automatic bootstrap creates or modifies project-root integration files.
 
 ## Case 38: Uninitialized Repository Bootstraps Before Doctor
 
@@ -1025,7 +1027,9 @@ Expected:
 
 - route records `pending_primary_stage: llm-wiki-doctor`.
 - the diagnosis request is preserved as `pending_intent`.
-- `project-init` runs before any bundled or project-local Doctor script is resolved.
+- `project-init` runs with `bootstrap_mode: automatic-minimal` before any bundled or project-local Doctor script is resolved.
+- default read-only diagnosis does not count as an explicit no-write constraint; only an explicit no-write constraint pauses for confirmation.
+- automatic bootstrap writes only under `.llm-wiki/**` and defers project-root integrations.
 - Doctor must not run and no Wiki health result is invented before initialization.
 
 Failure signals:
@@ -1055,7 +1059,8 @@ Expected:
 
 - `brief-candidates` and `draft-context-digest` may produce ephemeral previews without Wiki reads, writes, or imported claims.
 - `save-context-digest` and `promote-to-lifecycle` preserve the session request and selected candidates as `pending_intent`.
-- the save branch records `pending_primary_stage: project-session-extract` and routes to `project-init`.
+- the save branch records `pending_primary_stage: project-session-extract` and routes to `project-init` with `bootstrap_mode: automatic-minimal`.
+- automatic bootstrap writes only under `.llm-wiki/**` and defers project-root integrations.
 - no Session Digest, partial Wiki, requirement, bug, Flow Record, or dashboard state is written before init returns a supported next gate.
 
 Failure signals:
