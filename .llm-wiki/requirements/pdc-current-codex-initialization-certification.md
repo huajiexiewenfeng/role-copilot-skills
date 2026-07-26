@@ -73,7 +73,7 @@
 - secondary_bridges: `test-driven-development`
 - confidence: high
 - reason: 已有 Eval 定义和 Sidecar，目标是最小、可验证的兼容扩展。
-- next_gate: remediation-verification
+- next_gate: observability-boundary-decision
 - routed_at: 2026-07-25
 
 ## Flow Record
@@ -84,14 +84,15 @@
 | design | done | 本 Change Brief 的 Scope 与 Acceptance | 2026-07-25 |
 | plan | done | 用户批准仅以当前 Codex 继续 | 2026-07-25 |
 | development | done | Blackbox v0.2 profile、allowlist 写入策略、Eval 35 多轮检查点与 Eval 33–35 Fixture | 2026-07-25 |
-| testing | done | TDD RED；Blackbox 92/92；仓库级 77/77；文本、文档、sync、Skill validation 与 diff check | 2026-07-25 |
+| testing | done | 首轮修复后 Blackbox 92/92、仓库相关 78/78；第二轮 direct-invocation 修复后相关契约/文档/文本 31/31；Doctor scaffold、Skill validation、diff check 与 142 文件安装哈希一致 | 2026-07-26 |
 | current-codex-run-1 | done | Eval 33–35 均完成真实 Codex/gpt-5.6-sol Run；确定性失败分别暴露根目录集成越界写入与 Doctor 误停确认 | 2026-07-26 |
-| remediation | in-progress | 新增 `automatic-minimal` / `explicit-full` 边界；首轮重跑又发现直达 `project-session-extract` 停在 handoff，已进入第二轮 TDD 修复 | 2026-07-26 |
+| remediation | done | 新增 `automatic-minimal` / `explicit-full` 边界，并要求直达 wiki-backed 子 Skill 在同一轮 dispatch `project-init`，不得终止于内部 handoff | 2026-07-26 |
+| current-codex-run-2 | done | 最终提交 `0c101d7`、Skill 指纹 `4f2ecb7b...`：Eval 33/34/35 写入边界均 PASS，Eval 35 第一轮零写入 PASS；Eval 34 语义 PASS，Eval 33/35 因顺序与 next_gate 不可由 file-only evidence 证明而 NEEDS_REVIEW | 2026-07-26 |
 | archive | pending |  | 2026-07-25 |
 
 ## Open Questions
 
-- none
+- 是否将顺序类断言明确降为 `manual-only`；不建议采集 Codex 工具轨迹，因为这会把当前产品运行时绑定进原本产品无关的 Skill + LLM + Python Sidecar。
 
 ## Notes
 
@@ -100,3 +101,8 @@
 - Sidecar 实现已完成但本 Flow 尚未归档；下一门禁是使用当前 Codex、当前安装 Skill 和明确模型标签运行 Eval 33–35。
 - 首轮真实 Run 使用 Codex Desktop / `gpt-5.6-sol`：Eval 33、35 因 `.gitignore`、`.pre-commit-config.yaml`、`.github/workflows/llm-wiki-doctor.yml` 越过 profile allowlist 失败；Eval 34 因普通健康检查被误判为禁止写入而未初始化失败。
 - 修复后的第二轮真实 Run 中，Eval 35 第一轮零写入检查点通过，但第二轮直达 `project-session-extract` 后把 `bootstrap_handoff` 当成最终答复；该 Run 不作为通过证据，触发 direct-invocation dispatch 契约补强。
+- 最终 Run 报告：
+  - `D:\ai-discovery\project-develop-copilot-init-cert-workspace\eval-033-20260726T005517Z-adb1ff5e\report.md`
+  - `D:\ai-discovery\project-develop-copilot-init-cert-workspace\eval-034-20260726T005522Z-675aab1f\report.md`
+  - `D:\ai-discovery\project-develop-copilot-init-cert-workspace\eval-035-20260726T005527Z-1feefb5e\report.md`
+- 独立任务轨迹观察到 Eval 33 在业务代码前初始化、Eval 35 在 Digest 前初始化，但 Sidecar 的 `judge-request.json` 不包含产品工具轨迹，因此保持 `NEEDS_REVIEW`，不将该轨迹伪装成 file-only Judge 证据。
