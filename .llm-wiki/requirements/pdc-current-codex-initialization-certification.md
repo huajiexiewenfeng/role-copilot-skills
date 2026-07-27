@@ -3,7 +3,7 @@
 ## Summary
 
 - title: Current Codex Initialization Gate Black-box Certification
-- status: active
+- status: completed
 - flow_id: `pdc-current-codex-initialization-certification`
 
 ## Sources
@@ -23,6 +23,8 @@
   - 根据首轮真实 Eval 33–35 的失败证据，新增只写 `.llm-wiki/**` 的 `automatic-minimal` 初始化桥接模式。
   - 将“子 Skill 默认只读”与“用户明确禁止写入”分离，避免普通 Doctor 健康检查停在确认前。
   - 直达子 Skill 时将 `bootstrap_handoff` 定义为内部路由消息，同一轮继续执行 `project-init`，不得把 handoff 当最终答复。
+  - 将无法由 file-only evidence 证明的运行顺序与内部 `next_gate` 断言移出 Judge 契约，标记为 `manual-only` / `MANUAL_CHECK_REQUIRED`。
+  - 自动 Behavior Score 只计算确定性断言与 file-observable Judge 断言，不采集或绑定 Codex 工具轨迹。
 - reference-only:
   - 已完成的 Initialization Gate Skill 改造。
   - 既有 Eval 2、32 真实 Agent Run。
@@ -45,6 +47,8 @@
 - 直达任一 wiki-backed 子 Skill 且缺 Wiki 时，除明确 no-write 或根目录置信度需确认外，必须在同一轮 dispatch `project-init`；不得终止于 `bootstrap_handoff`。
 - 无 canary 的初始化用例不会伪造 Wiki canary 或 Wiki 路径引用评分。
 - Judge 能分别引用 Eval 35 第一轮与第二轮回答。
+- Eval 33 的初始化先于开发、初始化证据门禁，以及 Eval 35 的初始化先于 Digest、内部 `next_gate` 断言不再导致 `NEEDS_REVIEW`。
+- `manual-only` 断言必须明确呈现为 `MANUAL_CHECK_REQUIRED`，并排除在自动 Behavior Score 之外。
 - 文档明确这是 Skill Developer 使用的人工 Sidecar，普通用户零感知。
 - 认证结论只绑定记录在 Run 中的当前 Codex 产品、模型标签、Skill 指纹和提交。
 
@@ -73,7 +77,7 @@
 - secondary_bridges: `test-driven-development`
 - confidence: high
 - reason: 已有 Eval 定义和 Sidecar，目标是最小、可验证的兼容扩展。
-- next_gate: observability-boundary-decision
+- next_gate: none
 - routed_at: 2026-07-25
 
 ## Flow Record
@@ -84,15 +88,16 @@
 | design | done | 本 Change Brief 的 Scope 与 Acceptance | 2026-07-25 |
 | plan | done | 用户批准仅以当前 Codex 继续 | 2026-07-25 |
 | development | done | Blackbox v0.2 profile、allowlist 写入策略、Eval 35 多轮检查点与 Eval 33–35 Fixture | 2026-07-25 |
-| testing | done | 首轮修复后 Blackbox 92/92、仓库相关 78/78；第二轮 direct-invocation 修复后相关契约/文档/文本 31/31；Doctor scaffold、Skill validation、diff check 与 142 文件安装哈希一致 | 2026-07-26 |
+| testing | done | 初始化修复阶段 Blackbox 92/92、仓库相关 78/78；可观测性收口后 Blackbox 93/93、仓库相关 78/78、Skill validation 与 diff check 通过 | 2026-07-27 |
 | current-codex-run-1 | done | Eval 33–35 均完成真实 Codex/gpt-5.6-sol Run；确定性失败分别暴露根目录集成越界写入与 Doctor 误停确认 | 2026-07-26 |
 | remediation | done | 新增 `automatic-minimal` / `explicit-full` 边界，并要求直达 wiki-backed 子 Skill 在同一轮 dispatch `project-init`，不得终止于内部 handoff | 2026-07-26 |
 | current-codex-run-2 | done | 最终提交 `0c101d7`、Skill 指纹 `4f2ecb7b...`：Eval 33/34/35 写入边界均 PASS，Eval 35 第一轮零写入 PASS；Eval 34 语义 PASS，Eval 33/35 因顺序与 next_gate 不可由 file-only evidence 证明而 NEEDS_REVIEW | 2026-07-26 |
-| archive | pending |  | 2026-07-25 |
+| observability-boundary | done | Eval 33/35 顺序与内部 gate 断言已移出 file-only Judge，profile 0.3 以 `MANUAL_CHECK_REQUIRED` 呈现且不进入自动 Behavior Score | 2026-07-27 |
+| archive | done | `handoff/pdc-current-codex-initialization-certification-handoff.md` | 2026-07-27 |
 
 ## Open Questions
 
-- 是否将顺序类断言明确降为 `manual-only`；不建议采集 Codex 工具轨迹，因为这会把当前产品运行时绑定进原本产品无关的 Skill + LLM + Python Sidecar。
+- none
 
 ## Notes
 
@@ -106,3 +111,4 @@
   - `D:\ai-discovery\project-develop-copilot-init-cert-workspace\eval-034-20260726T005522Z-675aab1f\report.md`
   - `D:\ai-discovery\project-develop-copilot-init-cert-workspace\eval-035-20260726T005527Z-1feefb5e\report.md`
 - 独立任务轨迹观察到 Eval 33 在业务代码前初始化、Eval 35 在 Digest 前初始化，但 Sidecar 的 `judge-request.json` 不包含产品工具轨迹，因此保持 `NEEDS_REVIEW`，不将该轨迹伪装成 file-only Judge 证据。
+- profile 0.3 将上述不可观测顺序/内部 gate 断言标为 `MANUAL_CHECK_REQUIRED`；旧 profile 0.2 Run 保持不可变，不重写其历史 provenance。

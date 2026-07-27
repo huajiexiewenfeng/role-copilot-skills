@@ -2,6 +2,7 @@
 
 | Date | Flow | Event | Evidence |
 |---|---|---|---|
+| 2026-07-27 | `pdc-current-codex-initialization-certification` | Eval 33/35 的运行顺序与内部 gate 断言从 file-only Judge 契约移至 `manual-only`，统一呈现为 `MANUAL_CHECK_REQUIRED` 且不影响自动 Behavior Score；Blackbox 93/93、仓库相关 78/78 与 Skill validation 通过，本轮 Flow 归档。 | `handoff/pdc-current-codex-initialization-certification-handoff.md` |
 | 2026-07-25 | `pdc-initialization-contract-hardening` | 初始化 Gate、子 Skill 策略分类和 `project-graph-visualize` mechanical-artifact 集成完成；核心变更与升级说明均已推送 GitHub，本轮 Flow 归档。真实多模型认证保留为后续独立 Flow。 | `handoff/pdc-initialization-contract-hardening-handoff.md` |
 | 2026-07-23 | `2026-07-23-blackbox-report-shallow-checkout` | Reproduced and fixed the eleven shallow-checkout report-test setup errors, then fixed the Windows-only 8.3 short-path versus resolved long-path CLI assertion exposed afterward. GitHub Actions run `29982382466` passed the complete workflow on both Ubuntu and Windows; the bug is archived as CI-backed done. | `handoff/2026-07-23-blackbox-report-shallow-checkout-handoff.md` |
 | 2026-07-15 | `pdc-phase0-repository-integrity` | 修复后独立 whole-branch re-review 完成：Critical 0、Important 0、`Ready to merge: Yes`。Controller fresh verification 再次通过 7/12/66 tests、两 checker、sync-doctor、diff check、四项 Skill validation、CI static contract 与 exact 24-file encoding/privacy audit；清理测试生成的 `__pycache__` 后 union 恢复为 tracked 12 + untracked 12。Wiki Integrity Gate 完成，`archive` 标记 done；GitHub 托管 CI 仍未运行，当前分支仍未提交。 | `handoff/pdc-phase0-repository-integrity-handoff.md` |

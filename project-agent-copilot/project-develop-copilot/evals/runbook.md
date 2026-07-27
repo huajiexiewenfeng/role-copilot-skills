@@ -64,6 +64,12 @@ canonical PASS/PARTIAL/FAIL behavior-score totals and PASS-rate denominator.
 They never become a behavior `FAIL` merely because review or execution failed.
 The canonical PASS/PARTIAL/FAIL meanings above do not change.
 
+`MANUAL_CHECK_REQUIRED` is an assertion-level result for canonical behavior
+that cannot be established from the sidecar's file-only evidence. It remains
+outside the automated Behavior Score, does not block a `GRADED` Run, and must
+not be converted into `NEEDS_REVIEW` merely because no Agent-product tool trace
+is available.
+
 ## Report Template
 
 ```markdown

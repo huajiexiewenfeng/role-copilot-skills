@@ -71,6 +71,24 @@ class BlackboxEvalAssetTest(unittest.TestCase):
                 self.assertEqual((), profile.required_path_any_of)
                 self.assertFalse((profile.fixture_root / ".llm-wiki").exists())
 
+    def test_sequence_only_initialization_assertions_are_manual_only(self):
+        expected = {
+            "33": {
+                "bootstrap-before-development",
+                "readiness-evidence-gates-resume",
+            },
+            "35": {
+                "save-bootstrap-before-digest",
+                "supported-next-gate-required",
+            },
+        }
+
+        for eval_id, assertion_ids in expected.items():
+            with self.subTest(eval_id=eval_id):
+                profile = self.runner.load_profile(eval_id)
+                self.assertTrue(assertion_ids.issubset(profile.manual_only_assertion_ids))
+                self.assertTrue(assertion_ids.isdisjoint(profile.semantic_assertion_ids))
+
     def test_eval_035_requires_a_first_turn_checkpoint(self):
         profile = self.runner.load_profile("35")
 
@@ -442,7 +460,7 @@ class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
         self.assertFalse(any(hasattr(item, "adopted") for item in assertions))
         self.assertTrue(all("adopted" not in item for item in observations))
 
-    def test_manual_only_assertion_is_recorded_as_unautomated_metadata(self):
+    def test_manual_only_assertion_requires_manual_check_without_affecting_score(self):
         profile = self.runner.load_profile("32")
         run_path, _ = self.make_eval_032_run(baseline_has_root_index=False)
 
@@ -451,11 +469,12 @@ class BlackboxEvalDeterministicAssertionsTest(unittest.TestCase):
         )
 
         result = self.assertion_by_id(assertions, "wiki-before-source-fallback")
-        self.assertEqual("UNAUTOMATED", result.outcome)
+        self.assertEqual("MANUAL_CHECK_REQUIRED", result.outcome)
         self.assertEqual("manual-only", result.layer)
         self.assertIn("coverage=manual-only", result.message)
         self.assertIn(profile.manual_only_assertions[0].reason, result.message)
         self.assertNotEqual("PASS", result.outcome)
+        self.assertEqual("PASS", self.runner.aggregate_behavior_score([result]))
 
     def test_route_self_report_text_does_not_affect_deterministic_grading(self):
         pair = self.profile.canary_pairs[0]
@@ -2485,6 +2504,12 @@ class BlackboxEvalReportTest(unittest.TestCase):
         self.assertIn("wiki-before-source-fallback", report)
         self.assertIn("manual-only", report)
         self.assertIn("final answer cannot prove read order without runtime trace", report)
+        self.assertIn("## MANUAL_CHECK_REQUIRED", report)
+        self.assertIn("MANUAL_CHECK_REQUIRED count: 1", report)
+        self.assertIn(
+            "Manual checks are outside the automated Behavior Score.",
+            report,
+        )
         self.assertIn("private.txt", report)
         self.assertIn("9" * 64, report)
         self.assertNotIn("PRIVATE-UNTRACKED-CONTENT", report)

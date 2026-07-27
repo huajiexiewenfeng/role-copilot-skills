@@ -25,7 +25,7 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parents[1]
 BLACKBOX_ROOT = SKILL_ROOT / "evals" / "blackbox"
 CANONICAL_EVALS = SKILL_ROOT / "evals" / "project-develop-copilot-evals.md"
-GRADER_VERSION = "blackbox-eval-0.2"
+GRADER_VERSION = "blackbox-eval-0.3"
 PROFILE_SCHEMA_VERSION = "0.2"
 SUPPORTED_PROFILE_SCHEMA_VERSIONS = {"0.1", "0.2"}
 RUN_SCHEMA_VERSION = "0.2"
@@ -1671,7 +1671,7 @@ def run_deterministic_assertions(
         AssertionResult(
             id=item.id,
             layer="manual-only",
-            outcome="UNAUTOMATED",
+            outcome="MANUAL_CHECK_REQUIRED",
             severity="info",
             message=f"coverage={item.coverage}; reason={item.reason}",
         )
@@ -3073,7 +3073,14 @@ def render_report(
     lines.extend(
         [
             "",
-            "## Canonical Assertions Not Automated",
+            "## MANUAL_CHECK_REQUIRED",
+            "",
+            (
+                "MANUAL_CHECK_REQUIRED count: "
+                f"{len(profile.manual_only_assertions)}"
+            ),
+            "",
+            "Manual checks are outside the automated Behavior Score.",
             "",
             "| Assertion | Coverage | Reason |",
             "|---|---|---|",

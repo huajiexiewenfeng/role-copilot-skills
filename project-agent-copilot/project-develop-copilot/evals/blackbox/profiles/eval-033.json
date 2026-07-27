@@ -1,7 +1,7 @@
 {
   "schema_version": "0.2",
   "eval_id": "33",
-  "profile_version": "eval-033-profile-0.2",
+  "profile_version": "eval-033-profile-0.3",
   "fixture_version": "eval-033-fixture-0.1",
   "canonical_heading": "Eval 33: Uninitialized Business Repository Bootstraps Before Development",
   "prompt_appendix": "针对这个合成项目完成请求，并在最终回答中列出实际修改文件、测试命令与结果。",
@@ -9,17 +9,20 @@
   "turn_count": 1,
   "checkpoint_turns": [],
   "semantic_assertion_ids": [
-    "bootstrap-before-development",
     "pending-intent-fidelity",
-    "readiness-evidence-gates-resume",
     "no-level-readiness-overclaim",
     "feature-contract-result"
   ],
   "manual_only_assertions": [
     {
-      "id": "root-init-anchor-implementation-order",
+      "id": "bootstrap-before-development",
       "coverage": "manual-only",
-      "reason": "final answer and final Git state cannot independently prove runtime checkpoint order"
+      "reason": "final answer and final Git state cannot prove that initialization completed before development began"
+    },
+    {
+      "id": "readiness-evidence-gates-resume",
+      "coverage": "manual-only",
+      "reason": "file-only evidence cannot prove the internal readiness gate that resumed the pending stage"
     }
   ],
   "contract_refs": [

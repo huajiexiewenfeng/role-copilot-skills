@@ -94,19 +94,25 @@ Run Status tracks whether the sidecar completed safely:
 
 Behavior Score is only `PASS`, `PARTIAL`, or `FAIL`. `NEEDS_REVIEW` and
 `RUN_ERROR` are excluded from behavior-score and PASS-rate denominators.
+`MANUAL_CHECK_REQUIRED` is an assertion-level status for a canonical behavior
+that file-only evidence cannot prove. It does not block a `GRADED` Run and is
+excluded from the automated Behavior Score.
 
 ## Evidence limits and caveats
 
 The canary pairs are legacy/source authority probes. They indicate which literal
 the answer adopted; they are not a claim that every source file is wrong or that
 literal matching proves the complete reasoning path. Eval 32 therefore retains
-a `manual-only` read-order assertion: final files and answers cannot prove read
-order without a runtime trace, so a human must assess that assertion.
+`manual-only` assertions for read order, initialization order, and internal
+gate transitions. Final files and answers cannot prove those behaviors without
+a product-runtime trace, so the report labels them `MANUAL_CHECK_REQUIRED`
+instead of sending them to the file-only Judge.
 
 Eval 33-35 do not use Wiki/source canaries. They use scenario-specific Git
 write policies instead. Eval 35 additionally requires an intermediate
 checkpoint so a clean final tree cannot hide a write that occurred during the
-preview turn.
+preview turn. The sidecar does not collect Codex or another Agent product's
+tool trace.
 
 For untracked content, the maximum captured file size is **65,536** bytes and
 the maximum total is **1,048,576** bytes. Eligible content payloads are
