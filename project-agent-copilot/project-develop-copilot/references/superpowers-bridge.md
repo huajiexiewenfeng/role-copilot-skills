@@ -6,6 +6,12 @@ For the broader bridge contract across tools such as OpenSpec-style mechanisms a
 
 ## Boundary
 
+Project Develop Copilot initialization and lifecycle gates take precedence over Superpowers advisory workflow routing.
+
+Do not resolve or invoke an advisory workflow Skill before the Initialization Gate and Context Recovery Gate allow it.
+
+When PDC selects `lightweight-answer`, do not invoke brainstorming and do not create any Superpowers artifact.
+
 Project skills own:
 
 - project root resolution
