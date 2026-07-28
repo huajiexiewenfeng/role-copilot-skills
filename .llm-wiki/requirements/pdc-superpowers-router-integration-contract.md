@@ -93,3 +93,4 @@
 - 当前已知 frontier A0 RED 是“复杂但只讨论时可能误触发 brainstorming”；本 Flow 只确保 PDC 自身声明并测试 lightweight-answer 的产物边界。
 - Skill Creator 的 `quick_validate.py` 因本地解释器缺少 `PyYAML` 未能启动；这不是 Skill 验证失败。仓库自身的文档完整性、文本质量和契约测试均已通过，但不据此声称外部结构校验器通过。
 - 本 Flow 没有运行其他 Agent、完整 Blackbox 行为认证或 CI，因此验证级别保持 `passed-agent-local`。
+- 核心提交 `5276812` 已推送到 GitHub `main`；本地安装版 134 个受版本控制文件与源码哈希完全一致，安装目录回归 81/81。

@@ -6,7 +6,7 @@
 - development: done
 - testing: done (`passed-agent-local`)
 - archive: done
-- next_gate: review or publish when requested
+- next_gate: none
 
 ## Implementation Summary
 
@@ -27,6 +27,9 @@ The implementation adds one focused Python test module and three explicit bounda
 | PDC non-Blackbox regression | passed, 81/81 | 0 |
 | Superpowers frontier key regression | passed, 30/30 | 0 |
 | Git diff check before finish sync | passed | 0 |
+| GitHub core push | commit `5276812` present on `main` | 0 |
+| source/install tracked-file comparison | 134 files; missing 0, mismatch 0, meaningful extras 0 | 0 |
+| installed Skill regression | passed, 81/81 | 0 |
 | LLM Wiki Doctor finish command | not applicable; tool absent | n/a |
 | external Skill Creator `quick_validate.py` | not run; interpreter lacks `PyYAML` | n/a |
 
@@ -68,7 +71,7 @@ Verification provenance:
 - result_summary: three deterministic PDC↔Superpowers routing contracts added and verified locally
 - changed_assumptions: direct child-Skill compatibility remains intact; the remaining risk is top-level advisory over-routing
 - recommended_scope_changes: none
-- artifacts: Change Brief, focused test module, this handoff
-- verification_notes: targeted 3/3, PDC 81/81, Superpowers key 30/30; no CI or Agent blackbox claim
+- artifacts: Change Brief, focused test module, this handoff, core commit `5276812`
+- verification_notes: targeted 3/3, PDC 81/81, Superpowers key 30/30, installed Skill 81/81, source/install hash mismatch 0; no CI or Agent blackbox claim
 - lifecycle_updates_needed: none
-- next_gate: project-review or publish when requested
+- next_gate: none
