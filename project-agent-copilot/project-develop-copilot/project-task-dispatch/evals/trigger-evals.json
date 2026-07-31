@@ -1,0 +1,82 @@
+[
+  {
+    "query": "我们刚把一键日志方案定稿了，涉及 smarthub-web、smarthub-admin 和 drone-cloud-api。请先预览如何拆到三个 Codex 项目，确认后一次性分发。",
+    "should_trigger": true
+  },
+  {
+    "query": "这个设计已经稳定，Web、BFF、日志服务分别在三个 Project Graph 项目里。给我 A/B 两种分发模式，我默认只想发送任务。",
+    "should_trigger": true
+  },
+  {
+    "query": "把支付改造按 SDK -> merchant-admin -> merchant-web 拆成 Development 模式子任务，分别开发、测试、本地提交，但不要 push。",
+    "should_trigger": true
+  },
+  {
+    "query": "Base Graph 里 edge-agent 有实际目录，但 Codex 左侧没有这个项目。请把完整设计交给对应目录里的新任务，先让我看预览。",
+    "should_trigger": true
+  },
+  {
+    "query": "库存项目的方案跨 warehouse-api 和 warehouse-console，都是讨论任务，不开发。帮我分到各自项目的对话里。",
+    "should_trigger": true
+  },
+  {
+    "query": "需求、接口和验收都确认了，涉及 auth-service、gateway、mobile-app 三个独立仓库。现在适合拆 Codex 任务吗？",
+    "should_trigger": true
+  },
+  {
+    "query": "create separate codex chats for the three Project Graph owners, include the full approved markdown design, and do a dry-run preview first",
+    "should_trigger": true
+  },
+  {
+    "query": "评审任务跨两个项目：后端查协议兼容，前端查错误展示。只发送任务就结束，不跟踪结果。",
+    "should_trigger": true
+  },
+  {
+    "query": "部署方案涉及 infra-compose、device-service、operations-ui，设计已经过会。按项目整理可执行文档并批量派发。",
+    "should_trigger": true
+  },
+  {
+    "query": "这次需要回执：三个项目都要完成开发、项目内测试和本地 commit，父任务最后统一验收。",
+    "should_trigger": true
+  },
+  {
+    "query": "这个需求只改 drone-cloud-api 里的 log-service 和 log-sdk 两个 Maven 模块，帮我在当前任务直接开发。",
+    "should_trigger": false
+  },
+  {
+    "query": "查一下 smarthub-web 和 smarthub-admin 当前的日志接口调用关系，给我一个只读结论，不要创建任务。",
+    "should_trigger": false
+  },
+  {
+    "query": "方案还没定，先和我讨论 taskId 应该放 UUID 还是雪花 ID，暂时不要拆任务。",
+    "should_trigger": false
+  },
+  {
+    "query": "我不想分配子任务，直接把三个仓库的差异汇总成一段说明。",
+    "should_trigger": false
+  },
+  {
+    "query": "在当前 smarthub 项目里创建三个 Java 类并运行单元测试。",
+    "should_trigger": false
+  },
+  {
+    "query": "把现有前端任务继续做完，当前分支提交但不要推送。",
+    "should_trigger": false
+  },
+  {
+    "query": "看看 Base Graph 里有哪些项目，画一张项目依赖图，不需要发任务。",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我为一个仓库的前后端模块写实施计划，先不要开发。",
+    "should_trigger": false
+  },
+  {
+    "query": "把这份设计文档发给 Slack 的项目群，让大家评论。",
+    "should_trigger": false
+  },
+  {
+    "query": "分别解释 A 项目和 B 项目怎么处理鉴权，我只是在了解现状，不需要 Codex 新会话。",
+    "should_trigger": false
+  }
+]

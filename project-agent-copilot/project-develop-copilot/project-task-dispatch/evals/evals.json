@@ -1,0 +1,89 @@
+{
+  "skill_name": "project-task-dispatch",
+  "evals": [
+    {
+      "id": 1,
+      "name": "three-project-dispatch-preview",
+      "prompt": "Dry-run only. A confirmed distributed-log design assigns Web UI to smarthub-web, BFF endpoints to smarthub-admin, and SDK plus log-service to drone-cloud-api. Base Graph and Codex Projects match all three roots exactly. Preview how you would distribute the work. The user has not requested tracking or receipts. Do not create tasks or call thread tools.",
+      "expected_output": "A Dispatch-mode batch preview with three complete project packages and one batch confirmation gate.",
+      "files": [],
+      "assertions": [
+        "No task or thread is created before approval.",
+        "A/B choices are shown and Dispatch is selected as the default.",
+        "All three projects use VERIFIED_CODEX_PROJECT and local current checkouts.",
+        "Every child includes three complete Markdown documents.",
+        "The preview asks for one batch confirmation, not per-child approval.",
+        "No worktree, branch switch, push, or cross-project integration test is proposed."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "proactive-after-stable-design",
+      "prompt": "We have just finished and confirmed an inventory feature design spanning warehouse-api, warehouse-web, and billing-adapter. The design is stable, but I have not asked to create tasks yet. Respond with the next helpful step only. This is a dry-run; do not create tasks.",
+      "expected_output": "A proactive A/B dispatch prompt with Dispatch as the default.",
+      "files": [],
+      "assertions": [
+        "The response proactively offers multi-project distribution.",
+        "It presents A Dispatch and B Development clearly.",
+        "Dispatch is identified as the default.",
+        "No task or thread is created."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "development-dependency-chain",
+      "prompt": "Dry-run a Development-mode split for a confirmed API change with dependency order SDK -> BFF -> Web. Each project exists as a saved Codex Project and its Base Graph path matches. Show packages, scheduling, and completion rules. Do not create tasks.",
+      "expected_output": "A dependency-aware Development preview that serializes SDK, BFF, and Web and requires project-local tests and local commits.",
+      "files": [],
+      "assertions": [
+        "Development mode is selected explicitly.",
+        "The dependency chain is SDK then BFF then Web.",
+        "Every child receives a complete three-document package.",
+        "Normal completion requires project-local tests and at least one local commit.",
+        "No push or cross-project integration test is required.",
+        "No task or thread is created during the dry-run."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "base-path-fallback",
+      "prompt": "Dry-run only. Project Graph assigns one child to edge-collector. Base Graph resolves D:\\workspace\\edge\\edge-collector and the directory exists, but Codex list_projects has no saved edge-collector project. The current Codex Project is control-center. Preview the route and full package without creating a task.",
+      "expected_output": "A BASE_PATH_FALLBACK preview that creates no worktree and makes the Base Graph root the mandatory child workdir.",
+      "files": [],
+      "assertions": [
+        "The route is BASE_PATH_FALLBACK.",
+        "The session project remains control-center.",
+        "targetWorkdir is D:\\workspace\\edge\\edge-collector.",
+        "The child must verify its Git root and avoid modifying the session project.",
+        "No task or thread is created."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "ambiguous-route-blocks",
+      "prompt": "Dry-run only. Base Graph resolves D:\\workspace\\shared\\portal, but Codex list_projects returns two saved Projects with normalized paths that both resolve to that same directory. Show what the dispatcher should do. Do not create tasks.",
+      "expected_output": "A BLOCKED route with no approval or task creation until ambiguity is fixed.",
+      "files": [],
+      "assertions": [
+        "The route is BLOCKED.",
+        "The ambiguity is reported as an unresolved issue.",
+        "The batch cannot be approved while the route is blocked.",
+        "No task or thread is created."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "discussion-only-dispatch",
+      "prompt": "Dry-run a split discussion across telemetry-api and observability-console. The goal is to compare two interface alternatives and report decisions; nobody asked for code, tests, commits, or result tracking. Both routes are verified. Preview the task packages only.",
+      "expected_output": "A Dispatch-mode preview whose child task kind stays discussion and contains no implementation demand.",
+      "files": [],
+      "assertions": [
+        "Dispatch mode is used by default.",
+        "Both child task kinds remain discussion.",
+        "The packages request analysis and decisions rather than code changes.",
+        "No development receipt, commit, or test requirement is imposed.",
+        "No task or thread is created."
+      ]
+    }
+  ]
+}

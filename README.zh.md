@@ -50,6 +50,7 @@ role-copilot-skills/
       project-init/
       project-ingest/
       project-query/
+      project-task-dispatch/
       project-develop/
       project-fix/
       project-finish/
@@ -77,6 +78,7 @@ project-agent-copilot/
   project-develop-copilot/
     project-init/
     project-ingest/
+    project-task-dispatch/
     project-develop/
     project-fix/
     project-finish/
@@ -116,6 +118,7 @@ visual-agent-copilot/
 | `project-init` | 初始化或刷新项目 LLM Wiki，发现模块，并迁移旧版 `docs/ai-coding`。 |
 | `project-ingest` | 将 PRD、链接、Markdown、PDF、Word、日志、会议纪要或临时资料摄入项目 LLM Wiki。 |
 | `project-query` | 基于 `.llm-wiki`、Project Graph pin/edge/candidate 和必要源码证据回答只读项目问题。 |
+| `project-task-dispatch` | 为已确认的跨项目工作预览并分发完整的分项目任务包；默认使用 Dispatch 模式，只有 Development 模式才跟踪开发、项目内测试和本地提交。 |
 | `project-develop` | 基于受控项目上下文和需求摘要开发需求或功能。 |
 | `project-fix` | 基于受控上下文、证据、验证和 bug 摘要诊断并修复项目问题。 |
 | `project-finish` | 在验证后同步实际变更到 LLM Wiki，并准备交付说明。 |

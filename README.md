@@ -50,6 +50,7 @@ role-copilot-skills/
       project-init/
       project-ingest/
       project-query/
+      project-task-dispatch/
       project-develop/
       project-fix/
       project-finish/
@@ -77,6 +78,7 @@ project-agent-copilot/
   project-develop-copilot/
     project-init/
     project-ingest/
+    project-task-dispatch/
     project-develop/
     project-fix/
     project-finish/
@@ -116,6 +118,7 @@ Planned DevOps skills:
 | `project-init` | Initialize or refresh project-local LLM Wiki, discover modules, and migrate legacy `docs/ai-coding`. |
 | `project-ingest` | Ingest PRDs, links, Markdown, PDF, Word, logs, meeting notes, or temporary source material into the project LLM Wiki. |
 | `project-query` | Answer read-only project questions from `.llm-wiki`, Project Graph pins/edges/candidates, and source evidence when needed. |
+| `project-task-dispatch` | Preview and distribute complete project-specific task packages for confirmed multi-project work, using Dispatch mode by default or Development mode for tracked development, tests, and local commits. |
 | `project-develop` | Develop a requirement or feature with scoped project context and requirement summaries. |
 | `project-fix` | Diagnose and fix project bugs with scoped context, evidence, verification, and bug summaries. |
 | `project-finish` | Finish verified work by syncing actual changes back to LLM Wiki and preparing handoff. |

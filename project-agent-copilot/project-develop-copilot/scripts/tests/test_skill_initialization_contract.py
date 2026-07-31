@@ -38,6 +38,7 @@ class SkillInitializationContractTest(unittest.TestCase):
         "project-query",
         "project-review",
         "project-session-extract",
+        "project-task-dispatch",
     }
     MECHANICAL_STAGES = {
         "project-graph-visualize",

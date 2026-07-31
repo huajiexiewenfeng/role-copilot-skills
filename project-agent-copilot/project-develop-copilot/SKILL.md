@@ -1,6 +1,6 @@
 ---
 name: project-develop-copilot
-description: Use when the user wants project development help from natural intent, including Chinese prompts for 项目开发、项目文档、跨项目关系、项目图谱仓库、Base Graph、需求、bug、日志、评审、继续, or routing into project lifecycle skills.
+description: Use when the user wants project development help from natural intent, including Chinese prompts for 项目开发、项目文档、跨项目关系、跨项目任务分发、项目图谱仓库、Base Graph、需求、bug、日志、评审、继续, or routing into project lifecycle skills.
 ---
 
 # Project Develop Copilot
@@ -11,7 +11,7 @@ description: Use when the user wants project development help from natural inten
 
 It helps users enter naturally without choosing a child skill first. It decides whether the request should stay lightweight or enter the full project lifecycle, then routes full work into the right stage while preserving scope, lifecycle state, handoff, verification, knowledge sync, artifact sync, dashboard sync, and review.
 
-It does not replace `project-query`, `project-base-init`, `project-graph-visualize`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
+It does not replace `project-query`, `project-task-dispatch`, `project-base-init`, `project-graph-visualize`, `project-init`, `project-ingest`, `project-develop`, `project-fix`, `project-finish`, or `project-review`. It owns routing and lifecycle continuity; stage skills own stage execution.
 
 ## When to Use
 
@@ -19,6 +19,7 @@ Use this skill when the user asks for project development help from natural lang
 
 - Finding, explaining, querying, or discussing project `.llm-wiki`, requirements, bugs, design docs, README files, skills, references, artifacts, or current project status.
 - Investigating cross-service or cross-project integration points such as Feign clients, MQTT topics, HTTP/RPC interfaces, shared DB tables, shared config, upstream/downstream services, or external contracts.
+- Previewing and distributing a stable design, requirement, discussion, review, test, deployment, or development package across two or more projects without losing the executable source documents.
 - Developing a feature, requirement, PRD, design change, implementation plan, or scoped project change.
 - Diagnosing or fixing a bug, failed test, runtime error, log symptom, regression, incident, or unexpected behavior.
 - Ingesting PRDs, logs, PDFs, URLs, meeting notes, customer feedback, or temporary source material into project context.
@@ -56,6 +57,7 @@ The router owns lifecycle coherence across gates:
 - Session Import Gate
 - Finish Sync Gate when the user explicitly asks to refresh dashboard/progress state
 - Review & Wiki Integrity Gate when the user reports missing, stale, hard-to-find, inconsistent `.llm-wiki` state or lifecycle-quality risk
+- Cross-Project Dispatch Gate when a stable design spans two or more projects and is ready to split into independently executable task packages
 
 Stage skills own their stage-specific gates, but this router must ensure the next gate is explicit before handing off.
 
@@ -74,6 +76,19 @@ The injected step is:
 5. If graph evidence is missing, stale, draft, or indirect, verify from source before making implementation decisions.
 
 This is a router navigation rule, not a validator guarantee. Do not claim Project Graph was the primary workflow unless the actual trace shows it was used before source exploration.
+
+## Cross-Project Task Dispatch Trigger
+
+When a stable design spans two or more projects, proactively offer task distribution instead of waiting for the user to name a child skill. Preserve the original task kind: a discussion or design stays a discussion/design task unless the user chooses development.
+
+Present exactly two clear choices:
+
+- **A — Dispatch mode (default):** preview and send complete project-specific task packages. Delivery to the target Codex session means dispatch is complete; do not require receipts or manage downstream results.
+- **B — Development mode:** preview and send complete project-specific task packages, then track each child until project-local development, project-local tests, and a local Git commit are complete. Do not push, create worktrees, switch branches, or require cross-project integration tests by default.
+
+If the user asks to distribute tasks without requesting receipts, select Dispatch mode. Resolve each destination by corroborating Base Graph, Project Graph, and Codex Projects. If no matching Codex Project exists, fall back to creating the child task from the current session while setting its working directory to the Base Graph project root.
+
+Always preview the complete split and task packages before creation. Ask for one batch confirmation covering all child tasks; never require one confirmation per project. Route the approved package to `project-task-dispatch`.
 
 ## LLM Wiki Discovery Rule
 
@@ -122,6 +137,7 @@ Before doing project work:
    - lightweight-answer
    - project wiki query / discussion context
    - cross-project lookup / evidence gathering
+   - cross-project task dispatch
    - init / ingest
    - historical session extraction / Session Digest import
    - requirement or feature development
@@ -149,6 +165,7 @@ Before doing project work:
 | User asks to turn a candidate into an evidence-backed edge proposal through Base Graph or source verification | wiki-maintenance | `project-graph-auto-edge` |
 | User asks for large-scope requirement discussion across services | read-only-query | query Base Graph overview first when Base is discoverable |
 | User says to discuss design and not implement | lightweight-answer | none |
+| A stable design spans two or more projects and the user asks to preview, distribute, delegate, or create project-specific Codex tasks | cross-project-dispatch | `project-task-dispatch` |
 | User asks to initialize, create, adopt, or refresh a Base Graph repository, graph-base repo, base-project-graph, platform graph catalog, platform overview repo, 项目图谱仓库, 跨项目导航层, Base Graph 初始化, or 多项目 `.llm-wiki` 总目录 | full-lifecycle | `project-base-init` |
 | User provides PRD/source material to index | full-lifecycle | `project-ingest` |
 | User provides or references historical AI/team chat, session transcript, old conversation summary, colleague AI discussion, previous agent handoff, or asks to distill/import previous session context into `.llm-wiki` | session-context-import | `project-session-extract` |
@@ -170,7 +187,7 @@ If confidence is low, ask one minimal routing question. Do not start a long inta
 When multiple routes seem plausible, choose the least state-changing route that still satisfies the user:
 
 ```text
-lightweight-answer < read-only-query < mechanical-artifact < wiki-doctor < dashboard-refresh < wiki-maintenance < full-lifecycle
+lightweight-answer < read-only-query < mechanical-artifact < wiki-doctor < dashboard-refresh < wiki-maintenance < cross-project-dispatch < full-lifecycle
 ```
 
 Use this quick decision order:
@@ -185,8 +202,9 @@ Use this quick decision order:
 7. Project Graph human confirmation/manual edge requested (`human-edge`, `手动登记`, `确认 proposal`, `接受 proposal`, `拒绝 proposal`) -> `wiki-maintenance` / `project-graph-human-edge`.
 8. Wiki visibility, broken links, stale indexes, dashboard/card drift, artifact registry drift, Project Graph audit/repair, safety, or consistency requested -> `wiki-maintenance` / `project-maintain`.
 9. Base Graph repository initialization, adoption, or refresh requested, including Chinese prompts like 初始化项目图谱仓库 or 跨项目导航层 -> full lifecycle / `project-base-init`.
-10. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
-11. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
+10. Stable confirmed work spans two or more projects and needs previewed task creation -> `cross-project-dispatch` / `project-task-dispatch`.
+11. Requirement, bug, source ingest, implementation, finish, verification, handoff, or review readiness requested -> full lifecycle.
+12. Process/routing/gate/conversation-flow evaluation requested -> `lifecycle-quality`.
 
 Natural lifecycle-quality intent is enough. The user does not need to say `Dolores` or `skill-evaluator`; phrases like "did this flow go wrong", "review whether the lifecycle drifted", or "评估这次流程是否跑偏" should route to lifecycle-quality. Ordinary `review code`, `continue`, `finish`, `bug`, and `next step` stay on normal delivery routes unless the user asks to evaluate the process itself.
 
@@ -263,6 +281,14 @@ For session-context-import:
 - optional Lifecycle Promotion candidates only when the user asks to promote selected digest items
 - imported digest path after approval
 
+For cross-project-dispatch:
+
+- verified destination mapping from Base Graph, Project Graph, and Codex Projects
+- complete shared baseline plus one executable project task specification and handoff per destination
+- preview before task creation
+- one batch confirmation
+- Dispatch mode by default; Development mode only when the user explicitly requests receipt tracking
+
 For full lifecycle:
 
 - routing decision
@@ -321,6 +347,7 @@ If the returned result suggests new scope, new sources, changed acceptance crite
 - Lightweight-answer and read-only query must not create Change Brief, Bug Brief, dashboard updates, or code changes by default.
 - `mechanical-artifact` routes such as `project-graph-visualize` may write only their declared artifact output and must not create lifecycle documents, plans, finish-sync records, or commits unless the user explicitly asks.
 - Full lifecycle work must not call external implementation/debugging/planning skills before project scope is established.
+- Cross-project dispatch must not replace executable source documents with summary-only handoffs, create worktrees, switch branches, or push commits by default.
 - External skills are bridges, not lifecycle owners.
 - Completion claims must go through verification, knowledge sync, artifact sync, dashboard sync when enabled, and review as appropriate.
 - Evaluator and Dolores are non-blocking by default unless the user explicitly asks to enter improvement mode or review finds high-risk process failure.
@@ -330,6 +357,7 @@ If the returned result suggests new scope, new sources, changed acceptance crite
 
 - Forcing lightweight design discussion into full lifecycle.
 - Letting users choose child skills manually when natural routing is possible.
+- Asking for one confirmation per child task instead of one batch confirmation after preview.
 - Jumping into `systematic-debugging`, planning, TDD, or execution before scoped project context exists.
 - Creating duplicate Change Briefs or Bug Briefs instead of resuming existing sessions.
 - Treating dashboard state as a source of truth instead of evidence-backed summary.

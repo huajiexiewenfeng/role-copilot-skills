@@ -27,6 +27,7 @@ English | [Simplified Chinese](./README.zh.md)
 |---|---|
 | `project-develop-copilot` | Route natural project development intent into lightweight answers or the full project lifecycle. |
 | `project-query` | Query project `.llm-wiki` to answer what exists in the project, how modules or APIs are called, which cross-project refs point to remote contracts, and which requirements, bugs, source proxies, artifacts, or discussion context relate to a topic without starting implementation. |
+| `project-task-dispatch` | Preview and distribute complete, lossless task packages to the correct Codex project/session for every project in a confirmed multi-project design; Dispatch mode is the default, while Development mode tracks project-local development, tests, and local commits. |
 | `project-maintain` | Check, audit, repair, and maintain project `.llm-wiki` visibility, Flow Records, cross-project refs, artifact registry entries, dashboard consistency, module backlinks, logs, links, safety boundaries, and doctor findings. |
 | `llm-wiki-doctor` | Run or explain LLM Wiki Doctor validate/score/report output, including Chinese maturity reports, empty wiki skeleton detection, placeholder module-context detection, Project Graph validator findings, and stale/wiki anti-corruption signals. |
 | `project-base-init` | Initialize or refresh an independent Base Graph repository that coordinates many project-local `.llm-wiki` directories without treating the Base repo as a business project. |
@@ -75,13 +76,18 @@ project-develop-copilot
 or
 
 project-develop-copilot
+-> project-task-dispatch
+
+or
+
+project-develop-copilot
 -> project-query / project-maintain / llm-wiki-doctor / project-base-init / project-init / project-ingest
 -> project-develop or project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup, cross-project lookup, and discussion context. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `llm-wiki-doctor` runs read-only validate/score/report diagnosis. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work and record external dependencies/findings when cross-project contracts matter. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
+`project-develop-copilot` is the natural entry router. `project-query` handles read-only project wiki lookup, cross-project lookup, and discussion context. After a stable design spans multiple projects, `project-task-dispatch` corroborates Base Graph, Project Graph, and Codex Projects, previews complete project-specific packages, and creates all approved tasks after one batch confirmation. `project-maintain` keeps the project `.llm-wiki` discoverable, structurally consistent, and safe. `llm-wiki-doctor` runs read-only validate/score/report diagnosis. `project-init` and `project-ingest` enrich project context. `project-develop` and `project-fix` consume scoped context for actual work and record external dependencies/findings when cross-project contracts matter. `project-finish` writes verified outcomes back into the wiki. `project-review` checks code, tests, scope, and context consistency before handoff.
 
 Superpowers-style skills are invoked after project context recovery, not before it. See `references/superpowers-bridge.md`.
 

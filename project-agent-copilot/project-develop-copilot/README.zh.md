@@ -31,6 +31,7 @@ Project Develop Copilot 是面向真实项目开发的 skill 集合。它有两�
 |---|---|
 | `project-develop-copilot` | 将自然语言项目开发意图路由到轻量回答或完整项目生命周期。 |
 | `project-query` | 查询项目 `.llm-wiki`，回答项目里有什么、模块或 API 如何调用、哪些 cross-refs 指向外部契约，以及哪些需求、bug、source proxy、artifact 或讨论上下文与主题相关，不默认进入实现。 |
+| `project-task-dispatch` | 为已确认的跨项目方案预览并分发完整、无损的任务包到正确的 Codex project/session；默认使用 Dispatch 模式，Development 模式才跟踪各项目的开发、项目内测试和本地提交。 |
 | `project-maintain` | 体检、审计、修复和维护项目 `.llm-wiki` 的可见性、Flow Record、cross-refs、artifact registry、dashboard 一致性、模块回链、日志、链接、安全边界和 doctor 发现。 |
 | `llm-wiki-doctor` | 运行或解释 LLM Wiki Doctor 的 validate/score/report 输出，包括中文成熟度报告、空壳 wiki 识别、模块占位上下文识别、Project Graph validator 发现，以及过期/脏捕获 wiki 知识的防腐信号。 |
 | `project-base-init` | 初始化或刷新独立 Base Graph 仓库，用来协调多个项目本地 `.llm-wiki`，但不把 Base 仓库当成业务项目。 |
@@ -71,13 +72,18 @@ project-develop-copilot
 或
 
 project-develop-copilot
+-> project-task-dispatch
+
+或
+
+project-develop-copilot
 -> project-query / project-maintain / llm-wiki-doctor / project-base-init / project-init / project-ingest
 -> project-develop 或 project-fix
 -> project-finish
 -> project-review
 ```
 
-`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`llm-wiki-doctor` 负责只读运行 validate/score/report 诊断。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
+`project-develop-copilot` 是自然入口路由器。`project-query` 负责只读项目 wiki 查询、cross-project lookup 和讨论上下文组装。当稳定方案跨越多个项目后，`project-task-dispatch` 会用 Base Graph、Project Graph 和 Codex Projects 相互印证目标，预览完整的分项目任务包，并在一次批量确认后创建全部任务。`project-maintain` 负责项目 `.llm-wiki` 健康检查、可见性审计、cross-refs 巡检、结构性修复、dashboard 一致性、artifact registry、模块回链、日志、链接和安全检查。`llm-wiki-doctor` 负责只读运行 validate/score/report 诊断。`project-init` 和 `project-ingest` 负责完善项目上下文。`project-develop` 和 `project-fix` 在受控上下文内进入实际开发，并在跨项目契约影响需求或 bug 时记录外部依赖 / 外部发现。`project-finish` 将验证后的结果同步回 wiki。`project-review` 在交付前检查代码、测试、范围和上下文一致性。
 
 Superpowers 类 skills 应在项目上下文恢复之后调用，而不是在它之前调用。见 `references/superpowers-bridge.md`。
 
