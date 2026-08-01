@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -40,6 +41,7 @@ class TaskControlTest(unittest.TestCase):
     ):
         return self.control.parse_receipt(
             {
+                "schemaVersion": 1,
                 "taskId": task_id,
                 "requestedState": requested_state,
                 "summary": summary,
@@ -51,11 +53,81 @@ class TaskControlTest(unittest.TestCase):
             }
         )
 
+    def receipt_payload(self, task_id: str = "frontend") -> dict[str, object]:
+        return {
+            "schemaVersion": 1,
+            "taskId": task_id,
+            "requestedState": "IN_PROGRESS",
+            "summary": "Queried the local checkout version.",
+            "evidenceRefs": [f"thread:{task_id}#latest"],
+            "nextStep": "Parent records the result.",
+            "blocked": False,
+            "needsParentDecision": False,
+            "blocker": None,
+        }
+
+    def envelope(self, payload: dict[str, object], details: str = "") -> str:
+        return (
+            "TASK_CONTROL_RECEIPT_BEGIN\n"
+            + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            + "\nTASK_CONTROL_RECEIPT_END\n"
+            + details
+        )
+
     def test_exposes_only_four_authoritative_states(self) -> None:
         self.assertEqual(
             {state.value for state in self.control.TaskState},
             {"PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED"},
         )
+
+    def test_extracts_receipt_first_envelope_before_long_human_details(self) -> None:
+        raw = self.envelope(
+            self.receipt_payload(),
+            details="Changed files:\n" + ("path/to/dirty-file.txt\n" * 5000),
+        )
+
+        receipt = self.control.parse_receipt_text(raw)
+
+        self.assertEqual(receipt.task_id, "frontend")
+        self.assertEqual(receipt.requested_state, self.control.TaskState.IN_PROGRESS)
+
+    def test_rejects_missing_duplicate_and_truncated_receipt_envelopes(self) -> None:
+        valid = self.envelope(self.receipt_payload())
+        with self.assertRaisesRegex(ValueError, "missing receipt envelope"):
+            self.control.parse_receipt_text("Human-readable result only.")
+        with self.assertRaisesRegex(ValueError, "must be the first content"):
+            self.control.parse_receipt_text("Human preface.\n" + valid)
+        with self.assertRaisesRegex(ValueError, "marker must be on its own line"):
+            self.control.parse_receipt_text(
+                "TASK_CONTROL_RECEIPT_BEGIN"
+                + json.dumps(self.receipt_payload())
+                + "\nTASK_CONTROL_RECEIPT_END"
+            )
+        with self.assertRaisesRegex(ValueError, "duplicate receipt envelope"):
+            self.control.parse_receipt_text(valid + valid)
+        with self.assertRaisesRegex(ValueError, "truncated receipt envelope"):
+            self.control.parse_receipt_text(
+                "TASK_CONTROL_RECEIPT_BEGIN\n"
+                + json.dumps(self.receipt_payload())
+            )
+
+    def test_rejects_malformed_oversized_and_unsupported_receipt_envelopes(self) -> None:
+        with self.assertRaisesRegex(ValueError, "invalid receipt JSON"):
+            self.control.parse_receipt_text(
+                "TASK_CONTROL_RECEIPT_BEGIN\n"
+                '{"schemaVersion":1,"taskId":"frontend" requestedState:"IN_PROGRESS"}'
+                "\nTASK_CONTROL_RECEIPT_END"
+            )
+
+        oversized = self.receipt_payload()
+        oversized["summary"] = "x" * 9000
+        with self.assertRaisesRegex(ValueError, "receipt JSON exceeds"):
+            self.control.parse_receipt_text(self.envelope(oversized))
+
+        unsupported = self.receipt_payload()
+        unsupported["schemaVersion"] = 2
+        with self.assertRaisesRegex(ValueError, "unsupported schemaVersion"):
+            self.control.parse_receipt_text(self.envelope(unsupported))
 
     def test_applies_the_finite_legal_transition_sequence(self) -> None:
         task = self.control.create_task("backend", "smarthub", "BFF task")
@@ -83,6 +155,21 @@ class TaskControlTest(unittest.TestCase):
         )
 
         self.assertEqual(task.state, self.control.TaskState.COMPLETED)
+
+    def test_parent_starts_a_pending_task_before_a_one_shot_completed_receipt(self) -> None:
+        pending = self.control.create_task("version-query", "smarthub", "Query version")
+
+        active = self.control.start_task(pending)
+        completed = self.control.apply_receipt(
+            active,
+            self.receipt("version-query", "COMPLETED"),
+        )
+
+        self.assertEqual(pending.state, self.control.TaskState.PENDING)
+        self.assertEqual(active.state, self.control.TaskState.IN_PROGRESS)
+        self.assertEqual(completed.state, self.control.TaskState.COMPLETED)
+        with self.assertRaisesRegex(ValueError, "only PENDING"):
+            self.control.start_task(active)
 
     def test_allows_progress_and_blocker_snapshot_refreshes(self) -> None:
         task = self.control.create_task("frontend", "smarthub-web", "Web task")
@@ -142,6 +229,7 @@ class TaskControlTest(unittest.TestCase):
 
     def test_receipt_schema_rejects_global_state_and_unknown_fields(self) -> None:
         payload = {
+            "schemaVersion": 1,
             "taskId": "frontend",
             "requestedState": "IN_PROGRESS",
             "summary": "Working.",

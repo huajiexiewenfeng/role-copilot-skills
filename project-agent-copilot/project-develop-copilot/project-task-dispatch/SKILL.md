@@ -36,6 +36,11 @@ Dispatch is the default. If the user answers only `可以`, `继续`, `确认`, 
 no receipt/tracking requirement, select A. Select B only when the user explicitly
 chooses Development or asks to track development, tests, and local commits.
 
+If the user explicitly asks to wait for, collect, or return child results but
+does not request implementation tracking, keep Dispatch and set
+`awaitResult=true`. Dispatch remains the selected mode; this flag is not a third
+user-facing mode and does not require project-local tests or a local commit.
+
 Do not trigger for:
 
 - one project or several modules inside the same repository;
@@ -56,7 +61,7 @@ Read only the resources needed for the current phase:
   `references/task-package-protocol.md`;
 - Development result validation:
   `references/development-receipt.md`;
-- Development progress control and parent projection:
+- tracked Dispatch results and Development progress control:
   `references/task-control-plane.md` and `scripts/task_control.py`;
 - deterministic build and verification:
   `scripts/task_package.py`.
@@ -79,7 +84,7 @@ resolve current project and wiki
 -> obtain one explicit batch confirmation
 -> create_thread
 -> send_message_to_thread for remaining package chunks
--> Dispatch ends OR Development uses wait_threads
+-> Dispatch ends OR awaitResult/Development uses wait_threads
 ```
 
 ### 1. Establish the confirmed parent baseline
@@ -218,11 +223,25 @@ through `send_message_to_thread`. Follow
 Successful delivery means every approved byte reached the task; it is not a
 Development receipt.
 
+For Development and Dispatch with `awaitResult=true`, include the exact output
+contract from `references/task-control-plane.md` in the child handoff. State that
+the receipt envelope must appear before optional human details. Do not ask the
+child to return YAML-like prose for machine parsing.
+
 ### 7A. Finish Dispatch mode
 
-After successful package delivery, report created task links/identifiers and
-delivery status. Do not call `wait_threads`, monitor results, validate commits, or
-manage later output. Delivery completion ends the parent workflow.
+When `awaitResult=false`, after successful package delivery report created task
+links/identifiers and delivery status. Do not call `wait_threads`, monitor
+results, validate commits, or manage later output. Delivery completion ends the
+parent workflow.
+
+When the user explicitly requested returned results, keep Dispatch mode and set
+`awaitResult=true`. Read `references/task-control-plane.md`, create one
+authoritative task record per child, call `start_task` after successful delivery,
+and use `wait_threads`. Pass each raw child response to `parse_receipt_text`
+before applying the proposed transition. Regenerate the parent projection after
+each accepted receipt. This tracked Dispatch path validates the requested result
+and blockers only; it does not require project-local tests or a local commit.
 
 ### 7B. Track Development mode
 
@@ -234,6 +253,8 @@ coordinating task is the sole authority for these records and the global task
 projection. A child may only submit the strict progress receipt defined by the
 control-plane reference. Treat `requestedState` as a proposal: validate the
 receipt and legal transition before applying it with `scripts/task_control.py`.
+Call `start_task` after successful child delivery, and pass raw child updates to
+`parse_receipt_text`; never manually repair concatenated or truncated fields.
 Reject child payloads that contain an authoritative state or replacement global
 projection.
 
@@ -271,6 +292,7 @@ receipt or an accepted no-change result.
 | Decision | Required behavior |
 |---|---|
 | User does not ask for tracking | Dispatch mode |
+| User asks to wait for non-development results | Dispatch with `awaitResult=true` |
 | Stable design spans multiple projects | Proactively offer A/B |
 | Same logical project has several responsibilities | Consolidate one task |
 | Base path and saved Codex Project match | `VERIFIED_CODEX_PROJECT` |
@@ -279,6 +301,7 @@ receipt or an accepted no-change result.
 | Preview changes | Regenerate package and checksums |
 | Batch approved | Create all tasks without per-child prompts |
 | Dispatch delivered | Stop managing results |
+| Tracked Dispatch delivered | Start parent records, wait, parse envelopes, and project results |
 | Development completed normally | Tests pass and local commit exists |
 | Development progress arrives | Parent validates the requested transition and regenerates the projection |
 
@@ -292,6 +315,8 @@ receipt or an accepted no-change result.
 | Asking approval for every child | Preview all tasks, then use one batch confirmation |
 | Treating every task as development | Preserve discussion/design/test/review/deployment kinds |
 | Waiting in Dispatch mode | Stop after confirmed delivery |
+| Treating tracked read-only work as Development | Use Dispatch with `awaitResult=true`; require no commit or tests |
+| Parsing YAML-like receipt prose manually | Require the receipt-first JSON envelope and use `parse_receipt_text` |
 | Claiming Development done without evidence | Validate project-local tests and local commit receipt |
 | Letting a child replace global task state | Accept only a strict receipt; the coordinating task owns state and projection |
 | Testing the entire distributed system | No cross-project integration tests by default |
@@ -311,3 +336,5 @@ Stop and correct the workflow when:
   unaccepted `NO_CHANGE_REQUIRED`.
 - a child receipt contains authoritative task state or a replacement global
   projection.
+- a tracked child puts prose before the receipt envelope or omits the exact
+  receipt markers.

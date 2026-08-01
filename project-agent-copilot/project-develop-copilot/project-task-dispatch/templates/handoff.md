@@ -6,6 +6,7 @@
 dispatchId: "{{dispatch_id}}"
 subtaskId: "{{subtask_id}}"
 mode: "{{mode}}"
+awaitResult: "{{await_result}}"
 taskKind: "{{task_kind}}"
 routeMode: "{{route_mode}}"
 sessionProject: "{{session_project}}"
@@ -61,8 +62,10 @@ bundle checksums are valid. Stop on a missing, duplicate, or reordered chunk.
 expectedOutput: "{{expected_output}}"
 ```
 
-- Dispatch mode returns the task-kind result directly to its owning Codex task;
-  the parent does not track or validate a later receipt.
+- Dispatch with `awaitResult=false` returns the task-kind result directly to its
+  owning Codex task; the parent does not track or validate a later receipt.
+- Dispatch with `awaitResult=true` returns the receipt-first JSON envelope from
+  `references/task-control-plane.md`; it requires no local commit or tests.
 - Development mode returns the exact receipt defined in
   `references/development-receipt.md`.
 - `NO_CHANGE_REQUIRED` must explain why no change is needed and must not create

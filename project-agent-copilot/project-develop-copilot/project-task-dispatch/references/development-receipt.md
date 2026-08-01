@@ -8,6 +8,10 @@ During execution, progress and blocker updates use the strict receipt from
 projection only after parent validation. It does not replace this final
 Development receipt.
 
+Emit each progress receipt as the receipt-first JSON envelope defined by the
+control-plane reference. Human-readable detail may follow the envelope but may
+not precede it.
+
 ## Required Schema
 
 ```yaml

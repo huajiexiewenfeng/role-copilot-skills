@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Mapping
@@ -14,6 +15,7 @@ class TaskState(str, Enum):
 
 @dataclass(frozen=True)
 class ChildReceipt:
+    schema_version: int
     task_id: str
     requested_state: TaskState
     summary: str
@@ -40,6 +42,7 @@ class TaskRecord:
 
 RECEIPT_FIELDS = frozenset(
     {
+        "schemaVersion",
         "taskId",
         "requestedState",
         "summary",
@@ -50,6 +53,11 @@ RECEIPT_FIELDS = frozenset(
         "blocker",
     }
 )
+
+RECEIPT_SCHEMA_VERSION = 1
+RECEIPT_BEGIN = "TASK_CONTROL_RECEIPT_BEGIN"
+RECEIPT_END = "TASK_CONTROL_RECEIPT_END"
+MAX_RECEIPT_JSON_CHARS = 8192
 
 LEGAL_TRANSITIONS = {
     TaskState.PENDING: frozenset({TaskState.IN_PROGRESS, TaskState.BLOCKED}),
@@ -91,6 +99,17 @@ def create_task(task_id: str, project: str, title: str) -> TaskRecord:
     )
 
 
+def start_task(task: TaskRecord) -> TaskRecord:
+    if task.state is not TaskState.PENDING:
+        raise ValueError("only PENDING tasks can be started")
+    return replace(
+        task,
+        state=TaskState.IN_PROGRESS,
+        summary="Task started.",
+        next_step="Await child task result.",
+    )
+
+
 def parse_receipt(payload: Mapping[str, object]) -> ChildReceipt:
     if not isinstance(payload, Mapping):
         raise ValueError("receipt must be an object")
@@ -105,6 +124,13 @@ def parse_receipt(payload: Mapping[str, object]) -> ChildReceipt:
         raise ValueError(
             "missing receipt fields: " + ", ".join(sorted(missing))
         )
+
+    schema_version = payload["schemaVersion"]
+    if (
+        type(schema_version) is not int
+        or schema_version != RECEIPT_SCHEMA_VERSION
+    ):
+        raise ValueError(f"unsupported schemaVersion: {schema_version}")
 
     raw_state = payload["requestedState"]
     try:
@@ -142,6 +168,7 @@ def parse_receipt(payload: Mapping[str, object]) -> ChildReceipt:
         raise ValueError("parent decision is valid only for a blocked receipt")
 
     return ChildReceipt(
+        schema_version=schema_version,
         task_id=_required_text(payload["taskId"], "taskId"),
         requested_state=requested_state,
         summary=_required_text(payload["summary"], "summary"),
@@ -151,6 +178,46 @@ def parse_receipt(payload: Mapping[str, object]) -> ChildReceipt:
         needs_parent_decision=needs_parent_decision,
         blocker=blocker,
     )
+
+
+def parse_receipt_text(raw_text: str) -> ChildReceipt:
+    if not isinstance(raw_text, str):
+        raise ValueError("raw receipt text must be a string")
+
+    begin_count = raw_text.count(RECEIPT_BEGIN)
+    end_count = raw_text.count(RECEIPT_END)
+    if begin_count == 0 and end_count == 0:
+        raise ValueError("missing receipt envelope")
+    if begin_count > 1 or end_count > 1:
+        raise ValueError("duplicate receipt envelope")
+    if begin_count == 0 or end_count == 0:
+        raise ValueError("truncated receipt envelope")
+
+    begin_index = raw_text.find(RECEIPT_BEGIN)
+    end_index = raw_text.find(RECEIPT_END)
+    if end_index < begin_index:
+        raise ValueError("malformed receipt envelope")
+    if raw_text[:begin_index].strip():
+        raise ValueError("receipt envelope must be the first content")
+
+    json_start = begin_index + len(RECEIPT_BEGIN)
+    if json_start >= len(raw_text) or raw_text[json_start] not in "\r\n":
+        raise ValueError("receipt marker must be on its own line")
+    if end_index == 0 or raw_text[end_index - 1] not in "\r\n":
+        raise ValueError("receipt marker must be on its own line")
+    after_end = end_index + len(RECEIPT_END)
+    if after_end < len(raw_text) and raw_text[after_end] not in "\r\n":
+        raise ValueError("receipt marker must be on its own line")
+    encoded_receipt = raw_text[json_start:end_index].strip()
+    if len(encoded_receipt) > MAX_RECEIPT_JSON_CHARS:
+        raise ValueError(
+            f"receipt JSON exceeds {MAX_RECEIPT_JSON_CHARS} characters"
+        )
+    try:
+        payload = json.loads(encoded_receipt)
+    except json.JSONDecodeError as error:
+        raise ValueError("invalid receipt JSON") from error
+    return parse_receipt(payload)
 
 
 def apply_receipt(task: TaskRecord, receipt: ChildReceipt) -> TaskRecord:

@@ -107,6 +107,7 @@ class SkillContractTest(unittest.TestCase):
                 "dispatchId",
                 "subtaskId",
                 "mode",
+                "awaitResult",
                 "taskKind",
                 "routeMode",
                 "sessionProject",
@@ -190,6 +191,22 @@ class SkillContractTest(unittest.TestCase):
                 "WALK",
                 "graphical interface",
                 "no database",
+                "TASK_CONTROL_RECEIPT_BEGIN",
+                "TASK_CONTROL_RECEIPT_END",
+                '"schemaVersion": 1',
+                "receipt must be the first content",
+            ),
+        )
+
+    def test_skill_supports_explicitly_tracked_dispatch_without_development_rules(self) -> None:
+        self.assert_contains_all(
+            "SKILL.md",
+            (
+                "awaitResult=true",
+                "Dispatch remains the selected mode",
+                "does not require project-local tests or a local commit",
+                "parse_receipt_text",
+                "receipt envelope must appear before optional human details",
             ),
         )
 

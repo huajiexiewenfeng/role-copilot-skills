@@ -4,6 +4,8 @@
 
 Give the coordinating task one deterministic view of multi-project work without
 adding persistence, automatic thread synchronization, or a workflow platform.
+Use it for Development progress and for Dispatch only when the user explicitly
+asks the parent to wait for or aggregate child results.
 
 ## Authority Boundary
 
@@ -27,22 +29,27 @@ An `IN_PROGRESS` or `BLOCKED` receipt may refresh the same current state. This
 updates evidence, blocker, and next-step information but does not create a new
 transition.
 
+After a child task is successfully created and delivered, the parent calls
+`start_task` to apply the parent-owned `PENDING -> IN_PROGRESS` transition. A
+one-shot child may then request `COMPLETED` in its first receipt.
+
 ## Progress Receipt
 
-```yaml
-taskId: stable-child-task-id
-requestedState: IN_PROGRESS | BLOCKED | COMPLETED
-summary: one short result
-evidenceRefs:
-  - thread:child-task-id#message
-nextStep: one concrete next action
-blocked: false
-needsParentDecision: false
-blocker: null
+The receipt uses one exact, versioned JSON envelope:
+
+```text
+TASK_CONTROL_RECEIPT_BEGIN
+{"schemaVersion": 1, "taskId": "stable-child-task-id", "requestedState": "IN_PROGRESS", "summary": "one short result", "evidenceRefs": ["thread:child-task-id#message"], "nextStep": "one concrete next action", "blocked": false, "needsParentDecision": false, "blocker": null}
+TASK_CONTROL_RECEIPT_END
 ```
 
 Rules:
 
+- The receipt must be the first content in every tracked child update. Optional
+  human-readable details may follow `TASK_CONTROL_RECEIPT_END`.
+- Emit exactly one envelope. Keep both markers exact and on their own lines.
+- Emit a JSON object, not YAML, Markdown fields, or a fenced code block.
+- `schemaVersion` is required and must equal `1`.
 - Every field is required and unknown fields are rejected.
 - `evidenceRefs` contains at least one non-empty reference.
 - `blocked=true` exactly when `requestedState=BLOCKED`.
@@ -50,6 +57,20 @@ Rules:
 - `needsParentDecision=true` is valid only for a blocked receipt.
 - Non-blocked receipts use `blocker: null`.
 - `requestedState` is a proposal. The parent reducer remains authoritative.
+- Keep the JSON payload within 8192 characters. Summarize long dirty-file lists
+  by count and a few evidence references instead of embedding every path.
+
+The parent passes raw task text to `parse_receipt_text`. The parser rejects
+missing, duplicate, truncated, malformed, oversized, and unsupported-version
+envelopes before the reducer sees the receipt.
+
+## Tracked Dispatch
+
+Dispatch remains untracked by default. If the user explicitly asks to wait for,
+collect, or return child results, keep Dispatch mode and set `awaitResult=true`.
+Tracked Dispatch uses this envelope, `wait_threads`, parent validation, and the
+same deterministic projection. It does not require project-local tests or a
+local commit.
 
 The final Development receipt remains defined by `development-receipt.md`.
 Progress receipts complement it; they do not replace commit and project-local
