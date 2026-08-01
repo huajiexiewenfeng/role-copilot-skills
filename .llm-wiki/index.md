@@ -4,7 +4,7 @@
 
 ## Active Flow
 
-- none
+- none；PDC 当前保持已发布核心行为，本轮 Lifecycle State Guard 升级已暂停。
 
 ## Sources
 
@@ -17,6 +17,8 @@
 
 ## Historical Design
 
+- [`pdc-lifecycle-state-guard-v1`](requirements/pdc-lifecycle-state-guard-v1.md)：只读 State Guard 候选设计；因净收益尚未被真实使用证据证明而暂停，不得生成或执行 implementation plan。
+- [`pdc-llm-first-guardrails-contract-integration`](requirements/pdc-llm-first-guardrails-contract-integration.md)：书面设计被项目 Owner 否决；哲学不应被当成显式 Skill 功能，未生成执行计划或产品实现。
 - [`Runtime-first Architecture V2`](../project-agent-copilot/project-develop-copilot/references/2026-08-01-project-develop-copilot-runtime-first-architecture-v2.zh.md)：被 V3 替代，未实现 Runtime。
 - [`pdc-runtime-p0-contract-baseline`](working-context/pdc-runtime-p0-contract-baseline.md)：未执行的 P0 候选计划，已标记 `SUPERSEDED — DO NOT EXECUTE`。
 
