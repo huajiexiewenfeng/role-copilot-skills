@@ -32,6 +32,9 @@ jobs:
       - name: Run Project Develop Copilot script tests
         run: python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
 
+      - name: Run Project Task Dispatch tests
+        run: python -m unittest discover project-agent-copilot/project-develop-copilot/project-task-dispatch/tests
+
       - name: Check repository text quality
         run: python project-agent-copilot/project-develop-copilot/scripts/check_text_quality.py --root project-agent-copilot/project-develop-copilot
 
@@ -57,6 +60,9 @@ jobs:
 
       - name: Run Project Develop Copilot script tests
         run: python -m unittest discover project-agent-copilot/project-develop-copilot/scripts/tests
+
+      - name: Run Project Task Dispatch tests
+        run: python -m unittest discover project-agent-copilot/project-develop-copilot/project-task-dispatch/tests
 
       - name: Check repository text quality
         run: python project-agent-copilot/project-develop-copilot/scripts/check_text_quality.py --root project-agent-copilot/project-develop-copilot
