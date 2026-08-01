@@ -2,6 +2,7 @@
 
 | Date | Flow | Event | Evidence |
 |---|---|---|---|
+| 2026-08-01 | `pdc-project-task-dispatch-control-plane` | `project-task-dispatch` 新增四状态轻量控制面、严格子任务进度回执、主线程权威归约和确定性 blocker-first 投影；子测试 25/25、定向父集成 3/3、父集合 177/177、Skill validation/package 与 scoped diff check 通过，按 passed-agent-local 归档。 | `handoff/pdc-project-task-dispatch-control-plane-handoff.md` |
 | 2026-07-28 | `pdc-superpowers-router-integration-contract` | 新增三条 PDC↔Superpowers 确定性契约测试，并明确初始化/上下文 Gate 优先于 advisory workflow、`lightweight-answer` 不触发 brainstorming 或 Superpowers 产物；定向 3/3、PDC 与安装目录非 Blackbox 各 81/81、Superpowers 关键路由 30/30，核心提交 `5276812` 已推送 GitHub，按 agent-local 证据归档。 | `handoff/pdc-superpowers-router-integration-contract-handoff.md` |
 | 2026-07-27 | `pdc-current-codex-initialization-certification` | Eval 33/35 的运行顺序与内部 gate 断言从 file-only Judge 契约移至 `manual-only`，统一呈现为 `MANUAL_CHECK_REQUIRED` 且不影响自动 Behavior Score；Blackbox 93/93、仓库相关 78/78 与 Skill validation 通过，本轮 Flow 归档。 | `handoff/pdc-current-codex-initialization-certification-handoff.md` |
 | 2026-07-25 | `pdc-initialization-contract-hardening` | 初始化 Gate、子 Skill 策略分类和 `project-graph-visualize` mechanical-artifact 集成完成；核心变更与升级说明均已推送 GitHub，本轮 Flow 归档。真实多模型认证保留为后续独立 Flow。 | `handoff/pdc-initialization-contract-hardening-handoff.md` |

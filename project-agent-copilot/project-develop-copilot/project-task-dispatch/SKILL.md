@@ -56,6 +56,8 @@ Read only the resources needed for the current phase:
   `references/task-package-protocol.md`;
 - Development result validation:
   `references/development-receipt.md`;
+- Development progress control and parent projection:
+  `references/task-control-plane.md` and `scripts/task_control.py`;
 - deterministic build and verification:
   `scripts/task_package.py`.
 
@@ -224,7 +226,16 @@ manage later output. Delivery completion ends the parent workflow.
 
 ### 7B. Track Development mode
 
-Read `references/development-receipt.md` completely.
+Read `references/development-receipt.md` and
+`references/task-control-plane.md` completely.
+
+Create one authoritative `PENDING` task record for each delivered child. The
+coordinating task is the sole authority for these records and the global task
+projection. A child may only submit the strict progress receipt defined by the
+control-plane reference. Treat `requestedState` as a proposal: validate the
+receipt and legal transition before applying it with `scripts/task_control.py`.
+Reject child payloads that contain an authoritative state or replacement global
+projection.
 
 Start only dependency-ready tasks. Independent ready tasks may run in parallel;
 tasks that share a checkout or depend on another result run serially. Use
@@ -240,6 +251,11 @@ For each child:
 - never push;
 - run no cross-project integration tests;
 - return the required receipt.
+
+After each accepted progress receipt, regenerate the deterministic parent
+projection. Keep it concise: task/project, current state, short result, evidence,
+blocker or parent-decision need, and next step. Do not add a database, automatic
+cross-thread synchronization, or a graphical dashboard.
 
 Validate target root, branch, commit existence, project-local tests, contract
 differences, artifacts, and blockers. One follow-up may request missing receipt
@@ -264,6 +280,7 @@ receipt or an accepted no-change result.
 | Batch approved | Create all tasks without per-child prompts |
 | Dispatch delivered | Stop managing results |
 | Development completed normally | Tests pass and local commit exists |
+| Development progress arrives | Parent validates the requested transition and regenerates the projection |
 
 ## Common Failure Modes
 
@@ -276,6 +293,7 @@ receipt or an accepted no-change result.
 | Treating every task as development | Preserve discussion/design/test/review/deployment kinds |
 | Waiting in Dispatch mode | Stop after confirmed delivery |
 | Claiming Development done without evidence | Validate project-local tests and local commit receipt |
+| Letting a child replace global task state | Accept only a strict receipt; the coordinating task owns state and projection |
 | Testing the entire distributed system | No cross-project integration tests by default |
 
 ## Red Flags
@@ -291,3 +309,5 @@ Stop and correct the workflow when:
 - multiple confirmations are being requested for one approved batch;
 - Development is declared complete with missing commits, failed tests, or an
   unaccepted `NO_CHANGE_REQUIRED`.
+- a child receipt contains authoritative task state or a replacement global
+  projection.

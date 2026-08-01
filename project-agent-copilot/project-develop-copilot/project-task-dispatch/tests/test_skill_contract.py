@@ -16,6 +16,7 @@ class SkillContractTest(unittest.TestCase):
         "references/routing.md",
         "references/task-package-protocol.md",
         "references/development-receipt.md",
+        "references/task-control-plane.md",
     }
 
     def read(self, relative_path: str) -> str:
@@ -171,6 +172,27 @@ class SkillContractTest(unittest.TestCase):
             ),
         )
 
+    def test_task_control_plane_defines_parent_authority_and_future_boundary(self) -> None:
+        self.assert_contains_all(
+            "references/task-control-plane.md",
+            (
+                "PENDING",
+                "IN_PROGRESS",
+                "BLOCKED",
+                "COMPLETED",
+                "sole authority",
+                "requestedState",
+                "summary",
+                "evidenceRefs",
+                "nextStep",
+                "needsParentDecision",
+                "deterministic",
+                "WALK",
+                "graphical interface",
+                "no database",
+            ),
+        )
+
     def test_skill_entrypoint_defines_complete_safe_orchestration(self) -> None:
         self.assert_contains_all(
             "SKILL.md",
@@ -216,7 +238,9 @@ class SkillContractTest(unittest.TestCase):
                 "references/routing.md",
                 "references/task-package-protocol.md",
                 "references/development-receipt.md",
+                "references/task-control-plane.md",
                 "scripts/task_package.py",
+                "scripts/task_control.py",
             ),
         )
 
