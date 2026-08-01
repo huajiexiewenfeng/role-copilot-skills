@@ -2,6 +2,9 @@
 
 | Date | Flow | Event | Evidence |
 |---|---|---|---|
+| 2026-08-01 | `pdc-llm-first-deterministic-guardrails-v3` | 项目 Owner 审阅书面 V3 后回复“确认，继续”；当前架构基线完成归档。静态验证覆盖文本质量、文档完整性、UTF-8/BOM/尾随空白、`git diff --check` 和产品代码范围，均无 findings；没有 Runtime、CLI、MCP、CI 或 Skill 行为实现。 | `handoff/pdc-llm-first-deterministic-guardrails-v3-handoff.md` |
+| 2026-08-01 | `pdc-llm-first-deterministic-guardrails-v3` | 项目 Owner 确立“不限制模型上限、提高模型下限”的 PDC 北极星；Runtime-first V2 和未执行的 P0 计划转为历史。当前不建设统一 Runtime、JSON CLI 平台或 MCP；新 Python Guardrail 只能由真实、高风险、重复且不可稳定自纠正的机械故障触发。本轮只修订设计，不修改产品代码或用户流程。 | `requirements/pdc-llm-first-deterministic-guardrails-v3.md` |
+| 2026-08-01 | `pdc-runtime-p0-contract-baseline` | Runtime-first V2 进入独立 P0 子 Flow；完成状态权威与契约 Change Brief 及 8 任务候选实施计划，明确内部 developer-only、普通用户零新增成本、P1/P2/P3/P4 阶段隔离和当前单 Codex 任务顺序执行偏好。尚未修改 Runtime 代码或 CI。 | `working-context/pdc-runtime-p0-contract-baseline.md` |
 | 2026-08-01 | `pdc-project-task-dispatch-control-plane` | `project-task-dispatch` 新增四状态轻量控制面、严格子任务进度回执、主线程权威归约和确定性 blocker-first 投影；子测试 25/25、定向父集成 3/3、父集合 177/177、Skill validation/package 与 scoped diff check 通过，按 passed-agent-local 归档。 | `handoff/pdc-project-task-dispatch-control-plane-handoff.md` |
 | 2026-07-28 | `pdc-superpowers-router-integration-contract` | 新增三条 PDC↔Superpowers 确定性契约测试，并明确初始化/上下文 Gate 优先于 advisory workflow、`lightweight-answer` 不触发 brainstorming 或 Superpowers 产物；定向 3/3、PDC 与安装目录非 Blackbox 各 81/81、Superpowers 关键路由 30/30，核心提交 `5276812` 已推送 GitHub，按 agent-local 证据归档。 | `handoff/pdc-superpowers-router-integration-contract-handoff.md` |
 | 2026-07-27 | `pdc-current-codex-initialization-certification` | Eval 33/35 的运行顺序与内部 gate 断言从 file-only Judge 契约移至 `manual-only`，统一呈现为 `MANUAL_CHECK_REQUIRED` 且不影响自动 Behavior Score；Blackbox 93/93、仓库相关 78/78 与 Skill validation 通过，本轮 Flow 归档。 | `handoff/pdc-current-codex-initialization-certification-handoff.md` |
