@@ -1,89 +1,43 @@
-# Development Receipt
+# Development Delivery and Review
 
-Development mode tracks every child through project-local implementation,
-verification, and local commit. Dispatch mode does not use this receipt.
+The filename is retained for compatibility, but new Project Worker Sessions do
+not use a receipt-first progress protocol. Commentary and final are normal,
+human-readable Codex messages.
 
-During execution, progress and blocker updates use the strict receipt from
-`task-control-plane.md`. That progress receipt updates the coordinating task's
-projection only after parent validation. It does not replace this final
-Development receipt.
+## Worker final checklist
 
-Emit each progress receipt as the receipt-first JSON envelope defined by the
-control-plane reference. Human-readable detail may follow the envelope but may
-not precede it.
+Final must state:
 
-## Required Schema
+- completed work and acceptance IDs;
+- changed files;
+- actual project-local test commands and results;
+- current repository root, branch, HEAD, and local commit;
+- unresolved risks, blockers, and incomplete work;
+- `NO_CHANGE_REQUIRED` plus direct evidence when no change is needed.
 
-```yaml
-status: COMPLETED | BLOCKED | FAILED | NO_CHANGE_REQUIRED
-project: logical-project-id
-target_workdir: absolute-path
-branch: branch-name
-commits:
-  - commit-sha
-changes:
-  - concise change summary
-tests:
-  - command: exact project-local test command
-    result: PASSED | FAILED
-contract_changes:
-  - none or explicit differences
-artifacts:
-  - generated artifact or document
-blockers:
-  - none or blocker details
-```
+Final creates a delivery candidate. Manager classification moves `ASSIGNED` to
+`SUBMITTED`; it never directly approves work.
 
-Every field is required. Use a literal `none` item when a list has no applicable
-value.
+## Manager Review
 
-## Validation
+Manager transitions `SUBMITTED→REVIEWING`, then independently verifies Git,
+diff, test evidence, acceptance, current contract revision, dependencies, and
+side effects. Normal code changes require project-local passing tests and at
+least one local commit. Never push. Do not run system-wide cross-project tests by
+default.
 
-### COMPLETED
+If valid, apply `REVIEW_APPROVED`. If not, create structured OPEN findings,
+apply `REVIEW_CHANGES_REQUESTED`, and send them to the original Worker Session.
+The Worker resubmits in the same Session; review round increments. OPEN findings,
+failed/not-run required tests, branch/HEAD mismatch, stale contracts, or missing
+dependency approval block approval.
 
-- Requires at least one local commit containing only task-owned changes.
-- Every required project-local test must be listed and pass.
-- Contract differences must be explicit, including `none`.
-- No commit is pushed.
-- No cross-project integration tests are required.
+`NO_CHANGE_REQUIRED` creates no empty commit but still needs acceptance evidence
+and explicit Manager approval. A blocker becomes structured PDC blocker state,
+not a fake completion.
 
-### NO_CHANGE_REQUIRED
+## Legacy 1.x
 
-- Explains the evidence proving no code or document change is needed.
-- Creates no empty commit.
-- Requires parent or user acceptance before the batch is complete.
-
-### BLOCKED or FAILED
-
-- Includes actionable blockers or failure evidence.
-- Prevents dependent downstream tasks from starting.
-- Does not stop independent dependency chains.
-
-## Parent Validation
-
-The parent may request one follow-up when required fields are missing. It checks
-the target root, branch, commit existence, project-local test evidence, contract
-differences, and blockers. It does not perform cross-project integration tests.
-
-Overall Development status:
-
-```text
-COMPLETED
-  Every required child has a valid COMPLETED receipt, or an explicitly accepted
-  NO_CHANGE_REQUIRED receipt.
-
-INCOMPLETE
-  Any child is blocked, failed, missing a commit, has failing tests, lacks a
-  required receipt field, or has an unaccepted no-change result.
-```
-
-Control-plane mapping:
-
-- a validated `COMPLETED` final receipt may support a child
-  `requestedState=COMPLETED` update;
-- `BLOCKED` and `FAILED` final receipts remain `BLOCKED` in the lightweight
-  projection with evidence and a next step;
-- `NO_CHANGE_REQUIRED` remains `BLOCKED` with
-  `needsParentDecision=true` until the parent or user accepts it;
-- only the coordinating task accepts the receipt and changes authoritative task
-  state.
+Only an already-active 1.x run may use `scripts/legacy_receipt.py`. Its
+`COMPLETED` receipt maps to a v2 delivery candidate/`SUBMITTED`, retaining an
+unverified-risk marker. It cannot bypass Review.

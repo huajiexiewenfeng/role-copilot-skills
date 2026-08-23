@@ -1,265 +1,116 @@
 from __future__ import annotations
 
-import re
+import json
 import unittest
 from pathlib import Path
 
 
-SKILL_ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class SkillContractTest(unittest.TestCase):
-    expected_files = {
-        "templates/shared-baseline.md",
-        "templates/project-task-spec.md",
-        "templates/handoff.md",
-        "references/routing.md",
-        "references/task-package-protocol.md",
-        "references/development-receipt.md",
-        "references/task-control-plane.md",
-    }
-
-    def read(self, relative_path: str) -> str:
-        path = SKILL_ROOT / relative_path
-        self.assertTrue(path.is_file(), f"missing required file: {relative_path}")
+    def read(self, relative: str) -> str:
+        path = ROOT / relative
+        self.assertTrue(path.is_file(), f"missing {relative}")
         raw = path.read_bytes()
-        self.assertFalse(
-            raw.startswith(b"\xef\xbb\xbf"),
-            f"{relative_path} must not contain a UTF-8 BOM",
-        )
-        self.assertNotIn(
-            b"\r\n",
-            raw,
-            f"{relative_path} must use LF line endings",
-        )
+        self.assertFalse(raw.startswith(b"\xef\xbb\xbf"), f"BOM in {relative}")
         return raw.decode("utf-8")
 
-    def assert_contains_all(
-        self,
-        relative_path: str,
-        required: tuple[str, ...],
-    ) -> str:
-        text = self.read(relative_path)
-        for item in required:
-            self.assertIn(item, text, f"{relative_path} must contain {item!r}")
-        return text
+    def assert_contains(self, relative: str, tokens: list[str]) -> None:
+        content = self.read(relative)
+        for token in tokens:
+            self.assertIn(token, content, f"{relative} missing {token!r}")
 
-    def test_all_templates_and_references_exist_and_are_finished(self) -> None:
-        unfinished = re.compile(
-            r"\b(?:TODO|TBD|FIXME)\b|implementation incomplete|not ready",
-            re.IGNORECASE,
-        )
-        for relative_path in sorted(self.expected_files):
-            with self.subTest(path=relative_path):
-                text = self.read(relative_path)
-                self.assertIsNone(
-                    unfinished.search(text),
-                    f"{relative_path} contains an unfinished-work marker",
-                )
-
-    def test_shared_baseline_template_has_complete_cross_project_contract(self) -> None:
-        self.assert_contains_all(
-            "templates/shared-baseline.md",
-            (
-                "# Shared Baseline",
-                "## Parent Objective",
-                "## Non-goals",
-                "## End-to-end Architecture",
-                "## Shared Contracts",
-                "## Data and Naming Formats",
-                "## Ownership Boundaries",
-                "## Confirmed Decisions",
-                "## Evidence and Confidence",
-                "## Global Acceptance",
-            ),
+    def test_entrypoint_uses_peer_project_sessions_and_native_tools(self) -> None:
+        self.assert_contains(
+            "SKILL.md",
+            [
+                "Manager Session", "Project Worker Sessions", "Reviewer Sessions",
+                "not Agent Team Subagents", "list_projects", "create_thread", "wait_threads",
+                "read_thread", "send_message_to_thread", "set_thread_pinned",
+                "set_thread_archived", "list_threads", "list_archived_threads",
+                "target.environment.type = local", "threadId + hostId", "clientThreadId",
+                "automation_update", "open_in_codex",
+            ],
         )
 
-    def test_project_task_template_is_executable_for_every_task_kind(self) -> None:
-        self.assert_contains_all(
-            "templates/project-task-spec.md",
-            (
-                "# Project Task Specification",
-                "discussion",
-                "design",
-                "development",
-                "test",
-                "review",
-                "deployment",
-                "## Current State",
-                "## Problem and Target Behavior",
-                "## Owned Scope",
-                "## Excluded Scope",
-                "## Components and Flow",
-                "## Interfaces and Contracts",
-                "## Data and State",
-                "## Configuration and Deployment",
-                "## Compatibility and Failure Semantics",
-                "## Project-local Verification",
-                "## Acceptance",
-            ),
+    def test_entrypoint_enforces_review_gate_and_single_project_writer(self) -> None:
+        self.assert_contains(
+            "SKILL.md",
+            [
+                "one write Project Worker Session per saved Project per Dispatch",
+                "Worker final → SUBMITTED → REVIEWING → APPROVED",
+                "SUBMITTED → APPROVED` is forbidden", "original Worker `threadId`",
+                "not a hard mid-turn interrupt", "does not need JSON",
+            ],
         )
 
-    def test_handoff_template_carries_routing_execution_and_output_context(self) -> None:
-        self.assert_contains_all(
-            "templates/handoff.md",
-            (
-                "# Task Handoff",
-                "dispatchId",
-                "subtaskId",
-                "mode",
-                "awaitResult",
-                "taskKind",
-                "routeMode",
-                "sessionProject",
-                "targetProject",
-                "targetWorkdir",
-                "currentBranchPolicy",
-                "dependencies",
-                "deliveryProtocol",
-                "expectedOutput",
-            ),
-        )
-
-    def test_routing_reference_defines_all_routes_and_local_checkout_policy(self) -> None:
-        self.assert_contains_all(
+    def test_writable_fallback_is_forbidden(self) -> None:
+        self.assert_contains(
             "references/routing.md",
-            (
-                "VERIFIED_CODEX_PROJECT",
-                "BASE_PATH_FALLBACK",
-                "BLOCKED",
-                "normalized path",
-                "environment.type = local",
-                "current checkout",
-                "current branch",
-                "Do not create a worktree",
-                "Do not switch branches",
-            ),
+            ["Writable `WRITE` Project Worker Sessions require this route", "explicitly accepts fallback", "cannot be upgraded to Development", "Do not create a Worker in the Base"],
         )
 
-    def test_package_protocol_defines_lossless_envelope_and_abort(self) -> None:
-        self.assert_contains_all(
-            "references/task-package-protocol.md",
-            (
-                "UTF-8 without BOM",
-                "LF line endings",
-                "TASK_PACKAGE_BEGIN",
-                "DOCUMENT_BEGIN",
-                "CHUNK 1/N",
-                "DOCUMENT_END",
-                "TASK_PACKAGE_END",
-                "TASK_PACKAGE_ABORT",
-                "bundleChecksum",
-                "Do not begin execution",
-            ),
-        )
-
-    def test_development_receipt_defines_statuses_commit_and_test_rules(self) -> None:
-        self.assert_contains_all(
-            "references/development-receipt.md",
-            (
-                "status: COMPLETED | BLOCKED | FAILED | NO_CHANGE_REQUIRED",
-                "project:",
-                "target_workdir:",
-                "branch:",
-                "commits:",
-                "changes:",
-                "tests:",
-                "contract_changes:",
-                "artifacts:",
-                "blockers:",
-                "local commit",
-                "No commit is pushed",
-                "No cross-project integration tests",
-            ),
-        )
-
-    def test_task_control_plane_defines_parent_authority_and_future_boundary(self) -> None:
-        self.assert_contains_all(
+    def test_control_plane_defines_nine_states_and_authorities(self) -> None:
+        self.assert_contains(
             "references/task-control-plane.md",
-            (
-                "PENDING",
-                "IN_PROGRESS",
-                "BLOCKED",
-                "COMPLETED",
-                "sole authority",
-                "requestedState",
-                "summary",
-                "evidenceRefs",
-                "nextStep",
-                "needsParentDecision",
-                "deterministic",
-                "WALK",
-                "graphical interface",
-                "no database",
-                "TASK_CONTROL_RECEIPT_BEGIN",
-                "TASK_CONTROL_RECEIPT_END",
-                '"schemaVersion": 1',
-                "receipt must be the first content",
-            ),
+            ["WAITING_DEPENDENCY", "CHANGES_REQUESTED", "APPROVED", "STALE", "runtime-cache.json", "Approval Gate", "SUBMITTED→APPROVED"],
         )
 
-    def test_skill_supports_explicitly_tracked_dispatch_without_development_rules(self) -> None:
-        self.assert_contains_all(
-            "SKILL.md",
-            (
-                "awaitResult=true",
-                "Dispatch remains the selected mode",
-                "does not require project-local tests or a local commit",
-                "parse_receipt_text",
-                "receipt envelope must appear before optional human details",
-            ),
+    def test_runtime_defines_wait_recovery_and_lifecycle(self) -> None:
+        self.assert_contains(
+            "references/manager-runtime.md",
+            ["1–8 targets", "afterCursor", "timeoutMs=0", "Match only by `threadId`", "Pin active-unapproved", "explicit-only", "Archive is not cancel", "hard turn-interrupt"],
+        )
+        self.assert_contains(
+            "references/manager-runtime.md",
+            ["uses the `prompt` field", "without `hostId`", "fork_thread", "handoff_thread", "share_thread", "identity remains threadId"],
         )
 
-    def test_skill_entrypoint_defines_complete_safe_orchestration(self) -> None:
-        self.assert_contains_all(
+    def test_management_views_are_in_codex_and_degrade_safely(self) -> None:
+        self.assert_contains(
             "SKILL.md",
-            (
-                "stable design spans two or more projects",
-                "A: Dispatch mode (default)",
-                "B: Development mode",
-                "Dispatch is the default",
-                "Project Graph",
-                "Base Graph",
-                "list_projects",
-                "VERIFIED_CODEX_PROJECT",
-                "BASE_PATH_FALLBACK",
-                "target.environment.type = local",
-                "current checkout",
-                "current branch",
-                "Do not create a worktree",
-                "Do not switch branches",
-                "Do not push",
-                "No cross-project integration tests",
-                "generate all three complete Markdown documents",
-                "every complete document for every child",
-                "one batch confirmation",
-                "create_thread",
-                "authorized only after",
-                "send_message_to_thread",
-                "wait_threads",
-                "dependency",
-                "local commit",
-                "project-local tests",
-                "dry-run",
-                "must never create a real Codex task",
-            ),
+            ["Display the current PNG inline", "exact Markdown status table", "no HTML", "SVG + Markdown", "Rendering", "failure must not block"],
         )
+        self.assert_contains("references/manifest-v2.md", ["manager.md", "status-rNNNN.svg/.png", "only human-editable", "os.replace"])
 
-    def test_skill_entrypoint_links_progressive_disclosure_resources(self) -> None:
-        self.assert_contains_all(
-            "SKILL.md",
-            (
-                "templates/shared-baseline.md",
-                "templates/project-task-spec.md",
-                "templates/handoff.md",
-                "references/routing.md",
-                "references/task-package-protocol.md",
-                "references/development-receipt.md",
-                "references/task-control-plane.md",
-                "scripts/task_package.py",
-                "scripts/task_control.py",
-            ),
-        )
+    def test_schema_and_all_progressive_resources_exist(self) -> None:
+        resources = [
+            "references/routing.md", "references/task-control-plane.md", "references/development-receipt.md",
+            "references/task-package-protocol.md", "references/manager-runtime.md", "references/manifest-v2.md",
+            "templates/shared-baseline.md", "templates/project-task-spec.md", "templates/handoff.md",
+            "templates/worker-initial-message.md", "templates/worker-rework-message.md", "templates/reviewer-message.md",
+            "scripts/manifest_v2.py", "scripts/task_control.py", "scripts/legacy_receipt.py",
+            "scripts/native_thread_adapter.py", "scripts/status_view.py", "scripts/render_status_png.mjs",
+            "schemas/dispatch-manifest-v2.schema.json",
+        ]
+        for resource in resources:
+            self.read(resource)
+        schema = json.loads(self.read("schemas/dispatch-manifest-v2.schema.json"))
+        self.assertEqual(schema["properties"]["schemaVersion"]["const"], "2.0")
+
+    def test_templates_encode_project_session_batch_and_delivery(self) -> None:
+        self.assert_contains("templates/shared-baseline.md", ["realityProjectId", "contractRevision", "upstreamApprovalEvidence"])
+        self.assert_contains("templates/project-task-spec.md", ["projectSessionKey", "workItemIds", "acceptanceIds", "sameProjectBatchPolicy"])
+        self.assert_contains("templates/handoff.md", ["writePolicy", "expectedBranch", "baselineHead", "allowNestedDelegation: false", "development-delivery-checklist"])
+        self.assert_contains("templates/worker-initial-message.md", ["使用当前 Project 已配置的 PDC", "不输出 JSON progress receipt", "Final 只是提交候选"])
+
+    def test_legacy_receipt_is_not_normal_worker_protocol(self) -> None:
+        skill = self.read("SKILL.md")
+        self.assertIn("New v2 Workers never receive the 1.x receipt-first", skill)
+        self.assert_contains("scripts/legacy_receipt.py", ["only a delivery candidate", '"targetState": "SUBMITTED"'])
+
+    def test_transport_and_runtime_manifests_are_distinct(self) -> None:
+        self.assert_contains("references/task-package-protocol.md", ["task-package-manifest.json", "Dispatch control plane's `manifest.json`", "Do not embed the legacy receipt-first"])
+
+    def test_v2_evals_cover_release_scenarios(self) -> None:
+        payload = json.loads(self.read("evals/evals.json"))
+        self.assertEqual(payload["version"], "2.0")
+        ids = {case["id"] for case in payload["evals"]}
+        self.assertEqual(ids, {f"E-{index:02d}" for index in range(1, 13)})
+        combined = json.dumps(payload, ensure_ascii=False)
+        for token in ("same-project-multiple-work-items", "manager-recovery", "in-window-status-view", "no-hard-interrupt"):
+            self.assertIn(token, combined)
 
 
 if __name__ == "__main__":

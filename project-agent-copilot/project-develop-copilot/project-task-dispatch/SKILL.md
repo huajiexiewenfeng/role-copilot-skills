@@ -1,340 +1,254 @@
 ---
 name: project-task-dispatch
-description: Use when a requirement, design, discussion, review, test, deployment, or development effort spans two or more Project Graph projects, when a stable multi-project design is ready to delegate, or when the user asks to send complete work packages to separate Codex projects or tasks.
+description: Use when the user asks PDC to distribute, monitor, review, or manage work across saved Codex Projects that belong to one Base Graph reality project. Uses peer Codex Project Sessions, not Agent Team Subagents.
 ---
 
-# Project Task Dispatch
+# Project Task Dispatch 2.0
 
 ## Overview
 
-Distribute a confirmed multi-project objective without losing its executable
-design. Project Graph establishes ownership, Base Graph resolves the actual local
-root, and Codex Projects provide the task destination. Every child receives a
-complete frozen Markdown package rather than a summary-only handoff.
+The current Base Graph task is the **Manager Session**. It distributes work to
+independent, user-visible **Project Worker Sessions** bound to the saved Codex
+Project for each repository. Optional **Reviewer Sessions** provide independent
+read-only review. These are peer Codex tasks connected by a PDC Dispatch; they
+are not Agent Team Subagents and do not inherit the Manager conversation.
 
-The governing principle is: route only after corroboration, preview the exact
-package once, and preserve the user's task kind and Git workflow.
+The user normally interacts only with the Manager. The Manager owns routing,
+dependency unlock, native task monitoring, findings, repository verification,
+approval, the status view, and lifecycle cleanup.
 
 ## When to Use
 
-Use this skill when:
+Use this skill when a user asks to send or split work across PDC Projects,
+repositories, tasks, chats, or Sessions, including:
 
-- a requirement or stable design spans two or more projects;
-- the user asks to split work across Codex tasks, chats, sessions, or projects;
-- discussion, design, development, test, review, or deployment ownership crosses
-  Project Graph boundaries;
-- a completed multi-project design should proactively offer task distribution.
+- a lightweight hello, notification, or connectivity check;
+- an awaited cross-project query or research task;
+- a confirmed cross-project design or contract;
+- managed implementation, tests, review, and local commits across repositories;
+- recovery, monitoring, rework, or closure of an existing PDC Dispatch.
 
-When a stable design spans two or more projects, offer:
+Do not use it for work contained in one Project, ordinary PDC development in the
+current checkout, generic non-project research, or Agent Team delegation.
+
+## Mandatory References
+
+For every run, read [routing.md](references/routing.md). For awaited Dispatch or
+Managed Development, also read these completely:
+
+- [task-control-plane.md](references/task-control-plane.md)
+- [manager-runtime.md](references/manager-runtime.md)
+- [manifest-v2.md](references/manifest-v2.md)
+
+For formal packages read [task-package-protocol.md](references/task-package-protocol.md).
+For Managed Development read [development-receipt.md](references/development-receipt.md),
+whose retained filename now describes delivery and Review rather than a progress receipt.
+
+## 1. Select Mode and Complexity
+
+Choose the mode from user intent; do not force an A/B question when intent is clear.
+
+| Mode | Meaning |
+|---|---|
+| Dispatch | Deliver and stop after native task creation succeeds. |
+| Awaited Dispatch | Deliver read-only/non-development work, then wait/read and aggregate results. |
+| Managed Development | Manager tracks implementation through Review and APPROVED. |
+
+Use a lightweight readable prompt for hello/notification/simple isolated work.
+Use the three-document formal package only for shared contracts, dependencies,
+frozen responsibilities, or substantial development. A lightweight Dispatch
+does not need a management directory. Awaited Dispatch and Managed Development
+use manifest v2 when coordination state must survive the current turn.
+
+The user command to distribute/create/send is authorization to create the
+resolved native tasks. Do not add another confirmation gate. In dry-runs, evals,
+or previews, never create a real Codex task.
+
+## 2. Resolve Exact Saved Projects
+
+Use Base Graph repository identity/root plus `list_projects` projectId/path/host.
+Normalize paths and require exactly one corroborated saved Project. Never route
+by label alone.
+
+Writable work requires `VERIFIED_CODEX_PROJECT`. If the repository path exists
+but no exact saved Project exists, record a `PROJECT_ROUTE` blocker and do not
+create a path-fallback Worker in the Base Graph Project. `BASE_PATH_FALLBACK` is
+allowed only for an explicitly accepted `READ_ONLY` task and must carry
+`readOnlyFallback=true`; it cannot later become writable.
+
+For every repository record its own `expectedBranch`, `baselineHead`, and
+`dirtyBoundary`. Never assume all repositories use the same branch name. Do not
+create/switch branches or worktrees and do not merge, rebase, reset, push, or
+clean pre-existing changes unless separately authorized.
+
+## 3. Build the PDC Control Plane
+
+For Managed Development, create:
 
 ```text
-A: Dispatch mode (default) — deliver each approved task package and stop tracking.
-B: Development mode — track implementation, project-local tests, and local commits.
+<PDC_RUNTIME_ROOT>/<realityProjectId>/dispatches/<dispatchId>/
+├─ manifest.json
+├─ runtime-cache.json
+├─ manager.md
+├─ notes.md
+├─ project-sessions/<projectSessionKey>/session.md
+├─ work-items/<taskId>.md
+├─ findings/<findingId>.md
+└─ views/{current-status,status-rNNNN}.{svg,png}
 ```
 
-Dispatch is the default. If the user answers only `可以`, `继续`, `确认`, or gives
-no receipt/tracking requirement, select A. Select B only when the user explicitly
-chooses Development or asks to track development, tests, and local commits.
+The Manager is the only writer. `manifest.json` owns PDC business state;
+Codex owns native task/turn state; Git owns code facts; `runtime-cache.json`
+owns only replaceable cursor/snapshot observations. The directory is not a
+message queue. Human edits are limited to `notes.md`.
 
-If the user explicitly asks to wait for, collect, or return child results but
-does not request implementation tracking, keep Dispatch and set
-`awaitResult=true`. Dispatch remains the selected mode; this flag is not a third
-user-facing mode and does not require project-local tests or a local commit.
+Use one write Project Worker Session per saved Project per Dispatch. Several
+work items in that Project map to the same `projectSessionKey` and run as serial
+batches. Independent Projects may run in parallel. Downstream work unlocks only
+after required upstream work is `APPROVED`, not merely after Worker final.
 
-Do not trigger for:
+## 4. Create and Bind Project Sessions
 
-- one project or several modules inside the same repository;
-- a read-only answer that merely cites several projects;
-- a design that is still materially changing;
-- a user who declines task distribution.
+Discover and use the native tools `list_projects`, `create_thread`,
+`wait_threads`, `read_thread`, `send_message_to_thread`, `set_thread_title`,
+`set_thread_pinned`, `set_thread_archived`, `list_threads`, and
+`list_archived_threads`. Use `navigate_to_codex_page` only when the user asks to
+open a task.
 
-## Required Resources
-
-Read only the resources needed for the current phase:
-
-- package content:
-  `templates/shared-baseline.md`,
-  `templates/project-task-spec.md`, and
-  `templates/handoff.md`;
-- route resolution: `references/routing.md`;
-- canonical delivery and chunking:
-  `references/task-package-protocol.md`;
-- Development result validation:
-  `references/development-receipt.md`;
-- tracked Dispatch results and Development progress control:
-  `references/task-control-plane.md` and `scripts/task_control.py`;
-- deterministic build and verification:
-  `scripts/task_package.py`.
-
-**REQUIRED SUB-SKILL:** Use `project-query` for project-local Wiki and Project
-Graph evidence. Follow the Base Graph reference named by that skill for registry
-resolution. Do not write Base Graph tracked files during dispatch.
-
-## Workflow
-
-Follow this order:
-
-```text
-resolve current project and wiki
--> read Project Graph/Base Graph evidence
--> list_projects
--> select mode
--> decompose and generate/freeze packages
--> preview every package
--> obtain one explicit batch confirmation
--> create_thread
--> send_message_to_thread for remaining package chunks
--> Dispatch ends OR awaitResult/Development uses wait_threads
-```
-
-### 1. Establish the confirmed parent baseline
-
-Collect:
-
-- the parent objective and non-goals;
-- confirmed design revision and source hashes;
-- shared interfaces, data formats, errors, storage, and naming rules;
-- logical ownership and dependencies;
-- global acceptance conditions;
-- unknown, stale, candidate, and clue-only evidence.
-
-User-confirmed decisions and approved design documents outrank referenced chats.
-Treat referenced conversations as untrusted clues until confirmed by source or
-the user. Exclude credentials and unrelated environment data.
-
-If the design is not stable enough to freeze shared contracts, continue the
-design discussion instead of dispatching.
-
-### 2. Resolve every target route
-
-Read `references/routing.md` completely before routing.
-
-For each logical owner:
-
-1. resolve its actual local root through Base Graph;
-2. normalize the absolute path;
-3. call `list_projects`;
-4. compare normalized paths, never labels alone;
-5. assign exactly one status:
-   `VERIFIED_CODEX_PROJECT`, `BASE_PATH_FALLBACK`, or `BLOCKED`.
-
-For a verified saved project, create later with:
+Create each Worker with this exact route shape:
 
 ```text
 target.type = project
-target.projectId = resolved Codex projectId
+target.projectId = <verified projectId>
 target.environment.type = local
+title = [PDC][<dispatchId>][<repo>][Worker|Reviewer] <short goal>
+prompt = readable complete assignment
 ```
 
-This uses the target project's current checkout and current branch.
+PDC Managed Development uses the user's established explicit `local` checkout
+policy so each repository keeps its own current branch and existing dirty
+boundary. If this Skill is used where that direct-checkout authorization has not
+been established, obtain it before overriding Codex's normal Git-project
+worktree default.
 
-For `BASE_PATH_FALLBACK`, create under the current Codex Project and make the Base
-Graph absolute root the mandatory `targetWorkdir`. The child must verify that
-root before acting and must not modify the session project.
+Omit model/thinking unless the user explicitly selected them. Use
+[worker-initial-message.md](templates/worker-initial-message.md) for Managed
+Development. Tell the Worker to use its local Project PDC context and not to
+create a nested Session/Subagent unless authorized.
 
-A `BLOCKED` route prevents batch approval until corrected or removed.
+`create_thread` is asynchronous:
 
-### 3. Decompose by project and task kind
+- ready result: save `threadId + hostId`, binding=`BOUND`;
+- queued result: save only `clientThreadId`, binding=`CREATE_PENDING`;
+- never pass `clientThreadId` to wait/read/send and never repeat create merely
+  because pending has no `threadId`;
+- after every successful native creation, show the native created-task entry in
+  the Manager response.
 
-Consolidate one target project's responsibilities into one task by default.
-Separate tasks only when the user needs distinct task kinds or independently
-owned outputs. Serialize tasks that use the same checkout.
+## 5. Monitor and Communicate
 
-Supported task kinds are:
+For bound unapproved Sessions, use `wait_threads` in groups of 1–8 with each
+target's `hostId` and cached `afterCursor`. Prefer 30–60 second bounded waits in
+an active Manager turn. Update runtime cache on snapshots. Do not emit another
+Manager panel for an unchanged timeout.
+
+Normal Worker commentary is human-readable and does not need JSON. Deep-read
+with `read_thread` at completion, attention, error, or Review boundaries. Leave
+native permission/input requests for the user. A Worker final produces a
+delivery candidate and can move a work item only to `SUBMITTED`.
+
+Use `send_message_to_thread` for the next batch or Review findings. Rework goes
+to the original Worker `threadId`; do not fork or replace it. Sending a message
+is not a hard mid-turn interrupt. The current high-level API can stop future
+scheduling but cannot guarantee immediate interruption of a running turn.
+
+Use a recurring heartbeat only when the user explicitly requests monitoring
+after the Manager turn ends. Create/update it with native `automation_update`,
+targeting the Manager thread, and stop it when the Dispatch becomes terminal.
+
+## 6. Review, Rework, and Approval
+
+Managed Development follows this non-bypassable sequence:
 
 ```text
-discussion | design | development | test | review | deployment
+Worker final → SUBMITTED → REVIEWING → APPROVED
+                                  └→ CHANGES_REQUESTED → same Worker → SUBMITTED
 ```
 
-Preserve the task kind. Do not turn a discussion or design request into code
-development. Derive dependencies from contracts and outputs, not from project
-names. Independent projects may form a parallel group; dependent projects form a
-serial chain.
+The Manager verifies repository root, branch, baseline/final HEAD, dirty-file
+boundary, changed files, local commit, actual test results, acceptance IDs,
+contract revision, dependency approval, open findings, and cross-repository side
+effects. `SUBMITTED → APPROVED` is forbidden. Native idle/final and the word
+“completed” are not approval evidence.
 
-### 4. Generate and freeze complete packages
+Use `open_in_codex` to show branch/unstaged/staged/last-turn Review in the
+current Codex window when that makes human verification easier; it is a view,
+not the evidence authority.
 
-For every child, generate all three complete Markdown documents:
+Use a read-only Reviewer Session for inaccessible repositories, higher-risk
+changes, or user-required independent review. Run it after the write Worker is
+idle. Findings must include severity, evidence, required change, and a file/line,
+contractId, or acceptanceId where applicable. Send findings with
+[worker-rework-message.md](templates/worker-rework-message.md).
 
-```text
-00-shared-baseline.md
-01-{target-project}-{task-kind}.md
-02-handoff.md
-```
+Normal changes require project-local tests and a local commit; never push.
+`NO_CHANGE_REQUIRED` may be submitted without an empty commit but still requires
+evidence and explicit Manager approval. Do not run broad cross-project tests by
+default; the final cross-repository check validates agreed contracts and declared
+integration evidence.
 
-Use the templates exactly as structural contracts. The shared baseline must be
-byte-identical across the batch. A project specification must be executable
-without reopening the parent design. Handoff must carry route, branch policy,
-dependencies, delivery, and mode-specific output.
+## 7. Status View and Lifecycle
 
-Generate packages in a temporary workspace outside business repositories. Build
-the manifest with:
+After every meaningful manifest change, increment revision atomically and
+regenerate `manager.md`, Session/work-item/finding Markdown, and
+`status-rNNNN.svg`. Convert SVG to PNG with the bundled Node/sharp runtime when
+available; otherwise degrade to SVG + Markdown, then Markdown only. Rendering
+failure must not block dispatch or Review.
 
-```text
-python scripts/task_package.py build
-  --input <package-directory>
-  --output <manifest.json>
-  --chunk-size <positive-character-count>
-```
+Display the current PNG inline in the Manager Session when available, followed
+by the exact Markdown status table. This keeps the human dashboard in the Codex
+main window; no HTML or external application is required.
 
-Then verify into a separate directory and compare the reconstructed documents.
-Checksums are calculated from UTF-8 without BOM and LF line endings. Editing any
-task, route, dependency, mode, or document invalidates the affected frozen
-package and requires regeneration.
+Pin bound active-unapproved Worker/Reviewer tasks. Unpin Sessions whose assigned
+work is approved. On Dispatch close, unpin every bound Session but keep real
+development and read-only Sessions visible. The default archive policy is
+`explicit-only`: call `set_thread_archived` only when the user explicitly asks
+for cleanup or a declared retention rule has become due. A Canary/Smoke run may
+use the separate `canary-dispatch-close` policy. Archive is lifecycle cleanup,
+not cancellation, and `CLOSED` never implies archived.
 
-### 5. Preview once and obtain batch approval
+## 8. Recovery and Idempotency
 
-Preview before any `create_thread` call. Show:
+On resume, load and validate manifest revision, then reconcile saved Projects,
+Git baselines, and task bindings. Use `list_threads` and
+`list_archived_threads`, matching only durable `threadId`; title is display
+metadata and must not auto-bind a task. Rebuild deleted runtime cache using
+`read_thread` plus `wait_threads(timeoutMs=0)`.
 
-- mode, objective, child count, parallel groups, dependency chains, route status,
-  and unresolved issues;
-- one route table with task kind, logical project, actual root, current branch,
-  dependencies, and completion expectation;
-- every complete document for every child, not excerpts or a lossy summary;
-- document and bundle checksums.
+Do not recreate `CREATE_PENDING` Sessions automatically. Mark a missing bound
+thread as `MISSING`, surface it, and require an explicit recovery decision.
+Persist cursors so a repeated final cannot repeat a reducer transition.
 
-Ask for one batch confirmation. Do not ask for per-child confirmation. A user edit
-regenerates the affected package; approval applies to the newly frozen bytes.
+## 9. Formal Package Compatibility
 
-`create_thread` is authorized only after the user explicitly approves the frozen
-preview. In a dry-run, preview, automated test, or skill evaluation, this skill
-must never create a real Codex task.
+Keep the existing UTF-8/LF/checksum/chunk protocol. The transport manifest is
+named `task-package-manifest.json`; the Dispatch control file is `manifest.json`.
+The initial prompt must start with a readable parent-child title, never a
+protocol marker. A formal package carries shared contracts and that Project's
+responsibility, while local code knowledge comes from the target Project PDC.
 
-### 6. Create tasks and deliver exact bytes
+New v2 Workers never receive the 1.x receipt-first progress contract. The
+compatibility parser in `scripts/legacy_receipt.py` is only for restoring an
+already-active 1.x run, and legacy `COMPLETED` maps to a v2 delivery candidate,
+never directly to `APPROVED`.
 
-Use the thread-management tools available in Codex. If they are not currently
-loaded, discover `list_projects`, `create_thread`, `send_message_to_thread`, and
-`wait_threads` before constructing calls.
+## Completion
 
-Create all approved child tasks without additional confirmation. Do not create a worktree.
-Do not switch branches. Do not push. Do not merge, rebase, or reset.
+Dispatch completes after delivery. Awaited Dispatch completes after requested
+results are returned. Managed Development completes only when every required
+work item is `APPROVED`, the final cross-repository check passes, generated views
+match the manifest revision, and lifecycle actions requested by policy succeed.
 
-Use the exact route determined during preview:
-
-- `VERIFIED_CODEX_PROJECT`: target the matched saved project in `local` mode;
-- `BASE_PATH_FALLBACK`: target the current project and enforce `targetWorkdir`;
-- `BLOCKED`: do not create the task.
-
-For a small package, place the complete envelope in the initial task. For a large
-package, create the task with the non-execution envelope and send ordered chunks
-through `send_message_to_thread`. Follow
-`references/task-package-protocol.md`. On partial failure, send
-`TASK_PACKAGE_ABORT` when possible and mark delivery failed.
-
-Successful delivery means every approved byte reached the task; it is not a
-Development receipt.
-
-For Development and Dispatch with `awaitResult=true`, include the exact output
-contract from `references/task-control-plane.md` in the child handoff. State that
-the receipt envelope must appear before optional human details. Do not ask the
-child to return YAML-like prose for machine parsing.
-
-### 7A. Finish Dispatch mode
-
-When `awaitResult=false`, after successful package delivery report created task
-links/identifiers and delivery status. Do not call `wait_threads`, monitor
-results, validate commits, or manage later output. Delivery completion ends the
-parent workflow.
-
-When the user explicitly requested returned results, keep Dispatch mode and set
-`awaitResult=true`. Read `references/task-control-plane.md`, create one
-authoritative task record per child, call `start_task` after successful delivery,
-and use `wait_threads`. Pass each raw child response to `parse_receipt_text`
-before applying the proposed transition. Regenerate the parent projection after
-each accepted receipt. This tracked Dispatch path validates the requested result
-and blockers only; it does not require project-local tests or a local commit.
-
-### 7B. Track Development mode
-
-Read `references/development-receipt.md` and
-`references/task-control-plane.md` completely.
-
-Create one authoritative `PENDING` task record for each delivered child. The
-coordinating task is the sole authority for these records and the global task
-projection. A child may only submit the strict progress receipt defined by the
-control-plane reference. Treat `requestedState` as a proposal: validate the
-receipt and legal transition before applying it with `scripts/task_control.py`.
-Call `start_task` after successful child delivery, and pass raw child updates to
-`parse_receipt_text`; never manually repair concatenated or truncated fields.
-Reject child payloads that contain an authoritative state or replacement global
-projection.
-
-Start only dependency-ready tasks. Independent ready tasks may run in parallel;
-tasks that share a checkout or depend on another result run serially. Use
-`wait_threads` to follow active tasks. Pass upstream outputs to a dependent task
-only through a regenerated or explicitly supplemental confirmed contract when
-the output materially changes its scope.
-
-For each child:
-
-- preserve pre-existing changes;
-- run required project-local tests;
-- create at least one local commit for normal `COMPLETED`;
-- never push;
-- run no cross-project integration tests;
-- return the required receipt.
-
-After each accepted progress receipt, regenerate the deterministic parent
-projection. Keep it concise: task/project, current state, short result, evidence,
-blocker or parent-decision need, and next step. Do not add a database, automatic
-cross-thread synchronization, or a graphical dashboard.
-
-Validate target root, branch, commit existence, project-local tests, contract
-differences, artifacts, and blockers. One follow-up may request missing receipt
-fields. `NO_CHANGE_REQUIRED` creates no empty commit and requires explicit
-acceptance. A failed dependency blocks its downstream chain but not independent
-tasks.
-
-Development completes only when every required child has a valid completed
-receipt or an accepted no-change result.
-
-## Quick Reference
-
-| Decision | Required behavior |
-|---|---|
-| User does not ask for tracking | Dispatch mode |
-| User asks to wait for non-development results | Dispatch with `awaitResult=true` |
-| Stable design spans multiple projects | Proactively offer A/B |
-| Same logical project has several responsibilities | Consolidate one task |
-| Base path and saved Codex Project match | `VERIFIED_CODEX_PROJECT` |
-| Base path exists but saved project is absent | `BASE_PATH_FALLBACK` |
-| Route evidence is missing or ambiguous | `BLOCKED` |
-| Preview changes | Regenerate package and checksums |
-| Batch approved | Create all tasks without per-child prompts |
-| Dispatch delivered | Stop managing results |
-| Tracked Dispatch delivered | Start parent records, wait, parse envelopes, and project results |
-| Development completed normally | Tests pass and local commit exists |
-| Development progress arrives | Parent validates the requested transition and regenerates the projection |
-
-## Common Failure Modes
-
-| Failure | Correction |
-|---|---|
-| Sending a short handoff instead of the design | Generate the three complete documents |
-| Matching a Codex Project by label | Corroborate normalized Base Graph and Codex paths |
-| Letting Codex create a surprise worktree | Use local current checkout unless explicitly requested |
-| Asking approval for every child | Preview all tasks, then use one batch confirmation |
-| Treating every task as development | Preserve discussion/design/test/review/deployment kinds |
-| Waiting in Dispatch mode | Stop after confirmed delivery |
-| Treating tracked read-only work as Development | Use Dispatch with `awaitResult=true`; require no commit or tests |
-| Parsing YAML-like receipt prose manually | Require the receipt-first JSON envelope and use `parse_receipt_text` |
-| Claiming Development done without evidence | Validate project-local tests and local commit receipt |
-| Letting a child replace global task state | Accept only a strict receipt; the coordinating task owns state and projection |
-| Testing the entire distributed system | No cross-project integration tests by default |
-
-## Red Flags
-
-Stop and correct the workflow when:
-
-- a child package depends on reading the parent chat or repository to understand
-  its core contract;
-- a route is chosen from a project label without path corroboration;
-- `create_thread` is about to run before frozen preview approval;
-- a worktree, branch operation, or push is proposed without an explicit request;
-- a discussion task contains implementation instructions;
-- multiple confirmations are being requested for one approved batch;
-- Development is declared complete with missing commits, failed tests, or an
-  unaccepted `NO_CHANGE_REQUIRED`.
-- a child receipt contains authoritative task state or a replacement global
-  projection.
-- a tracked child puts prose before the receipt envelope or omits the exact
-  receipt markers.
+Report the outcome, approved/blocked work, Review findings, verification evidence,
+and current in-window status view. Do not claim hard interruption, approval, or
+cross-project completion without direct evidence.
