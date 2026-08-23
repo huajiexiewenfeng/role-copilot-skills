@@ -35,6 +35,13 @@ and per-Project-Session native snapshot including thread/host, afterCursor,
 native status, latest turn/assistant phase, summary, and observation time. It may
 be deleted and reconstructed.
 
+## Lifecycle policy
+
+`policies.archive` defaults to `explicit-only`. Closing a real Dispatch unpins
+bound Sessions but does not archive them. `canary-dispatch-close` is permitted
+only for disposable Canary/Smoke runs. A user-requested cleanup is an explicit
+runtime action; it is not inferred from `status=CLOSED`.
+
 ## Views
 
 `scripts/status_view.py` creates deterministic Markdown and SVG from one status

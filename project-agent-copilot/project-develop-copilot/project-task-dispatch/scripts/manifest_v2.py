@@ -214,7 +214,7 @@ def validate_manifest(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
         "singleWriterPerProject": {True},
         "monitoring": {"attached", "heartbeat"},
         "pin": {"active-unapproved"},
-        "archive": {"dispatch-close"},
+        "archive": {"explicit-only", "canary-dispatch-close"},
         "review": {"manager-direct", "risk-based-independent", "always-independent"},
         "approvalAuthority": {"manager", "user", "mixed"},
     }

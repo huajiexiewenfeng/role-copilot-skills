@@ -85,6 +85,7 @@ effects. A Worker final supplies a delivery candidate only.
 - `ACTIVE`: required work remains with a path forward.
 - `BLOCKED`: no required path can advance and at least one required item is blocked.
 - `APPROVED`: all required work approved and final cross-repository check passed.
-- `CLOSED`: lifecycle cleanup completed.
+- `CLOSED`: Manager closeout completed and requested lifecycle policy actions
+  succeeded. Real Sessions may remain visible and unarchived.
 
 `ATTENTION` is a derived view flag from native attention, blocker, or OPEN finding.

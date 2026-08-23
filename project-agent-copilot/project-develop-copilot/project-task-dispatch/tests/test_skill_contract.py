@@ -60,7 +60,7 @@ class SkillContractTest(unittest.TestCase):
     def test_runtime_defines_wait_recovery_and_lifecycle(self) -> None:
         self.assert_contains(
             "references/manager-runtime.md",
-            ["1–8 targets", "afterCursor", "timeoutMs=0", "Match only by `threadId`", "Pin active-unapproved", "Archive is not cancel", "hard turn-interrupt"],
+            ["1–8 targets", "afterCursor", "timeoutMs=0", "Match only by `threadId`", "Pin active-unapproved", "explicit-only", "Archive is not cancel", "hard turn-interrupt"],
         )
         self.assert_contains(
             "references/manager-runtime.md",

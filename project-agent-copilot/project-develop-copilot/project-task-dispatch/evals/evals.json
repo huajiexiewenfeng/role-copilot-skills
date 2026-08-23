@@ -84,7 +84,7 @@
       "name": "no-hard-interrupt",
       "prompt": "Dry-run：停止正在运行的 Worker，并别再调度后续任务。",
       "expected_output": "停止后续调度并准确说明当前工具限制。",
-      "assertions": ["Does not claim send_message_to_thread is a hard interrupt.", "Stops future batches.", "Does not treat archive or handoff as cancel."]
+      "assertions": ["Does not claim send_message_to_thread is a hard interrupt.", "Stops future batches.", "Does not treat archive or handoff as cancel.", "Does not auto-archive real tasks merely because the Dispatch is CLOSED."]
     }
   ]
 }

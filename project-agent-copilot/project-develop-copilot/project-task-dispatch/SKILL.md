@@ -210,8 +210,12 @@ by the exact Markdown status table. This keeps the human dashboard in the Codex
 main window; no HTML or external application is required.
 
 Pin bound active-unapproved Worker/Reviewer tasks. Unpin Sessions whose assigned
-work is approved. On Dispatch close, unpin and archive them with
-`set_thread_archived`; archive is lifecycle cleanup, not cancellation.
+work is approved. On Dispatch close, unpin every bound Session but keep real
+development and read-only Sessions visible. The default archive policy is
+`explicit-only`: call `set_thread_archived` only when the user explicitly asks
+for cleanup or a declared retention rule has become due. A Canary/Smoke run may
+use the separate `canary-dispatch-close` policy. Archive is lifecycle cleanup,
+not cancellation, and `CLOSED` never implies archived.
 
 ## 8. Recovery and Idempotency
 
