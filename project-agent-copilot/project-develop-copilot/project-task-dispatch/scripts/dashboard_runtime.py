@@ -43,7 +43,14 @@ def _atomic_json(path: Path, value: dict[str, Any]) -> None:
         stream.write(payload)
         stream.flush()
         os.fsync(stream.fileno())
-    os.replace(temporary, path)
+    for attempt in range(12):
+        try:
+            os.replace(temporary, path)
+            break
+        except PermissionError:
+            if attempt == 11:
+                raise
+            time.sleep(min(0.01 * (2 ** attempt), 0.2))
 
 
 def _read_json(path: Path) -> dict[str, Any]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -57,7 +58,19 @@ def _write_text(path: Path, value: str) -> None:
         stream.write(value)
         stream.flush()
         os.fsync(stream.fileno())
-    os.replace(temporary, path)
+    _replace_with_retry(temporary, path)
+
+
+def _replace_with_retry(source: Path, destination: Path, attempts: int = 12) -> None:
+    """Tolerate short Windows reader/AV locks without abandoning the revision."""
+    for attempt in range(attempts):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt + 1 == attempts:
+                raise
+            time.sleep(min(0.01 * (2 ** attempt), 0.2))
 
 
 def _next_action(state: str, native: str) -> str:
@@ -102,7 +115,7 @@ def build_dashboard_snapshot(
             1 for finding in manifest["findings"]
             if finding["status"] == "OPEN" and finding["taskId"] in {task["taskId"] for task in tasks}
         )
-        attempts = max([task["review"].get("round", 0) + 1 for task in tasks] or [1])
+        attempts = max([max(1, task["review"].get("round", 0)) for task in tasks] or [1])
         binding = session["binding"]
         thread_id = binding.get("threadId") or binding.get("clientThreadId") or "-"
         sessions.append({
