@@ -2,10 +2,6 @@
 
 | Date | Flow | Event | Evidence |
 |---|---|---|---|
-| 2026-08-01 | `pdc-lifecycle-state-guard-v1` | 项目 Owner 判断当前 PDC 的 develop、fix、Base Graph 与 LLM Wiki 核心体验正常，而 State Guard 的净收益尚未被真实证据证明；决定将候选设计同步到 GitHub，但暂停升级，不生成执行计划或产品实现。Active Flow 恢复为 none。 | `requirements/pdc-lifecycle-state-guard-v1.md` |
-| 2026-08-01 | `pdc-lifecycle-state-guard-v1` | 项目 Owner 否决纯哲学契约集成；新设计收敛为只读 Python State Guard，通过 preflight、audit、verify-claim 处理初始化门禁、状态漂移和部分成功误报，当前停在 design-review。 | `requirements/pdc-lifecycle-state-guard-v1.md` |
-| 2026-08-01 | `pdc-llm-first-guardrails-contract-integration` | 项目 Owner 在设计评审中否决该方案；哲学应作为设计语言，不应成为显式 Skill 交付。该 Flow 未生成执行计划、未修改产品行为。 | `requirements/pdc-llm-first-guardrails-contract-integration.md` |
-| 2026-08-01 | `pdc-llm-first-guardrails-contract-integration` | 项目 Owner 批准进入 V3 active-contract integration 开发准备，并要求设计与执行计划先于开发；已生成包含三种方案、四层契约、self-correction 行为、Eval 36/Case 40、静态测试、风险和文件地图的书面设计。当前停在 design-review，未修改 Skill、Eval、测试或产品代码。 | `requirements/pdc-llm-first-guardrails-contract-integration.md` |
 | 2026-08-01 | `pdc-llm-first-deterministic-guardrails-v3` | 项目 Owner 审阅书面 V3 后回复“确认，继续”；当前架构基线完成归档。静态验证覆盖文本质量、文档完整性、UTF-8/BOM/尾随空白、`git diff --check` 和产品代码范围，均无 findings；没有 Runtime、CLI、MCP、CI 或 Skill 行为实现。 | `handoff/pdc-llm-first-deterministic-guardrails-v3-handoff.md` |
 | 2026-08-01 | `pdc-llm-first-deterministic-guardrails-v3` | 项目 Owner 确立“不限制模型上限、提高模型下限”的 PDC 北极星；Runtime-first V2 和未执行的 P0 计划转为历史。当前不建设统一 Runtime、JSON CLI 平台或 MCP；新 Python Guardrail 只能由真实、高风险、重复且不可稳定自纠正的机械故障触发。本轮只修订设计，不修改产品代码或用户流程。 | `requirements/pdc-llm-first-deterministic-guardrails-v3.md` |
 | 2026-08-01 | `pdc-runtime-p0-contract-baseline` | Runtime-first V2 进入独立 P0 子 Flow；完成状态权威与契约 Change Brief 及 8 任务候选实施计划，明确内部 developer-only、普通用户零新增成本、P1/P2/P3/P4 阶段隔离和当前单 Codex 任务顺序执行偏好。尚未修改 Runtime 代码或 CI。 | `working-context/pdc-runtime-p0-contract-baseline.md` |
