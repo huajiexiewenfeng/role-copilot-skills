@@ -8,12 +8,12 @@ from pathlib import Path
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = SKILL_ROOT / "scripts" / "task_control.py"
+MODULE_PATH = SKILL_ROOT / "scripts" / "legacy_receipt.py"
 
 
 def load_module():
     if not MODULE_PATH.is_file():
-        raise AssertionError(f"missing task control module: {MODULE_PATH}")
+        raise AssertionError(f"missing legacy receipt module: {MODULE_PATH}")
     spec = importlib.util.spec_from_file_location("task_control", MODULE_PATH)
     if spec is None or spec.loader is None:
         raise AssertionError(f"unable to load task control module: {MODULE_PATH}")

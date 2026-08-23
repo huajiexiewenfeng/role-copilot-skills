@@ -48,7 +48,13 @@
 
 ```yaml
 subtaskId: "{{subtask_id}}"
+projectSessionKey: "{{project_session_key}}"
+workItemIds: {{work_item_ids}}
 logicalProject: "{{logical_project}}"
 taskKind: "{{task_kind}}"
 objective: "{{task_objective}}"
+contractRevision: "{{contract_revision}}"
+acceptanceIds: {{acceptance_ids}}
+useTargetProjectPdc: true
+sameProjectBatchPolicy: "serial"
 ```

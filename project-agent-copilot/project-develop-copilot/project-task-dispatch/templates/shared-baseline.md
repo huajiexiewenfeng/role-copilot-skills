@@ -48,7 +48,9 @@
 
 ```yaml
 dispatchId: "{{dispatch_id}}"
-designRevision: "{{design_revision}}"
+realityProjectId: "{{reality_project_id}}"
+contractRevision: "{{contract_revision}}"
+upstreamApprovalEvidence: "{{upstream_approval_evidence}}"
 preparedAt: "{{prepared_at}}"
 parentProject: "{{parent_project}}"
 ```

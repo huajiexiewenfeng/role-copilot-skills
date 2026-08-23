@@ -1,105 +1,90 @@
-# Lightweight Task Control Plane
+# PDC Task Control Plane 2.0
 
-## Purpose
+## Authority
 
-Give the coordinating task one deterministic view of multi-project work without
-adding persistence, automatic thread synchronization, or a workflow platform.
-Use it for Development progress and for Dispatch only when the user explicitly
-asks the parent to wait for or aggregate child results.
+| Fact | Authority |
+|---|---|
+| native task/turn active, idle, final, attention, error, history | Codex thread runtime |
+| Dispatch, Project Session, work item, dependency, acceptance, finding, approval | `manifest.json` |
+| branch, HEAD, dirty state, diff, tests | Git/filesystem evidence |
+| wait cursor and last native observation | `runtime-cache.json` |
 
-## Authority Boundary
+The Manager Session is the only writer of the PDC management directory. Worker
+and Reviewer Sessions communicate only through native commentary/final and
+Manager messages. The directory is not a queue.
 
-The coordinating task is the sole authority for task state and the aggregate
-projection. A child submits an observation with a requested state. The parent
-validates the observation and decides whether to apply it.
+## Registry and identity
 
-A child must never send an authoritative state record, mutate another task, or
-publish a replacement global projection.
+`dispatchId` contains Project Sessions keyed by `projectSessionKey`; work items
+use stable `taskId` and reference one Project Session. A `threadId + hostId`
+binds a PDC Session to a user-visible Codex task. `clientThreadId` represents
+only queued creation and cannot be waited/read/sent.
 
-## States And Transitions
+Default cardinality is one `WRITE` Worker for each `projectId` in a Dispatch.
+Multiple same-Project work items share it and execute in serial batches.
 
-```text
-PENDING -> IN_PROGRESS | BLOCKED
-IN_PROGRESS -> BLOCKED | COMPLETED
-BLOCKED -> IN_PROGRESS | COMPLETED
-COMPLETED -> terminal
-```
-
-An `IN_PROGRESS` or `BLOCKED` receipt may refresh the same current state. This
-updates evidence, blocker, and next-step information but does not create a new
-transition.
-
-After a child task is successfully created and delivered, the parent calls
-`start_task` to apply the parent-owned `PENDING -> IN_PROGRESS` transition. A
-one-shot child may then request `COMPLETED` in its first receipt.
-
-## Progress Receipt
-
-The receipt uses one exact, versioned JSON envelope:
+## Work item states
 
 ```text
-TASK_CONTROL_RECEIPT_BEGIN
-{"schemaVersion": 1, "taskId": "stable-child-task-id", "requestedState": "IN_PROGRESS", "summary": "one short result", "evidenceRefs": ["thread:child-task-id#message"], "nextStep": "one concrete next action", "blocked": false, "needsParentDecision": false, "blocker": null}
-TASK_CONTROL_RECEIPT_END
+READY
+WAITING_DEPENDENCY
+ASSIGNED
+SUBMITTED
+REVIEWING
+CHANGES_REQUESTED
+APPROVED
+BLOCKED
+STALE
 ```
 
-Rules:
-
-- The receipt must be the first content in every tracked child update. Optional
-  human-readable details may follow `TASK_CONTROL_RECEIPT_END`.
-- Emit exactly one envelope. Keep both markers exact and on their own lines.
-- Emit a JSON object, not YAML, Markdown fields, or a fenced code block.
-- `schemaVersion` is required and must equal `1`.
-- Every field is required and unknown fields are rejected.
-- `evidenceRefs` contains at least one non-empty reference.
-- `blocked=true` exactly when `requestedState=BLOCKED`.
-- A blocked receipt has a non-empty `blocker`.
-- `needsParentDecision=true` is valid only for a blocked receipt.
-- Non-blocked receipts use `blocker: null`.
-- `requestedState` is a proposal. The parent reducer remains authoritative.
-- Keep the JSON payload within 8192 characters. Summarize long dirty-file lists
-  by count and a few evidence references instead of embedding every path.
-
-The parent passes raw task text to `parse_receipt_text`. The parser rejects
-missing, duplicate, truncated, malformed, oversized, and unsupported-version
-envelopes before the reducer sees the receipt.
-
-## Tracked Dispatch
-
-Dispatch remains untracked by default. If the user explicitly asks to wait for,
-collect, or return child results, keep Dispatch mode and set `awaitResult=true`.
-Tracked Dispatch uses this envelope, `wait_threads`, parent validation, and the
-same deterministic projection. It does not require project-local tests or a
-local commit.
-
-The final Development receipt remains defined by `development-receipt.md`.
-Progress receipts complement it; they do not replace commit and project-local
-test validation.
-
-## Parent Projection
-
-The parent projection contains fixed state counts and one concise row per task:
+Native `active/idle/error/attention` is never copied into this state field.
+Allowed normal transitions are:
 
 ```text
-taskId
-project
-title
-state
-summary
-evidenceRefs
-nextStep
-blocked
-needsParentDecision
-blocker
+WAITING_DEPENDENCY --DEPENDENCIES_SATISFIED--> READY
+READY --WORK_ASSIGNED--> ASSIGNED
+ASSIGNED --WORKER_SUBMITTED--> SUBMITTED
+SUBMITTED --REVIEW_STARTED--> REVIEWING
+REVIEWING --REVIEW_APPROVED--> APPROVED
+REVIEWING --REVIEW_CHANGES_REQUESTED--> CHANGES_REQUESTED
+CHANGES_REQUESTED --WORKER_RESUBMITTED--> SUBMITTED
 ```
 
-Rows are deterministic: `BLOCKED`, `IN_PROGRESS`, `PENDING`, `COMPLETED`, then
-project and task ID. This makes blockers and pending decisions visible without a
-graphical dashboard.
+Any non-approved item can raise a structured blocker. Resolution derives
+WAITING_DEPENDENCY, READY, ASSIGNED, or SUBMITTED from current evidence.
+Contract/baseline/upstream invalidation moves assigned or reviewed work to
+STALE; Manager explicitly requeues it.
 
-## Future Boundary
+The following are forbidden: `ASSIGNED→APPROVED`, `SUBMITTED→APPROVED`,
+`CHANGES_REQUESTED→APPROVED`, native idle→SUBMITTED, or Worker “completed”→APPROVED.
 
-The standardized receipt and projection may later become an adapter boundary for
-WALK or a graphical interface. This delivery intentionally has no database,
-WALK adapter, Web/HTML dashboard, automatic cross-thread synchronization, or
-general workflow engine.
+## Reducer order
+
+1. Load and validate schema version and revision.
+2. Validate event identity, current state, guard, and external evidence.
+3. Apply one transition.
+4. Recompute dependency states and Dispatch aggregate.
+5. Increment revision and atomically replace `manifest.json` using an optimistic
+   previous-revision check.
+6. Regenerate Markdown/SVG/PNG and emit a Manager snapshot only for meaningful change.
+
+Use `scripts/manifest_v2.py` and `scripts/task_control.py`; do not manually repair
+state JSON. A repeated cursor/final must be idempotently ignored.
+
+## Approval Gate
+
+Approval requires exact Project/repository/branch, explainable baseline/final
+HEAD, authorized changed files, required acceptance PASS/authorized WAIVED,
+actual passing/waived tests, no OPEN finding, current contract revision,
+APPROVED dependencies, verified commit/HEAD, and verified cross-repository side
+effects. A Worker final supplies a delivery candidate only.
+
+## Aggregate Dispatch
+
+- `DRAFT`: no work started.
+- `ACTIVE`: required work remains with a path forward.
+- `BLOCKED`: no required path can advance and at least one required item is blocked.
+- `APPROVED`: all required work approved and final cross-repository check passed.
+- `CLOSED`: lifecycle cleanup completed.
+
+`ATTENTION` is a derived view flag from native attention, blocker, or OPEN finding.

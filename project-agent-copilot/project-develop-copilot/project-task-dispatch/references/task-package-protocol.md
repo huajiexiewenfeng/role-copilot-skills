@@ -27,7 +27,7 @@ dispatch ID, checksum, UUID, or project ID as the first line.
 
 Hello/connectivity tests, acknowledgements, simple notifications, and other
 short tasks without shared contracts, dependencies, repository changes, or
-tracked receipts do not use this package protocol.
+durable coordination do not use this package protocol.
 
 Deliver the complete prepared human-readable message as the initial task prompt:
 
@@ -66,7 +66,14 @@ must not contain template guidance, unused sections, or repeated
 `Not applicable` filler.
 
 Calculate an uppercase SHA-256 for every canonical document and the deterministic
-bundle. Use `scripts/task_package.py` to build and verify the manifest.
+bundle. Use `scripts/task_package.py` to build and verify
+`task-package-manifest.json`. This transport filename must never collide with
+the Dispatch control plane's `manifest.json`.
+
+Package only the shared cross-project contract and this Project's responsibility.
+The Project Worker reads local code, rules, PDC context, and knowledge from its
+target saved Codex Project. It must not depend on Manager chat history and,
+unless authorized, must not create nested Sessions or Agent Team Subagents.
 
 ## Parent Visibility Boundary
 
@@ -164,7 +171,8 @@ chunk text.
 - Verify the title and one-sentence purpose match the packaged objective and
   owned scope.
 - Delivery is complete only when every required message succeeds.
-- Do not treat successful delivery as a Development receipt.
+- Do not treat successful delivery as Worker submission or Manager approval.
+- Do not embed the legacy receipt-first progress protocol in a new v2 package.
 - Do not create real Codex tasks during automated skill evaluation.
 
 If delivery fails after a partial send, send:

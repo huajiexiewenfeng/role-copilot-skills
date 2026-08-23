@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pdc.local/schemas/dispatch-manifest-v2.schema.json",
+  "title": "PDC project-task-dispatch Manifest v2",
+  "description": "Durable PDC business state. Native Codex observations belong in runtime-cache.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "dispatchId", "revision", "executionMode", "status", "realityProject", "manager", "policies", "contract", "projectSessions", "workItems", "findings", "view", "createdAt", "updatedAt"],
+  "properties": {
+    "schemaVersion": {"const": "2.0"},
+    "dispatchId": {"$ref": "#/$defs/stableId"},
+    "revision": {"type": "integer", "minimum": 0},
+    "executionMode": {"enum": ["dispatch", "awaited-dispatch", "managed-development"]},
+    "status": {"enum": ["DRAFT", "ACTIVE", "BLOCKED", "APPROVED", "CLOSED"]},
+    "realityProject": {
+      "type": "object",
+      "required": ["realityProjectId", "baseGraphRoot", "repositoryIds"],
+      "properties": {
+        "realityProjectId": {"$ref": "#/$defs/stableId"},
+        "baseGraphRoot": {"$ref": "#/$defs/path"},
+        "baseGraphProjectId": {"type": ["string", "null"]},
+        "repositoryIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/stableId"}}
+      }
+    },
+    "manager": {"type": "object"},
+    "policies": {"type": "object"},
+    "contract": {
+      "type": "object",
+      "required": ["currentRevision", "sharedBaseline", "updatedAt"],
+      "properties": {
+        "currentRevision": {"$ref": "#/$defs/stableId"},
+        "sharedBaseline": {"type": "string", "minLength": 1},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "projectSessions": {"type": "array", "items": {"$ref": "#/$defs/projectSession"}},
+    "workItems": {"type": "array", "items": {"$ref": "#/$defs/workItem"}},
+    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "view": {
+      "type": "object",
+      "required": ["revision", "sourceSvg", "previewPng", "currentSvg", "currentPng", "renderedAt"],
+      "properties": {"revision": {"type": "integer", "minimum": 0}}
+    },
+    "createdAt": {"$ref": "#/$defs/timestamp"},
+    "updatedAt": {"$ref": "#/$defs/timestamp"}
+  },
+  "$defs": {
+    "stableId": {"type": "string", "minLength": 2, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "path": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "title", "threadId", "hostId", "clientThreadId"],
+      "properties": {
+        "state": {"enum": ["UNBOUND", "CREATE_PENDING", "BOUND", "MISSING"]},
+        "title": {"type": "string", "minLength": 1},
+        "threadId": {"type": ["string", "null"]},
+        "hostId": {"type": ["string", "null"]},
+        "clientThreadId": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "BOUND"}}}, "then": {"properties": {"threadId": {"type": "string", "minLength": 1}, "hostId": {"type": "string", "minLength": 1}}}},
+        {"if": {"properties": {"state": {"const": "CREATE_PENDING"}}}, "then": {"properties": {"clientThreadId": {"type": "string", "minLength": 1}}}}
+      ]
+    },
+    "projectSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectSessionKey", "role", "writePolicy", "repositoryId", "repositoryRoot", "projectId", "expectedBranch", "baselineHead", "dirtyBoundary", "binding", "assignedWorkItemIds", "createdAt", "updatedAt"],
+      "properties": {
+        "projectSessionKey": {"$ref": "#/$defs/stableId"},
+        "role": {"enum": ["worker", "reviewer"]},
+        "writePolicy": {"enum": ["WRITE", "READ_ONLY"]},
+        "routeMode": {"enum": ["VERIFIED_CODEX_PROJECT", "BASE_PATH_FALLBACK"]},
+        "readOnlyFallback": {"type": "boolean"},
+        "targetWorkdir": {"type": ["string", "null"]},
+        "repositoryId": {"$ref": "#/$defs/stableId"},
+        "repositoryRoot": {"$ref": "#/$defs/path"},
+        "projectId": {"type": "string", "minLength": 1},
+        "expectedBranch": {"type": "string", "minLength": 1},
+        "baselineHead": {"type": "string", "pattern": "^[0-9a-fA-F]{7,64}$"},
+        "dirtyBoundary": {"type": "object"},
+        "binding": {"$ref": "#/$defs/binding"},
+        "assignedWorkItemIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/stableId"}},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "workItemState": {"enum": ["READY", "WAITING_DEPENDENCY", "ASSIGNED", "SUBMITTED", "REVIEWING", "CHANGES_REQUESTED", "APPROVED", "BLOCKED", "STALE"]},
+    "workItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "title", "repositoryId", "projectSessionKey", "required", "state", "dependencies", "acceptanceCriteria", "contractRevision", "findingIds", "delivery", "review", "blocker", "staleReason", "lastTransition", "createdAt", "updatedAt"],
+      "properties": {
+        "taskId": {"$ref": "#/$defs/stableId"},
+        "title": {"type": "string", "minLength": 1},
+        "repositoryId": {"$ref": "#/$defs/stableId"},
+        "projectSessionKey": {"type": ["string", "null"]},
+        "required": {"type": "boolean"},
+        "state": {"$ref": "#/$defs/workItemState"},
+        "dependencies": {"type": "array", "items": {"type": "object", "required": ["taskId", "gate"], "properties": {"taskId": {"$ref": "#/$defs/stableId"}, "gate": {"const": "APPROVED"}}}},
+        "acceptanceCriteria": {"type": "array", "minItems": 1},
+        "contractRevision": {"$ref": "#/$defs/stableId"},
+        "findingIds": {"type": "array", "uniqueItems": true},
+        "delivery": {"type": ["object", "null"]},
+        "review": {"type": "object"},
+        "blocker": {"type": ["object", "null"]},
+        "staleReason": {"type": ["object", "null"]},
+        "lastTransition": {"type": "object"},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["findingId", "taskId", "severity", "evidence", "requiredChange", "status", "createdAt", "resolvedAt"],
+      "properties": {
+        "findingId": {"$ref": "#/$defs/stableId"},
+        "taskId": {"$ref": "#/$defs/stableId"},
+        "severity": {"enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]},
+        "status": {"enum": ["OPEN", "RESOLVED", "WAIVED"]}
+      }
+    }
+  }
+}
