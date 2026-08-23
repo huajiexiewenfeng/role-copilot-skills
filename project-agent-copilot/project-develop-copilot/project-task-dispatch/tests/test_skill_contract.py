@@ -57,53 +57,51 @@ class SkillContractTest(unittest.TestCase):
                     f"{relative_path} contains an unfinished-work marker",
                 )
 
-    def test_shared_baseline_template_has_complete_cross_project_contract(self) -> None:
+    def test_shared_baseline_template_is_language_aware_and_concise(self) -> None:
         self.assert_contains_all(
             "templates/shared-baseline.md",
             (
-                "# Shared Baseline",
-                "## Parent Objective",
-                "## Non-goals",
-                "## End-to-end Architecture",
-                "## Shared Contracts",
-                "## Data and Naming Formats",
-                "## Ownership Boundaries",
-                "## Confirmed Decisions",
-                "## Evidence and Confidence",
-                "## Global Acceptance",
+                "# {{shared_title}}",
+                "{{objective_heading}}",
+                "{{required_outcomes_heading}}",
+                "{{non_goals_heading}}",
+                "{{participants_and_flow_heading}}",
+                "{{shared_contracts_heading}}",
+                "{{ownership_heading}}",
+                "{{confirmed_decisions_heading}}",
+                "{{global_acceptance_heading}}",
+                "{{technical_appendix_heading}}",
             ),
         )
 
-    def test_project_task_template_is_executable_for_every_task_kind(self) -> None:
+    def test_project_task_template_prioritizes_human_readability(self) -> None:
         self.assert_contains_all(
             "templates/project-task-spec.md",
             (
-                "# Project Task Specification",
-                "discussion",
-                "design",
-                "development",
-                "test",
-                "review",
-                "deployment",
-                "## Current State",
-                "## Problem and Target Behavior",
-                "## Owned Scope",
-                "## Excluded Scope",
-                "## Components and Flow",
-                "## Interfaces and Contracts",
-                "## Data and State",
-                "## Configuration and Deployment",
-                "## Compatibility and Failure Semantics",
-                "## Project-local Verification",
-                "## Acceptance",
+                "# {{task_title}}",
+                "{{why_heading}}",
+                "{{what_to_do_heading}}",
+                "{{what_not_to_do_heading}}",
+                "{{context_heading}}",
+                "{{interfaces_heading}}",
+                "{{execution_heading}}",
+                "{{verification_heading}}",
+                "{{completion_heading}}",
+                "{{deliverables_heading}}",
+                "{{technical_appendix_heading}}",
             ),
         )
 
-    def test_handoff_template_carries_routing_execution_and_output_context(self) -> None:
-        self.assert_contains_all(
+    def test_handoff_template_keeps_machine_metadata_in_appendix(self) -> None:
+        text = self.assert_contains_all(
             "templates/handoff.md",
             (
-                "# Task Handoff",
+                "# {{handoff_title}}",
+                "{{handoff_summary}}",
+                "{{destination_heading}}",
+                "{{execution_boundary_heading}}",
+                "{{result_heading}}",
+                "{{technical_appendix_heading}}",
                 "dispatchId",
                 "subtaskId",
                 "mode",
@@ -119,6 +117,36 @@ class SkillContractTest(unittest.TestCase):
                 "expectedOutput",
             ),
         )
+        appendix_index = text.index("{{technical_appendix_heading}}")
+        for machine_field in (
+            "targetProject",
+            "targetWorkdir",
+            "routeMode",
+            "codexProjectId",
+        ):
+            self.assertGreater(
+                text.index(machine_field),
+                appendix_index,
+                f"{machine_field} must appear only after the technical appendix",
+            )
+
+    def test_templates_do_not_leak_authoring_boilerplate(self) -> None:
+        forbidden = (
+            "Replace every",
+            "If a section does not apply",
+            "Supported task kinds",
+            "Not applicable",
+            "Task-kind Instructions",
+        )
+        for relative_path in (
+            "templates/shared-baseline.md",
+            "templates/project-task-spec.md",
+            "templates/handoff.md",
+        ):
+            with self.subTest(path=relative_path):
+                text = self.read(relative_path)
+                for item in forbidden:
+                    self.assertNotIn(item, text)
 
     def test_routing_reference_defines_all_routes_and_local_checkout_policy(self) -> None:
         self.assert_contains_all(
@@ -140,6 +168,17 @@ class SkillContractTest(unittest.TestCase):
         self.assert_contains_all(
             "references/task-package-protocol.md",
             (
+                "Lightweight Direct Message",
+                "Do not create package files",
+                "user's language",
+                "Parent Visibility Boundary",
+                "child-task transport, not default parent-task display",
+                "explicitly requests a full package or audit preview",
+                "Human-readable Task Header",
+                "# {{parent_task_name}} - {{child_task_name}}",
+                "TASK_PACKAGE_BEGIN",
+                "appears below it",
+                "a semantic mismatch blocks delivery",
                 "UTF-8 without BOM",
                 "LF line endings",
                 "TASK_PACKAGE_BEGIN",
@@ -152,6 +191,12 @@ class SkillContractTest(unittest.TestCase):
                 "Do not begin execution",
             ),
         )
+
+    def test_protocol_places_readable_title_before_package_marker(self) -> None:
+        text = self.read("references/task-package-protocol.md")
+        title_index = text.index("# {{parent_task_name}} - {{child_task_name}}")
+        marker_index = text.index("TASK_PACKAGE_BEGIN")
+        self.assertLess(title_index, marker_index)
 
     def test_development_receipt_defines_statuses_commit_and_test_rules(self) -> None:
         self.assert_contains_all(
@@ -173,40 +218,16 @@ class SkillContractTest(unittest.TestCase):
             ),
         )
 
-    def test_task_control_plane_defines_parent_authority_and_future_boundary(self) -> None:
+    def test_task_control_plane_defines_receipt_first_json_envelope(self) -> None:
         self.assert_contains_all(
             "references/task-control-plane.md",
             (
-                "PENDING",
-                "IN_PROGRESS",
-                "BLOCKED",
-                "COMPLETED",
-                "sole authority",
-                "requestedState",
-                "summary",
-                "evidenceRefs",
-                "nextStep",
-                "needsParentDecision",
-                "deterministic",
-                "WALK",
-                "graphical interface",
-                "no database",
                 "TASK_CONTROL_RECEIPT_BEGIN",
                 "TASK_CONTROL_RECEIPT_END",
                 '"schemaVersion": 1',
                 "receipt must be the first content",
-            ),
-        )
-
-    def test_skill_supports_explicitly_tracked_dispatch_without_development_rules(self) -> None:
-        self.assert_contains_all(
-            "SKILL.md",
-            (
-                "awaitResult=true",
-                "Dispatch remains the selected mode",
-                "does not require project-local tests or a local commit",
                 "parse_receipt_text",
-                "receipt envelope must appear before optional human details",
+                "awaitResult=true",
             ),
         )
 
@@ -215,9 +236,26 @@ class SkillContractTest(unittest.TestCase):
             "SKILL.md",
             (
                 "stable design spans two or more projects",
-                "A: Dispatch mode (default)",
-                "B: Development mode",
+                "Lightweight direct message",
+                "Do not generate the",
+                "Keep it under 30 lines",
+                "Formal package",
+                "follows the user's current language",
+                "Templates are structural guidance, not literal text",
+                "Task Naming and First Line",
+                "# <parent task name> - <child task name>",
+                "Never start a child prompt with `TASK_PACKAGE_BEGIN`",
+                "任务分发测试 - 回复你好",
+                "A mismatch between the header and the task body is a",
                 "Dispatch is the default",
+                "awaitResult=true",
+                "Dispatch remains the selected mode",
+                "does not require project-local tests or a local commit",
+                "Do not force an A/B choice",
+                "Do not add a confirmation gate",
+                "Full Markdown belongs in the child task",
+                "Do not show full Markdown documents",
+                "one short sentence",
                 "Project Graph",
                 "Base Graph",
                 "list_projects",
@@ -231,10 +269,7 @@ class SkillContractTest(unittest.TestCase):
                 "Do not push",
                 "No cross-project integration tests",
                 "generate all three complete Markdown documents",
-                "every complete document for every child",
-                "one batch confirmation",
                 "create_thread",
-                "authorized only after",
                 "send_message_to_thread",
                 "wait_threads",
                 "dependency",
@@ -244,6 +279,25 @@ class SkillContractTest(unittest.TestCase):
                 "must never create a real Codex task",
             ),
         )
+
+    def test_parent_interaction_is_minimal_by_default(self) -> None:
+        text = self.read("SKILL.md")
+        for required in (
+            "objective;",
+            "target project and one-line responsibility;",
+            "dependency order, only when present;",
+            "unresolved decisions or material risks.",
+            "Only when explicitly requested",
+        ):
+            self.assertIn(required, text)
+        for obsolete in (
+            "A: Dispatch mode (default)",
+            "B: Development mode",
+            "every complete document for every child",
+            "one batch confirmation",
+            "authorized only after",
+        ):
+            self.assertNotIn(obsolete, text)
 
     def test_skill_entrypoint_links_progressive_disclosure_resources(self) -> None:
         self.assert_contains_all(
@@ -255,9 +309,9 @@ class SkillContractTest(unittest.TestCase):
                 "references/routing.md",
                 "references/task-package-protocol.md",
                 "references/development-receipt.md",
-                "references/task-control-plane.md",
                 "scripts/task_package.py",
                 "scripts/task_control.py",
+                "references/task-control-plane.md",
             ),
         )
 

@@ -3,14 +3,10 @@
 Development mode tracks every child through project-local implementation,
 verification, and local commit. Dispatch mode does not use this receipt.
 
-During execution, progress and blocker updates use the strict receipt from
-`task-control-plane.md`. That progress receipt updates the coordinating task's
-projection only after parent validation. It does not replace this final
-Development receipt.
-
-Emit each progress receipt as the receipt-first JSON envelope defined by the
-control-plane reference. Human-readable detail may follow the envelope but may
-not precede it.
+During execution, progress and blocker updates use the receipt-first JSON
+envelope from `task-control-plane.md`. Human-readable detail may follow the
+envelope but may not precede it. This progress receipt does not replace the
+final Development receipt below.
 
 ## Required Schema
 
@@ -76,14 +72,3 @@ INCOMPLETE
   Any child is blocked, failed, missing a commit, has failing tests, lacks a
   required receipt field, or has an unaccepted no-change result.
 ```
-
-Control-plane mapping:
-
-- a validated `COMPLETED` final receipt may support a child
-  `requestedState=COMPLETED` update;
-- `BLOCKED` and `FAILED` final receipts remain `BLOCKED` in the lightweight
-  projection with evidence and a next step;
-- `NO_CHANGE_REQUIRED` remains `BLOCKED` with
-  `needsParentDecision=true` until the parent or user accepts it;
-- only the coordinating task accepts the receipt and changes authoritative task
-  state.

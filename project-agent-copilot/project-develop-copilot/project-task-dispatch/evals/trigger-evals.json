@@ -1,5 +1,9 @@
 [
   {
+    "query": "只是测试 Codex 分发功能，把 hello 发到 smarthub 和 smarthub-web，让它们只回复 hello，不要改代码。",
+    "should_trigger": true
+  },
+  {
     "query": "我们刚把一键日志方案定稿了，涉及 smarthub-web、smarthub-admin 和 drone-cloud-api。请先预览如何拆到三个 Codex 项目，确认后一次性分发。",
     "should_trigger": true
   },

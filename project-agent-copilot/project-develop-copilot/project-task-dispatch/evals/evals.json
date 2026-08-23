@@ -2,17 +2,35 @@
   "skill_name": "project-task-dispatch",
   "evals": [
     {
+      "id": 0,
+      "name": "lightweight-chinese-hello",
+      "prompt": "只测试任务分发功能。请把 hello 发到 smarthub、smarthub-web 和 smart-go-web，收到后让每个任务只回复 hello。不要修改文件，也不要跟踪结果。",
+      "expected_output": "直接执行轻量中文批量分发，不增加确认；父任务只报告目标和投递结果，每个子任务收到一条简短可读消息。",
+      "files": [],
+      "assertions": [
+        "Uses lightweight direct-message delivery rather than a formal package.",
+        "Human-facing titles and instructions are Chinese.",
+        "Each child prompt starts with a readable Markdown title using the format 主任务名称 - 子任务名称.",
+        "The hello case uses a title equivalent to 任务分发测试 - 回复你好.",
+        "Each complete task message explains the goal, exact action, boundaries, and completion response.",
+        "Each task message is under 30 lines.",
+        "No Markdown package files, manifest, checksums, chunks, or TASK_PACKAGE markers are generated.",
+        "No repository action or result tracking is requested.",
+        "No additional confirmation is requested after the explicit send command.",
+        "The parent does not display routes, project IDs, branches, or protocol details."
+      ]
+    },
+    {
       "id": 1,
       "name": "three-project-dispatch-preview",
       "prompt": "Dry-run only. A confirmed distributed-log design assigns Web UI to smarthub-web, BFF endpoints to smarthub-admin, and SDK plus log-service to drone-cloud-api. Base Graph and Codex Projects match all three roots exactly. Preview how you would distribute the work. The user has not requested tracking or receipts. Do not create tasks or call thread tools.",
-      "expected_output": "A Dispatch-mode batch preview with three complete project packages and one batch confirmation gate.",
+      "expected_output": "A compact Dispatch-mode preview containing only the objective, three targets with one-line responsibilities, dependency order, and material risks.",
       "files": [],
       "assertions": [
-        "No task or thread is created before approval.",
-        "A/B choices are shown and Dispatch is selected as the default.",
-        "All three projects use VERIFIED_CODEX_PROJECT and local current checkouts.",
-        "Every child includes three complete Markdown documents.",
-        "The preview asks for one batch confirmation, not per-child approval.",
+        "No task or thread is created during the dry-run.",
+        "Dispatch is selected by default without forcing an A/B choice.",
+        "The preview shows only the objective, targets, one-line responsibilities, dependencies, and material risks.",
+        "Full Markdown documents, checksums, project IDs, host IDs, absolute paths, and branches are not displayed.",
         "No worktree, branch switch, push, or cross-project integration test is proposed."
       ]
     },
@@ -20,12 +38,12 @@
       "id": 2,
       "name": "proactive-after-stable-design",
       "prompt": "We have just finished and confirmed an inventory feature design spanning warehouse-api, warehouse-web, and billing-adapter. The design is stable, but I have not asked to create tasks yet. Respond with the next helpful step only. This is a dry-run; do not create tasks.",
-      "expected_output": "A proactive A/B dispatch prompt with Dispatch as the default.",
+      "expected_output": "One short sentence offering to distribute the confirmed design to the three named projects.",
       "files": [],
       "assertions": [
         "The response proactively offers multi-project distribution.",
-        "It presents A Dispatch and B Development clearly.",
-        "Dispatch is identified as the default.",
+        "It does not force an A/B choice or show package, route, or checksum details.",
+        "It asks only whether to distribute.",
         "No task or thread is created."
       ]
     },
@@ -62,12 +80,12 @@
       "id": 5,
       "name": "ambiguous-route-blocks",
       "prompt": "Dry-run only. Base Graph resolves D:\\workspace\\shared\\portal, but Codex list_projects returns two saved Projects with normalized paths that both resolve to that same directory. Show what the dispatcher should do. Do not create tasks.",
-      "expected_output": "A BLOCKED route with no approval or task creation until ambiguity is fixed.",
+      "expected_output": "A concise BLOCKED result with no task creation until ambiguity is fixed.",
       "files": [],
       "assertions": [
         "The route is BLOCKED.",
         "The ambiguity is reported as an unresolved issue.",
-        "The batch cannot be approved while the route is blocked.",
+        "Delivery remains blocked while the route is ambiguous.",
         "No task or thread is created."
       ]
     },
@@ -87,6 +105,53 @@
     },
     {
       "id": 7,
+      "name": "formal-chinese-human-readable-package",
+      "prompt": "只做 dry-run。日志下载方案已经确认，涉及 smarthub-web、smarthub 和 drone-cloud-api，包含接口约定、依赖顺序和各项目验收条件。请用中文预览正式分发包，不要创建真实任务。",
+      "expected_output": "正式三文档预览，标题和正文为中文，先呈现目标、职责、边界和验收，再在末尾放路由与校验信息。",
+      "files": [],
+      "assertions": [
+        "Uses the formal three-document package because shared contracts and dependencies exist.",
+        "Human-facing headings and prose are Chinese.",
+        "The documents do not contain template instructions or exhaustive unrelated task-kind lists.",
+        "Unused sections are omitted instead of producing walls of Not applicable.",
+        "Route identifiers and checksums appear in compact technical appendices after the human-readable content.",
+        "No real task or thread is created during the dry-run."
+      ]
+    },
+    {
+      "id": 8,
+      "name": "explicit-formal-dispatch-no-extra-confirmation",
+      "prompt": "日志下载方案已经确认，目标是 smarthub-web、smarthub 和 drone-cloud-api。现在直接分发，完整 Markdown 放进各自子任务，不需要在父任务预览，也不要再问我是否确认。",
+      "expected_output": "完成必要路由解析后直接创建三个任务；父任务只显示简短进度和最终投递结果，完整 Markdown 与技术元数据仅发送给对应子任务。",
+      "files": [],
+      "assertions": [
+        "The explicit distribute command is treated as authorization.",
+        "No additional confirmation or A/B mode question is asked.",
+        "The parent does not display full Markdown, checksums, project IDs, host IDs, absolute paths, or branches.",
+        "Each child receives the full human-readable Markdown context and its required technical appendix.",
+        "Each child initial prompt starts with 主任务名称 - 子任务名称, before any TASK_PACKAGE_BEGIN marker.",
+        "TASK_PACKAGE_BEGIN is retained only as an internal marker below the readable title and purpose.",
+        "The final parent response reports only targets, delivery status, and blockers if any.",
+        "No worktree, branch switch, or push is introduced."
+      ]
+    },
+    {
+      "id": 9,
+      "name": "formal-child-title-before-package-marker",
+      "prompt": "把“视频流联调”正式分发给 smarthub-web，子任务负责前端验证。完整 Markdown 直接发送给子任务，不要让 TASK_PACKAGE_BEGIN 变成任务标题。",
+      "expected_output": "子任务首行为“视频流联调 - smarthub-web 前端验证”，一句话目的随后，TASK_PACKAGE_BEGIN 位于其后并仅承担内部协议作用。",
+      "files": [],
+      "assertions": [
+        "The first line is a Markdown heading in the format 视频流联调 - smarthub-web 前端验证.",
+        "A one-sentence human-readable purpose follows the title.",
+        "TASK_PACKAGE_BEGIN appears below the title and purpose.",
+        "The title and purpose match the packaged objective and owned scope.",
+        "No dispatch ID, checksum, UUID, project ID, or protocol marker is used as the task title.",
+        "The formal package documents and checksums remain unchanged below the header."
+      ]
+    },
+    {
+      "id": 10,
       "name": "tracked-read-only-dispatch",
       "prompt": "Dry-run only. Ask smarthub, smarthub-web, smart-go-web, smarthub-zlmediakit, and drone-cloud-api to report their current local branch, HEAD, declared version, and dirty/clean status. I explicitly want the parent to wait for and aggregate every result, but this is read-only work: no development, tests, commits, or pushes. Do not create tasks during this dry-run.",
       "expected_output": "Dispatch remains selected with awaitResult=true, every child receives the receipt-first JSON envelope contract, and no Development commit or test requirements are added.",

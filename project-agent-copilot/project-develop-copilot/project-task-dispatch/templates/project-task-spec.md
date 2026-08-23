@@ -1,11 +1,50 @@
-# Project Task Specification
+# {{task_title}}
 
-> Supported task kinds: `discussion | design | development | test | review |
-> deployment`. Replace every `{{...}}` token before preview. Preserve the
-> requested task kind: a discussion or design task must not silently become a
-> development task.
+{{one_sentence_task_summary}}
 
-## Task Identity
+## {{why_heading}}
+
+{{problem_and_target_behavior}}
+
+## {{what_to_do_heading}}
+
+{{owned_scope}}
+
+## {{what_not_to_do_heading}}
+
+{{excluded_scope}}
+
+## {{context_heading}}
+
+{{current_state_and_relevant_evidence}}
+
+## {{interfaces_heading}}
+
+{{only_relevant_inputs_outputs_contracts_and_errors}}
+
+## {{dependencies_heading}}
+
+| {{upstream_column}} | {{required_result_column}} | {{availability_column}} |
+|---|---|---|
+{{upstream_dependency_rows}}
+
+## {{execution_heading}}
+
+{{task_kind_specific_steps}}
+
+## {{verification_heading}}
+
+{{project_local_verification}}
+
+## {{completion_heading}}
+
+{{project_acceptance}}
+
+## {{deliverables_heading}}
+
+{{expected_deliverables}}
+
+## {{technical_appendix_heading}}
 
 ```yaml
 subtaskId: "{{subtask_id}}"
@@ -13,118 +52,3 @@ logicalProject: "{{logical_project}}"
 taskKind: "{{task_kind}}"
 objective: "{{task_objective}}"
 ```
-
-## Current State
-
-### Relevant source anchors
-
-{{current_source_anchors}}
-
-### Existing behavior and constraints
-
-{{current_behavior}}
-
-### Evidence confidence
-
-{{project_evidence_confidence}}
-
-## Problem and Target Behavior
-
-### Problem
-
-{{problem_statement}}
-
-### Target behavior or requested result
-
-{{target_behavior}}
-
-## Owned Scope
-
-{{owned_scope}}
-
-## Excluded Scope
-
-{{excluded_scope}}
-
-## Components and Flow
-
-{{components_and_flow}}
-
-## Interfaces and Contracts
-
-### Inputs
-
-{{inputs}}
-
-### Outputs
-
-{{outputs}}
-
-### API, event, and DTO details
-
-{{interface_details}}
-
-### Error semantics
-
-{{error_semantics}}
-
-## Data and State
-
-### Data model
-
-{{data_model}}
-
-### State transitions and idempotency
-
-{{state_transitions}}
-
-## Configuration and Deployment
-
-{{configuration_deployment}}
-
-## Compatibility and Failure Semantics
-
-{{compatibility_failure_semantics}}
-
-## Upstream Dependencies
-
-| Upstream subtask | Required result | Availability rule |
-|---|---|---|
-{{upstream_dependency_rows}}
-
-## Downstream Consumers
-
-{{downstream_consumers}}
-
-## Shared Decisions That Cannot Be Redesigned Locally
-
-{{frozen_shared_decisions}}
-
-## Task-kind Instructions
-
-- `discussion`: analyze and return decisions, unknowns, and recommendations; do
-  not edit code unless a later user request changes the task kind.
-- `design`: produce an executable technical design and contract differences; do
-  not implement it.
-- `development`: implement only the owned scope, run project-local tests, and
-  create local commits according to the handoff.
-- `test`: build or execute the requested project-local verification and report
-  evidence; do not expand into unrelated fixes.
-- `review`: inspect the supplied changes and return evidence-backed findings; do
-  not mutate the project unless explicitly requested.
-- `deployment`: perform or describe only the approved deployment operation and
-  its validation, respecting the target environment authority.
-
-## Project-local Verification
-
-{{project_local_verification}}
-
-No cross-project integration tests are required by default.
-
-## Acceptance
-
-{{project_acceptance}}
-
-## Expected Deliverables
-
-{{expected_deliverables}}
