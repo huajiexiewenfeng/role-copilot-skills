@@ -30,10 +30,18 @@ class StatusViewTest(unittest.TestCase):
             generated = status_view.render_generated_documents(temporary, make_manifest())
             root = Path(temporary)
             self.assertTrue(Path(generated["managerMarkdown"]).is_file())
-            self.assertTrue((root / "views" / "status-r0000.svg").is_file())
+            self.assertFalse((root / "views" / "status-r0000.svg").exists())
+            self.assertTrue((root / "views" / "live" / "index.html").is_file())
+            self.assertTrue((root / "views" / "live" / "snapshot.json").is_file())
             self.assertTrue((root / "project-sessions" / "PS-a" / "session.md").is_file())
             self.assertTrue((root / "work-items" / "T-a.md").is_file())
             self.assertTrue((root / "notes.md").is_file())
+
+    def test_svg_is_generated_only_when_explicitly_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            generated = status_view.render_generated_documents(temporary, make_manifest(), generate_svg=True)
+            self.assertTrue(Path(generated["revisionSvg"]).is_file())
+            self.assertTrue(Path(generated["currentSvg"]).is_file())
 
     def test_render_updates_manifest_view_to_same_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -41,7 +49,12 @@ class StatusViewTest(unittest.TestCase):
             manifest["revision"] = 7
             updated, _ = status_view.render_and_update_manifest(temporary, manifest, None, "2026-08-23T15:00:00+08:00")
             self.assertEqual(updated["view"]["revision"], 7)
-            self.assertEqual(updated["view"]["sourceSvg"], "views/status-r0007.svg")
+            self.assertIsNone(updated["view"]["sourceSvg"])
+
+            with_svg, _ = status_view.render_and_update_manifest(
+                temporary, manifest, None, "2026-08-23T15:00:00+08:00", generate_svg=True
+            )
+            self.assertEqual(with_svg["view"]["sourceSvg"], "views/status-r0007.svg")
 
     def test_unchanged_native_timeout_is_not_meaningful(self) -> None:
         snapshot = task_control.build_status_snapshot(make_manifest())

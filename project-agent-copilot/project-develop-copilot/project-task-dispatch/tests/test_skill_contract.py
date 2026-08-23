@@ -67,21 +67,27 @@ class SkillContractTest(unittest.TestCase):
             ["uses the `prompt` field", "without `hostId`", "fork_thread", "handoff_thread", "share_thread", "identity remains threadId"],
         )
 
-    def test_management_views_are_in_codex_and_degrade_safely(self) -> None:
+    def test_management_views_use_secure_external_html_and_degrade_safely(self) -> None:
         self.assert_contains(
             "SKILL.md",
-            ["Display the current PNG inline", "exact Markdown status table", "no HTML", "SVG + Markdown", "Rendering", "failure must not block"],
+            ["loopback runtime", "Windows default external browser", "Manager 1 → Project Sessions N", "WebSocket", "Markdown remains", "failure never blocks"],
         )
-        self.assert_contains("references/manifest-v2.md", ["manager.md", "status-rNNNN.svg/.png", "only human-editable", "os.replace"])
+        self.assert_contains("references/manifest-v2.md", ["manager.md", "views/live", "server-state.json", "only human-editable", "os.replace"])
+        self.assert_contains(
+            "references/dashboard-runtime.md",
+            ["read-only human projection", "one-time bootstrap", "HttpOnly", "revision-applied", "set_thread_archived", "raw HTML"],
+        )
 
     def test_schema_and_all_progressive_resources_exist(self) -> None:
         resources = [
             "references/routing.md", "references/task-control-plane.md", "references/development-receipt.md",
             "references/task-package-protocol.md", "references/manager-runtime.md", "references/manifest-v2.md",
+            "references/dashboard-runtime.md",
             "templates/shared-baseline.md", "templates/project-task-spec.md", "templates/handoff.md",
             "templates/worker-initial-message.md", "templates/worker-rework-message.md", "templates/reviewer-message.md",
             "scripts/manifest_v2.py", "scripts/task_control.py", "scripts/legacy_receipt.py",
             "scripts/native_thread_adapter.py", "scripts/status_view.py", "scripts/render_status_png.mjs",
+            "scripts/dashboard_view.py", "scripts/dashboard_runtime.py",
             "schemas/dispatch-manifest-v2.schema.json",
         ]
         for resource in resources:

@@ -30,6 +30,37 @@ planning. Python does not call Codex; the Manager Agent executes native tools.
 8. Regenerate view only on meaningful business/native changes.
 9. After all required approvals, run the final cross-repository check.
 
+## HTML dashboard runtime
+
+After Revision 1 exists, run:
+
+```text
+python scripts/dashboard_runtime.py start --dispatch-root <dispatch-directory>
+```
+
+`start` creates or recovers the PDC-owned loopback server and opens the Windows
+default external browser. If it is already running, `start` requests a fresh
+one-time bootstrap and reopens it. The explicit equivalent is:
+
+```text
+python scripts/dashboard_runtime.py reopen --dispatch-root <dispatch-directory>
+```
+
+The runtime listens only on `127.0.0.1`, exchanges a one-time query token for an
+HttpOnly SameSite cookie, removes the token by redirect, validates Host and
+Origin, applies a local-only CSP, and escapes all projected task text. Tokens
+must never appear in the manifest, manager Markdown, logs, or final response.
+
+The watcher broadcasts meaningful snapshot changes by WebSocket. The client
+fetches `snapshot.json`, updates the DOM without raw `innerHTML`, and sends a
+`revision-applied` acknowledgement. Polling and the generated static HTML are
+the fallback. `server-state.json` and `client-state.json` are replaceable
+observations; neither is PDC business authority. A browser/server failure does
+not stop Manager coordination.
+
+The HTML is read-only. All pause, rework, approval, close, and archive commands
+still occur in the Manager conversation through native Codex capabilities.
+
 Ordinary commentary does not require JSON. An unchanged timeout is cached but is
 not a new status revision. Native attention/permission stays with the user.
 

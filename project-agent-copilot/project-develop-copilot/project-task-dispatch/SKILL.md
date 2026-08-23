@@ -43,6 +43,7 @@ Managed Development, also read these completely:
 For formal packages read [task-package-protocol.md](references/task-package-protocol.md).
 For Managed Development read [development-receipt.md](references/development-receipt.md),
 whose retained filename now describes delivery and Review rather than a progress receipt.
+For the default live status display read [dashboard-runtime.md](references/dashboard-runtime.md).
 
 ## 1. Select Mode and Complexity
 
@@ -94,7 +95,9 @@ For Managed Development, create:
 ├─ project-sessions/<projectSessionKey>/session.md
 ├─ work-items/<taskId>.md
 ├─ findings/<findingId>.md
-└─ views/{current-status,status-rNNNN}.{svg,png}
+└─ views/
+   ├─ live/{index.html,snapshot.json,assets/,server-state.json}
+   └─ {current-status,status-rNNNN}.{svg,png}
 ```
 
 The Manager is the only writer. `manifest.json` owns PDC business state;
@@ -200,14 +203,25 @@ integration evidence.
 ## 7. Status View and Lifecycle
 
 After every meaningful manifest change, increment revision atomically and
-regenerate `manager.md`, Session/work-item/finding Markdown, and
-`status-rNNNN.svg`. Convert SVG to PNG with the bundled Node/sharp runtime when
-available; otherwise degrade to SVG + Markdown, then Markdown only. Rendering
-failure must not block dispatch or Review.
+regenerate `manager.md`, Session/work-item/finding Markdown, and the static HTML
+projection in `views/live/`. Start or recover the PDC-owned loopback runtime
+with `scripts/dashboard_runtime.py start --dispatch-root <path>` after Revision
+1; it opens the Windows default external browser unless the user selected the
+Codex in-window mode. Use `reopen` when the user asks to open the existing board
+again. Judge visibility from the client acknowledgement, not process launch.
 
-Display the current PNG inline in the Manager Session when available, followed
-by the exact Markdown status table. This keeps the human dashboard in the Codex
-main window; no HTML or external application is required.
+The dashboard is read-only and fixed to `Manager 1 → Project Sessions N →
+Manager final 1`. WebSocket revision notifications update it live; JSON polling
+is the reconnect fallback and the generated HTML remains a readable static
+snapshot when the server is unavailable. It must show PDC state and native
+Codex state separately. A display/runtime failure never blocks dispatch or
+Review.
+
+HTML is the default display. Do not generate SVG/PNG on every revision; render
+an image only when the user asks for an inline/exported artifact or when HTML
+cannot be opened and an in-conversation visual is useful. Markdown remains the
+final universal fallback. Use `open_in_codex` only for a user-selected in-window
+dashboard or code Review; treat `queued` as not yet visibly opened.
 
 Pin bound active-unapproved Worker/Reviewer tasks. Unpin Sessions whose assigned
 work is approved. On Dispatch close, unpin every bound Session but keep real

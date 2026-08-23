@@ -17,6 +17,12 @@ dispatches/<dispatchId>/
 ├─ work-items/*.md               generated acceptance/review summaries
 ├─ findings/*.md                 generated finding summaries
 └─ views/
+   ├─ live/
+   │  ├─ index.html              static last-known-good shell
+   │  ├─ snapshot.json           current escaped projection
+   │  ├─ assets/*                local-only JS/CSS
+   │  ├─ server-state.json       replaceable process state, never tokens
+   │  └─ client-state.json       replaceable ready/revision acknowledgement
    ├─ status-rNNNN.svg/.png      immutable revision views
    └─ current-status.svg/.png    latest copies
 ```
@@ -44,7 +50,17 @@ runtime action; it is not inferred from `status=CLOSED`.
 
 ## Views
 
-`scripts/status_view.py` creates deterministic Markdown and SVG from one status
-snapshot. `render_status_png.mjs` accepts SVG path, PNG path, and the discovered
-bundled `sharp` module path. Never hard-code a user cache/runtime path. Fallback
-is SVG + Markdown, then Markdown only; rendering does not control business state.
+`scripts/status_view.py` creates deterministic Markdown, optionally creates SVG,
+and delegates the
+default `views/live/` HTML projection to `scripts/dashboard_view.py`. The HTML projection is
+regenerated atomically from the same manifest revision and remains readable as
+a static last-known-good snapshot.
+
+`scripts/dashboard_runtime.py` owns only loopback presentation state. It never
+writes the manifest. `server-state.json` and `client-state.json` are replaceable
+observations; the private control token is not included in either JSON file.
+
+SVG/PNG are opt-in exports. `render_status_png.mjs` accepts SVG path, PNG path,
+and the discovered bundled `sharp` module path. Never hard-code a user
+cache/runtime path. Universal fallback is HTML static snapshot, then Markdown;
+rendering does not control business state.

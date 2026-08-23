@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 try:
+    from dashboard_view import render_dashboard
     from manifest_v2 import atomic_write_json
     from task_control import build_status_snapshot
 except ImportError:  # pragma: no cover
+    from .dashboard_view import render_dashboard
     from .manifest_v2 import atomic_write_json
     from .task_control import build_status_snapshot
 
@@ -81,11 +83,16 @@ def _write_text(path: Path, content: str) -> None:
     os.replace(temporary, path)
 
 
-def render_generated_documents(root: Path | str, manifest: Mapping[str, Any], runtime_cache: Mapping[str, Any] | None = None) -> dict[str, str]:
+def render_generated_documents(
+    root: Path | str,
+    manifest: Mapping[str, Any],
+    runtime_cache: Mapping[str, Any] | None = None,
+    *,
+    generate_svg: bool = False,
+) -> dict[str, str]:
     root = Path(root)
     snapshot = build_status_snapshot(manifest, runtime_cache)
     markdown = render_markdown(snapshot)
-    svg = render_svg(snapshot)
     revision = int(manifest["revision"])
     revision_name = f"status-r{revision:04d}.svg"
     manager_path = root / "manager.md"
@@ -93,10 +100,14 @@ def render_generated_documents(root: Path | str, manifest: Mapping[str, Any], ru
     current_svg = root / "views" / "current-status.svg"
     notes_path = root / "notes.md"
     _write_text(manager_path, markdown)
-    _write_text(revision_svg, svg)
-    _write_text(current_svg, svg)
+    if generate_svg:
+        svg = render_svg(snapshot)
+        _write_text(revision_svg, svg)
+        _write_text(current_svg, svg)
     if not notes_path.exists():
         _write_text(notes_path, "# Manager Notes\n\n")
+
+    dashboard = render_dashboard(root, manifest, runtime_cache)
 
     sessions = {session["projectSessionKey"]: session for session in manifest["projectSessions"]}
     for key, session in sessions.items():
@@ -125,7 +136,13 @@ def render_generated_documents(root: Path | str, manifest: Mapping[str, Any], ru
             f"- Status: `{finding['status']}`\n\n## Required change\n\n{finding['requiredChange']}\n"
         )
         _write_text(root / "findings" / f"{finding_id}.md", content)
-    return {"managerMarkdown": str(manager_path), "revisionSvg": str(revision_svg), "currentSvg": str(current_svg)}
+    generated = {
+        "managerMarkdown": str(manager_path),
+        **dashboard,
+    }
+    if generate_svg:
+        generated.update({"revisionSvg": str(revision_svg), "currentSvg": str(current_svg)})
+    return generated
 
 
 def render_and_update_manifest(
@@ -135,16 +152,18 @@ def render_and_update_manifest(
     rendered_at: str,
     *,
     png_available: bool = False,
+    generate_svg: bool = False,
 ) -> tuple[dict[str, Any], dict[str, str]]:
     """Render one revision and return matching durable view metadata."""
-    generated = render_generated_documents(root, manifest, runtime_cache)
+    generate_svg = generate_svg or png_available
+    generated = render_generated_documents(root, manifest, runtime_cache, generate_svg=generate_svg)
     revision = int(manifest["revision"])
     updated = copy.deepcopy(dict(manifest))
     updated["view"] = {
         "revision": revision,
-        "sourceSvg": f"views/status-r{revision:04d}.svg",
+        "sourceSvg": f"views/status-r{revision:04d}.svg" if generate_svg else None,
         "previewPng": f"views/status-r{revision:04d}.png" if png_available else None,
-        "currentSvg": "views/current-status.svg",
+        "currentSvg": "views/current-status.svg" if generate_svg else None,
         "currentPng": "views/current-status.png" if png_available else None,
         "renderedAt": rendered_at,
     }
