@@ -63,7 +63,7 @@ def make_manifest() -> dict:
         "status": "ACTIVE",
         "realityProject": {"realityProjectId": "RP-test", "baseGraphRoot": "D:/projects/base", "baseGraphProjectId": "project-base", "repositoryIds": ["repo-a", "repo-b"]},
         "manager": {"baseGraphRoot": "D:/projects/base", "threadId": "manager-thread", "hostId": "local", "projectId": "project-base"},
-        "policies": {"environment": "local", "singleWriterPerProject": True, "monitoring": "attached", "pin": "active-unapproved", "archive": "explicit-only", "review": "manager-direct", "approvalAuthority": "manager"},
+        "policies": {"environment": "local", "singleWriterPerProject": True, "monitoring": "attached", "pin": "explicit-only", "archive": "explicit-only", "review": "manager-direct", "approvalAuthority": "manager"},
         "contract": {"currentRevision": "CR-1", "sharedBaseline": "Shared contract", "updatedAt": NOW},
         "projectSessions": [
             session("PS-a", "repo-a", "project-a", "feature/a"),

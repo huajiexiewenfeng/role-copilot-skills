@@ -74,17 +74,17 @@
     },
     {
       "id": "E-11",
-      "name": "in-window-status-view",
-      "prompt": "Dry-run：主窗口展示当前跨仓任务状态和进度，不打开 HTML。",
-      "expected_output": "revisioned PNG/SVG 和 Markdown 表。",
-      "assertions": ["Generates status-rNNNN.svg and attempts PNG.", "Displays PNG inline when available plus exact Markdown fallback.", "Does not open HTML or another application.", "Unchanged timeout does not create a revision."]
+      "name": "live-html-status-view",
+      "prompt": "Dry-run：任务分发后用默认外部浏览器展示 1→N→1 实时看板，图片默认关闭。",
+      "expected_output": "只读 HTML 实时看板、客户端 revision 回执和 Markdown 降级。",
+      "assertions": ["Generates views/live/index.html and snapshot.json.", "Opens the default external browser after Revision 1.", "Keeps SVG/PNG opt-in and Markdown as the universal fallback.", "Unchanged timeout does not create a revision."]
     },
     {
       "id": "E-12",
       "name": "no-hard-interrupt",
       "prompt": "Dry-run：停止正在运行的 Worker，并别再调度后续任务。",
       "expected_output": "停止后续调度并准确说明当前工具限制。",
-      "assertions": ["Does not claim send_message_to_thread is a hard interrupt.", "Stops future batches.", "Does not treat archive or handoff as cancel.", "Does not auto-archive real tasks merely because the Dispatch is CLOSED."]
+      "assertions": ["Does not claim send_message_to_thread is a hard interrupt.", "Stops future batches.", "Does not treat archive or handoff as cancel.", "Does not pin or archive created tasks unless the user explicitly requests that action."]
     }
   ]
 }

@@ -223,13 +223,12 @@ cannot be opened and an in-conversation visual is useful. Markdown remains the
 final universal fallback. Use `open_in_codex` only for a user-selected in-window
 dashboard or code Review; treat `queued` as not yet visibly opened.
 
-Pin bound active-unapproved Worker/Reviewer tasks. Unpin Sessions whose assigned
-work is approved. On Dispatch close, unpin every bound Session but keep real
-development and read-only Sessions visible. The default archive policy is
-`explicit-only`: call `set_thread_archived` only when the user explicitly asks
-for cleanup or a declared retention rule has become due. A Canary/Smoke run may
-use the separate `canary-dispatch-close` policy. Archive is lifecycle cleanup,
-not cancellation, and `CLOSED` never implies archived.
+Do not pin or archive created Worker/Reviewer tasks by default. Creation,
+approval, and Dispatch close leave their native pin/archive state untouched and
+keep real development and read-only Sessions visible. Call `set_thread_pinned`
+or `set_thread_archived` only when the user explicitly asks for that specific
+lifecycle action. Archive is lifecycle cleanup, not cancellation, and `CLOSED`
+never implies pinned, unpinned, or archived.
 
 ## 8. Recovery and Idempotency
 

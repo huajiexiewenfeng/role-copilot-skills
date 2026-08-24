@@ -93,23 +93,24 @@ def build_continue_request(session: Mapping[str, Any], message: str) -> dict[str
 
 
 def lifecycle_actions(
-    manifest: Mapping[str, Any], *, explicit_archive_requested: bool = False
+    manifest: Mapping[str, Any], *, explicit_pin_requested: bool | None = None,
+    explicit_archive_requested: bool = False,
 ) -> list[dict[str, Any]]:
-    task_states = {task["taskId"]: task["state"] for task in manifest["workItems"]}
     actions: list[dict[str, Any]] = []
     for session in manifest["projectSessions"]:
         binding = session["binding"]
         if binding["state"] != "BOUND":
             continue
-        states = [task_states[task_id] for task_id in session["assignedWorkItemIds"]]
-        approved = bool(states) and all(state == "APPROVED" for state in states)
-        if manifest["status"] == "CLOSED":
-            actions.append({"operation": "set_thread_pinned", "threadId": binding["threadId"], "pinned": False})
-            archive_policy = manifest["policies"]["archive"]
-            if explicit_archive_requested or archive_policy == "canary-dispatch-close":
-                actions.append({"operation": "set_thread_archived", "threadId": binding["threadId"], "hostId": binding["hostId"], "archived": True})
-        else:
-            actions.append({"operation": "set_thread_pinned", "threadId": binding["threadId"], "pinned": not approved})
+        if explicit_pin_requested is not None:
+            actions.append({
+                "operation": "set_thread_pinned", "threadId": binding["threadId"],
+                "pinned": explicit_pin_requested,
+            })
+        if manifest["status"] == "CLOSED" and explicit_archive_requested:
+            actions.append({
+                "operation": "set_thread_archived", "threadId": binding["threadId"],
+                "hostId": binding["hostId"], "archived": True,
+            })
     return actions
 
 

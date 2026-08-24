@@ -23,8 +23,8 @@ the outer 1 → N → 1 structure.
 | observe progress | `wait_threads` | native state and cursor observation |
 | verify delivery | `read_thread` | SUBMITTED candidate enters Review |
 | request rework/next batch | `send_message_to_thread` | same Session, next attempt |
-| keep active work visible | `set_thread_pinned` | active-unapproved task remains pinned |
-| explicit cleanup only | `set_thread_archived` | archive never inferred from CLOSED |
+| explicit pin/unpin | `set_thread_pinned` | called only when the user asks |
+| explicit archive/unarchive | `set_thread_archived` | never inferred from CLOSED |
 | optional in-window view | `open_in_codex` | queued/opened state is reported truthfully |
 
 Native final is a turn observation, not PDC approval. The dashboard always shows

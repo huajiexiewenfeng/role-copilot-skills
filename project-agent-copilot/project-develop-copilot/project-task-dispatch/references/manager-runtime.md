@@ -79,12 +79,11 @@ Never repeat a reducer event for an already-consumed cursor/final.
 
 ## Lifecycle and monitoring
 
-Pin active-unapproved Sessions and unpin approved Sessions. Dispatch close
-unpins all bound Sessions but keeps real tasks visible. The default archive
-policy is `explicit-only`; archive only after an explicit user cleanup request
-or a due retention rule. `canary-dispatch-close` is reserved for disposable
-Canary/Smoke runs. Archive is not cancel, and CLOSED is independent from native
-archive state. Use heartbeat only after explicit user request for continued
+Do not pin, unpin, or archive Project Sessions automatically. Creation,
+approval, and Dispatch close leave native pin/archive state untouched. Execute
+`set_thread_pinned` or `set_thread_archived` only after an explicit user request
+for that action. Archive is not cancel, and CLOSED is independent from native
+pin/archive state. Use heartbeat only after explicit user request for continued
 monitoring, manage it with `automation_update`, and stop it at terminal state.
 
 `send_message_to_thread` controls future work and requests rework but is not a

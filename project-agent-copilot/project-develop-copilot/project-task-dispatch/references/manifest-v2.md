@@ -43,10 +43,13 @@ be deleted and reconstructed.
 
 ## Lifecycle policy
 
-`policies.archive` defaults to `explicit-only`. Closing a real Dispatch unpins
-bound Sessions but does not archive them. `canary-dispatch-close` is permitted
-only for disposable Canary/Smoke runs. A user-requested cleanup is an explicit
-runtime action; it is not inferred from `status=CLOSED`.
+`policies.pin` and `policies.archive` default to `explicit-only`. Creating,
+approving, or closing a Dispatch does not call either native lifecycle tool.
+Pin, unpin, archive, and unarchive are explicit runtime actions and are never
+inferred from `status=CLOSED`, including for Canary/Smoke runs.
+Legacy manifests containing `active-unapproved` or `canary-dispatch-close` are
+accepted for recovery compatibility, but those values no longer schedule a
+native lifecycle action.
 
 ## Views
 

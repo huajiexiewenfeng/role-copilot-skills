@@ -55,31 +55,27 @@ class NativeThreadAdapterTest(unittest.TestCase):
         self.assertEqual(request["prompt"], "fix finding")
         self.assertNotIn("message", request)
 
-    def test_lifecycle_pins_unapproved_unpins_approved_and_keeps_real_closed_visible(self) -> None:
+    def test_lifecycle_does_not_pin_or_archive_by_default(self) -> None:
         manifest = make_manifest()
         manifest["projectSessions"][0]["assignedWorkItemIds"] = ["T-a"]
-        actions = adapter.lifecycle_actions(manifest)
-        action = next(item for item in actions if item["threadId"] == "thread-PS-a")
-        self.assertTrue(action["pinned"])
-        self.assertNotIn("hostId", action)
+        self.assertEqual(adapter.lifecycle_actions(manifest), [])
         manifest["workItems"][0]["state"] = "APPROVED"
-        actions = adapter.lifecycle_actions(manifest)
-        action = next(item for item in actions if item["threadId"] == "thread-PS-a")
-        self.assertFalse(action["pinned"])
+        self.assertEqual(adapter.lifecycle_actions(manifest), [])
         manifest["status"] = "CLOSED"
-        actions = adapter.lifecycle_actions(manifest)
-        self.assertTrue(any(item["operation"] == "set_thread_pinned" and item["pinned"] is False for item in actions))
-        self.assertFalse(any(item["operation"] == "set_thread_archived" for item in actions))
+        self.assertEqual(adapter.lifecycle_actions(manifest), [])
 
-    def test_lifecycle_archives_only_for_explicit_request_or_canary_policy(self) -> None:
+    def test_lifecycle_pin_and_archive_require_explicit_requests(self) -> None:
         manifest = make_manifest()
+        pin_actions = adapter.lifecycle_actions(manifest, explicit_pin_requested=True)
+        self.assertTrue(all(item["operation"] == "set_thread_pinned" and item["pinned"] for item in pin_actions))
+
+        unpin_actions = adapter.lifecycle_actions(manifest, explicit_pin_requested=False)
+        self.assertTrue(all(item["operation"] == "set_thread_pinned" and not item["pinned"] for item in unpin_actions))
+
+        self.assertEqual(adapter.lifecycle_actions(manifest, explicit_archive_requested=True), [])
         manifest["status"] = "CLOSED"
         explicit_actions = adapter.lifecycle_actions(manifest, explicit_archive_requested=True)
         self.assertTrue(any(item["operation"] == "set_thread_archived" for item in explicit_actions))
-
-        manifest["policies"]["archive"] = "canary-dispatch-close"
-        canary_actions = adapter.lifecycle_actions(manifest)
-        self.assertTrue(any(item["operation"] == "set_thread_archived" for item in canary_actions))
 
     def test_recovery_uses_thread_id_not_title_and_navigation_is_explicit(self) -> None:
         manifest = make_manifest()

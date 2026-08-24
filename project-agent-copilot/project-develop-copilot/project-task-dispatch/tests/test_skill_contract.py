@@ -60,7 +60,7 @@ class SkillContractTest(unittest.TestCase):
     def test_runtime_defines_wait_recovery_and_lifecycle(self) -> None:
         self.assert_contains(
             "references/manager-runtime.md",
-            ["1–8 targets", "afterCursor", "timeoutMs=0", "Match only by `threadId`", "Pin active-unapproved", "explicit-only", "Archive is not cancel", "hard turn-interrupt"],
+            ["1–8 targets", "afterCursor", "timeoutMs=0", "Match only by `threadId`", "Do not pin, unpin, or archive", "explicit user request", "Archive is not cancel", "hard turn-interrupt"],
         )
         self.assert_contains(
             "references/manager-runtime.md",
@@ -115,7 +115,7 @@ class SkillContractTest(unittest.TestCase):
         ids = {case["id"] for case in payload["evals"]}
         self.assertEqual(ids, {f"E-{index:02d}" for index in range(1, 13)})
         combined = json.dumps(payload, ensure_ascii=False)
-        for token in ("same-project-multiple-work-items", "manager-recovery", "in-window-status-view", "no-hard-interrupt"):
+        for token in ("same-project-multiple-work-items", "manager-recovery", "live-html-status-view", "no-hard-interrupt"):
             self.assertIn(token, combined)
 
 
