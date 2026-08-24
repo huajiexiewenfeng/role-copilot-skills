@@ -45,6 +45,19 @@ class SkillContractTest(unittest.TestCase):
             ],
         )
 
+    def test_writable_mode_precedence_and_pre_create_gate(self) -> None:
+        self.assert_contains(
+            "SKILL.md",
+            [
+                "Mode is selected from the work lifecycle",
+                "explicit delivery-only",
+                "modify project files", "run tests or", "create a local commit",
+                "Before the first `create_thread`",
+                "Revision 1 control plane", "HTML", "dashboard first",
+                "UNBOUND", "The user said dispatch", "Dashboard can be added later",
+            ],
+        )
+
     def test_writable_fallback_is_forbidden(self) -> None:
         self.assert_contains(
             "references/routing.md",
@@ -113,9 +126,13 @@ class SkillContractTest(unittest.TestCase):
         payload = json.loads(self.read("evals/evals.json"))
         self.assertEqual(payload["version"], "2.0")
         ids = {case["id"] for case in payload["evals"]}
-        self.assertEqual(ids, {f"E-{index:02d}" for index in range(1, 13)})
+        self.assertEqual(ids, {f"E-{index:02d}" for index in range(1, 15)})
         combined = json.dumps(payload, ensure_ascii=False)
-        for token in ("same-project-multiple-work-items", "manager-recovery", "live-html-status-view", "no-hard-interrupt"):
+        for token in (
+            "same-project-multiple-work-items", "manager-recovery", "live-html-status-view",
+            "no-hard-interrupt", "implicit-writable-work-is-managed",
+            "explicit-delivery-only-writable-override",
+        ):
             self.assertIn(token, combined)
 
 

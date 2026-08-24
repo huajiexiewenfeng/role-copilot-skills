@@ -55,6 +55,48 @@ Choose the mode from user intent; do not force an A/B question when intent is cl
 | Awaited Dispatch | Deliver read-only/non-development work, then wait/read and aggregate results. |
 | Managed Development | Manager tracks implementation through Review and APPROVED. |
 
+Mode is selected from the work lifecycle, not from words such as "dispatch",
+"send", or "create", and not from estimated duration. Apply this precedence:
+
+1. If the user makes an explicit delivery-only request such as "create the
+   tasks and stop; do not wait or review", use Dispatch even when a Worker will
+   write code.
+2. Otherwise, if any Worker is authorized to modify project files, run tests or
+   builds, create a local commit, or produce a result the Manager must accept,
+   use Managed Development. This does not require the user to say "monitor" or
+   "dashboard" explicitly.
+3. Otherwise, if the user needs read-only results returned or aggregated, use
+   Awaited Dispatch.
+4. Otherwise use Dispatch.
+
+Short confirmations such as "confirm", "continue", or "execute" inherit the
+work lifecycle already established by the conversation. If material ambiguity
+remains, ask only about the missing lifecycle expectation; do not silently
+interpret missing monitoring words as delivery-only authorization.
+
+Before the first `create_thread`, complete a mode gate that records the selected
+mode, the write/read-only boundary, whether results require Manager acceptance,
+and the user's explicit delivery-only instruction when one exists. For Managed
+Development, also create and render the Revision 1 control plane and HTML
+dashboard first, with Project Sessions `UNBOUND` and work items `READY` or
+`WAITING_DEPENDENCY`. Start the dashboard and verify client acknowledgement;
+then create Workers, bind their native identities, assign ready work, and publish
+the next revision. Worker creation before this gate is a routing error.
+
+Common mode rationalizations:
+
+| Rationalization | Correction |
+|---|---|
+| "The user said dispatch, so delivery ends the job." | "Dispatch" is task wording; select the mode from the lifecycle and explicit stop condition. |
+| "No monitoring or dashboard was requested." | Writable work defaults to Managed Development; its control plane and dashboard are operational requirements. |
+| "Dashboard can be added later after Workers start." | Revision 1 and client acknowledgement precede the first Worker. |
+| "Writable work is always Managed Development." | An explicit delivery-only instruction has higher precedence and remains Dispatch. |
+
+Stop before `create_thread` if the mode gate is missing, writable work was
+classified from wording alone, or Managed Development has no acknowledged
+Revision 1 dashboard. Correct the control plane first; do not retrofit it after
+Worker creation.
+
 Use a lightweight readable prompt for hello/notification/simple isolated work.
 Use the three-document formal package only for shared contracts, dependencies,
 frozen responsibilities, or substantial development. A lightweight Dispatch

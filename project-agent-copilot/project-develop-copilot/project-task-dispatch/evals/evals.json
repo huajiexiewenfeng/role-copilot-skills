@@ -85,6 +85,20 @@
       "prompt": "Dry-run：停止正在运行的 Worker，并别再调度后续任务。",
       "expected_output": "停止后续调度并准确说明当前工具限制。",
       "assertions": ["Does not claim send_message_to_thread is a hard interrupt.", "Stops future batches.", "Does not treat archive or handoff as cancel.", "Does not pin or archive created tasks unless the user explicitly requests that action."]
+    },
+    {
+      "id": "E-13",
+      "name": "implicit-writable-work-is-managed",
+      "prompt": "Dry-run：当前项目已把镜像导出默认改成 tar.gz；另外三个项目也有这个问题，请同步并做任务分发。每个项目需要改脚本、补测试和真实 docker load 验证，但我没有另外说监控或 Dashboard。",
+      "expected_output": "按写操作生命周期选择 Managed Development，并在创建 Worker 前建立 Revision 1 Dashboard。",
+      "assertions": ["Selects Managed Development despite the words task dispatch.", "Creates and acknowledges the Revision 1 HTML dashboard before the first Worker.", "Records branches, baseline HEADs, and dirty boundaries.", "Does not treat missing monitoring words as delivery-only authorization."]
+    },
+    {
+      "id": "E-14",
+      "name": "explicit-delivery-only-writable-override",
+      "prompt": "Dry-run：给三个项目创建代码修改任务即可，创建成功后立即结束；不要等待、审核或监控结果。",
+      "expected_output": "尊重明确的 delivery-only 请求，使用一次性 Dispatch。",
+      "assertions": ["Selects Dispatch because the user explicitly requested delivery-only behavior.", "Does not create the Managed Development dashboard.", "Stops after successful native task creation."]
     }
   ]
 }
